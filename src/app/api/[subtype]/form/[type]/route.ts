@@ -115,10 +115,22 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(list);
+    return NextResponse.json(list, {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+      },
+    });
   } catch (err) {
     console.error("GET ERROR:", err);
-    return NextResponse.json({ error: "Erro ao listar" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro ao listar" },
+      {
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
   }
 }
 
