@@ -1,0 +1,69 @@
+{
+  "sites": [
+    {
+      "id": "site1",
+      "siteName": "Tegbe Institucional",
+      "description": "Dashboard completo para gerenciamento do institucional",
+      "planType": "pro",
+      "logoUrl": "/tegbe.png",
+      "devAuthor": "Mavellium",
+      "theme": {
+        "mainColor": "#e61a4a",
+        "secondColor": "#fff",
+        "boxShadowColor": "#fff",
+        "asideColor": "#111",
+        "borderColor": "#e61a4a",
+        "backgroundColor": "#111",
+        "backgroundBody": "#000"
+      },
+      "menuItems": [
+        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/" },
+        { "name": "Headline", "icon": "HelpCircle", "href": "/headline" },
+        { "name": "Passo a Passo", "icon": "Building", "href": "/steps" }
+      ]
+    },
+    {
+      "id": "site2",
+      "siteName": "TegPro",
+      "description": "Dashboard completo para o gerenciamento da landing page",
+      "planType": "pro",
+      "logoUrl": "/tegpro.png",
+      "devAuthor": "Mavellium",
+      "theme": {
+        "mainColor": "#C9A050",
+        "secondColor": "#fff",
+        "boxShadowColor": "#fff",
+        "asideColor": "#111",
+        "borderColor": "#C9A050",
+        "backgroundColor": "#111",
+        "backgroundBody": "#000"
+      },
+      "menuItems": [
+        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/tegpro/dashboard" },
+        { "name": "Personalização", "icon": "FileText", "href": "/tegpro/personalizacao" }
+      ]
+    },
+    {
+      "id": "site3",
+      "siteName": "Tegbe LP",
+      "description": "Dashboard completo para o gerenciamento da landing page",
+      "planType": "pro",
+      "logoUrl": "/tegbe.png",
+      "devAuthor": "Mavellium",
+      "theme": {
+        "mainColor": "#e61a4a",
+        "secondColor": "#fff",
+        "boxShadowColor": "#fff",
+        "asideColor": "#111",
+        "borderColor": "#e61a4a",
+        "backgroundColor": "#111",
+        "backgroundBody": "#000"
+      },
+      "menuItems": [
+        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/tegbe/dashboard" },
+        { "name": "Personalização", "icon": "FileText", "href": "/tegbe/personalizacao" }
+      ]
+    }
+  ],
+  "defaultSiteId": "site1"
+}
