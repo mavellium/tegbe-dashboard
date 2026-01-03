@@ -41,7 +41,7 @@ export function ManageLayout({
               animate={{ opacity: 1, y: 0 }}
               className="text-3xl font-bold text-[var(--color-secondary)]"
             >
-              {exists ? `Gerenciar ${itemName}s` : `Criar ${itemName}s`}
+              {exists ? `Gerenciar ${itemName}` : `Criar ${itemName}`}
             </motion.h1>
             <p className="text-[var(--color-secondary)]/70 mt-1">
               {description}

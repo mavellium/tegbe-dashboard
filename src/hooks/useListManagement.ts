@@ -1,4 +1,3 @@
-// hooks/useListManagement.ts
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -14,56 +13,53 @@ interface UseListManagementProps<T> {
 
 interface DeleteModalState {
   isOpen: boolean;
-  type: 'single' | 'all' | null;
+  type: "single" | "all" | null;
   index: number | null;
   title: string;
 }
 
 function getPlanLimit(planType: "basic" | "pro"): number {
-  const limits: Record<"basic" | "pro", number> = {
-    basic: 5,
-    pro: 10
-  };
-  return limits[planType] || 5;
+  return planType === "pro" ? 10 : 5;
 }
 
 export function useListManagement<T extends { id?: string }>({
   type,
   apiPath,
   defaultItem,
-  validationFields = []
+  validationFields = [],
 }: UseListManagementProps<T>) {
-  const { currentSite } = useSite(); // Usar contexto do site
-  
-  const [list, setList] = useState<T[]>([{...defaultItem}]);
+  const { currentSite } = useSite();
+
+  const [list, setList] = useState<T[]>([{ ...defaultItem }]);
   const [exists, setExists] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showValidation, setShowValidation] = useState(false);
+
   const [deleteModal, setDeleteModal] = useState<DeleteModalState>({
     isOpen: false,
     type: null,
     index: null,
-    title: ''
+    title: "",
   });
-  
+
   const newItemRef = useRef<HTMLDivElement>(null);
 
-  const currentPlanLimit = useMemo(() => {
-    return getPlanLimit(currentSite.planType); // Usar do site atual
-  }, [currentSite.planType]);
+  const currentPlanLimit = useMemo(
+    () => getPlanLimit(currentSite.planType),
+    [currentSite.planType]
+  );
 
-  const isLimitReached = useMemo(() => {
-    return list.length >= currentPlanLimit;
-  }, [list.length, currentPlanLimit]);
+  const currentPlanType = currentSite.planType;
 
-  const currentPlanType = useMemo(() => {
-    return currentSite.planType; // Usar do site atual
-  }, [currentSite.planType]);
+  const isLimitReached = list.length >= currentPlanLimit;
 
+  // =========================
+  // 🔥 LOAD DATA (API OBJETO)
+  // =========================
   useEffect(() => {
     async function loadData() {
       try {
@@ -72,220 +68,138 @@ export function useListManagement<T extends { id?: string }>({
 
         const data = await res.json();
 
-        let itemsArray: any[] = [];
-        let savedExists = null;
+        /**
+         * SUPORTA:
+         * - API nova: { id, type, subtype, values }
+         * - API antiga: [ { id, values } ]
+         */
+        let record = null;
+        let values: any[] = [];
 
-        if (Array.isArray(data)) {
-          if (data.length > 0 && data[0].values) {
-            savedExists = data[0];
-            itemsArray = data[0].values || [];
-          } else {
-            itemsArray = data;
-            if (itemsArray.length > 0) {
-              savedExists = {
-                id: `temp-${type}-${Date.now()}`,
-                type,
-                values: itemsArray
-              };
-            }
-          }
+        if (data && Array.isArray(data.values)) {
+          record = data;
+          values = data.values;
+        } else if (Array.isArray(data) && data.length && data[0]?.values) {
+          record = data[0];
+          values = data[0].values;
         }
 
-        const safeList = itemsArray
-          .map((val: any, index: number) => ({
-            ...val,
-            id: val.id || `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${index}`,
-          }))
-          .slice(0, currentPlanLimit);
+        const normalizedList = (values || [])
+          .slice(0, currentPlanLimit)
+          .map((item, index) => ({
+            ...item,
+            id: item.id || `${type}-${index}`,
+          }));
 
-        if (safeList.length > 0) {
-          setExists(savedExists);
-          setList(safeList);
+        if (normalizedList.length > 0) {
+          setExists(record);
+          setList(normalizedList);
         } else {
-          setList([{
-            ...defaultItem,
-            id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-          }]);
+          setExists(record);
+          setList([{ ...defaultItem, id: `${type}-0` }]);
         }
-      } catch (e) {
-        console.error('Erro ao carregar dados:', e);
+      } catch (err) {
+        console.error("Erro ao carregar dados:", err);
       }
     }
 
     loadData();
   }, [apiPath, type, currentPlanLimit, defaultItem]);
 
-  const createNewItem = useCallback((): T => {
-    return {
+  // =========================
+  // HELPERS
+  // =========================
+  const createNewItem = useCallback(
+    (): T => ({
       ...defaultItem,
-      id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-    };
-  }, [defaultItem, type]);
+      id: `${type}-${Date.now()}`,
+    }),
+    [defaultItem, type]
+  );
 
-  const canAddNewItem = useCallback(() => {
-    if (isLimitReached) {
-      return false;
-    }
-    
-    if (search) return false;
-    
-    const lastItem = list[list.length - 1];
-    
-    if (validationFields.length === 0) return true;
-    
-    return validationFields.every(field => {
-      const value = lastItem[field];
-      if (typeof value === 'string') return value.trim() !== "";
-      if (Array.isArray(value)) return value.some((v: string) => v.trim() !== "");
-      return !!value;
+  const canAddNewItem = useMemo(() => {
+    if (isLimitReached || search) return false;
+
+    if (!validationFields.length) return true;
+
+    const last = list[list.length - 1];
+    return validationFields.every((field) => {
+      const v = last[field];
+      if (typeof v === "string") return v.trim() !== "";
+      return !!v;
     });
   }, [list, search, validationFields, isLimitReached]);
 
   const filteredItems = useMemo(() => {
-    let filtered = list
+    const items = list
       .map((item, index) => ({ ...item, originalIndex: index }))
-      .filter(item => {
+      .filter((item) => {
         if (!search) return true;
-        
-        const searchLower = search.toLowerCase();
-        return Object.entries(item).some(([key, value]) => {
-          if (key === 'originalIndex' || key === 'file' || key === 'id') return false;
-          if (typeof value === 'string') {
-            return value.toLowerCase().includes(searchLower);
-          }
-          if (Array.isArray(value)) {
-            return value.some((v: string) => 
-              typeof v === 'string' && v.toLowerCase().includes(searchLower)
-            );
-          }
-          return false;
-        });
+        return Object.values(item).some(
+          (v) =>
+            typeof v === "string" &&
+            v.toLowerCase().includes(search.toLowerCase())
+        );
       });
-    
-    if (sortOrder === 'desc') {
-      filtered = filtered.sort((a, b) => b.originalIndex - a.originalIndex);
-    } else {
-      filtered = filtered.sort((a, b) => a.originalIndex - b.originalIndex);
-    }
-    
-    return filtered;
+
+    return sortOrder === "desc"
+      ? items.reverse()
+      : items;
   }, [list, search, sortOrder]);
 
-  const addItem = useCallback((newItem?: T) => {
-    if (isLimitReached) {
-      setErrorMsg(`Limite do plano atingido! Plano ${currentPlanType} permite apenas ${currentPlanLimit} itens.`);
-      setTimeout(() => setErrorMsg(""), 5000);
+  // =========================
+  // ACTIONS
+  // =========================
+  const addItem = useCallback(() => {
+    if (!canAddNewItem) {
+      setShowValidation(true);
       return;
     }
 
-    if (search) {
-      setErrorMsg("Limpe a busca antes de adicionar um novo item.");
-      setTimeout(() => setErrorMsg(""), 3000);
-      return;
-    }
-
-    const lastItem = list[list.length - 1];
-    
-    if (validationFields.length > 0) {
-      const isValid = validationFields.every(field => {
-        const value = lastItem[field];
-        if (typeof value === 'string') return value.trim() !== "";
-        if (Array.isArray(value)) return value.some((v: string) => v.trim() !== "");
-        return !!value;
-      });
-
-      if (!isValid) {
-        setShowValidation(true);
-        setErrorMsg("Complete o item atual antes de adicionar um novo.");
-        setTimeout(() => setErrorMsg(""), 3000);
-        return;
-      }
-    }
-
-    const itemToAdd = newItem || createNewItem();
-    
-    setList([...list, itemToAdd]);
+    setList([...list, createNewItem()]);
     setShowValidation(false);
-    
+
     setTimeout(() => {
-      newItemRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'center'
-      });
+      newItemRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 100);
-  }, [list, search, validationFields, createNewItem, isLimitReached, currentPlanLimit, currentPlanType]);
+  }, [list, canAddNewItem, createNewItem]);
 
-  const openDeleteSingleModal = useCallback((index: number, title: string) => {
-    setDeleteModal({
-      isOpen: true,
-      type: 'single',
-      index,
-      title: title || "Item sem título"
-    });
-  }, []);
+  const openDeleteSingleModal = (index: number, title: string) =>
+    setDeleteModal({ isOpen: true, type: "single", index, title });
 
-  const openDeleteAllModal = useCallback(() => {
-    setDeleteModal({
-      isOpen: true,
-      type: 'all',
-      index: null,
-      title: ''
-    });
-  }, []);
+  const openDeleteAllModal = () =>
+    setDeleteModal({ isOpen: true, type: "all", index: null, title: "" });
 
-  const closeDeleteModal = useCallback(() => {
-    setDeleteModal({
-      isOpen: false,
-      type: null,
-      index: null,
-      title: ''
-    });
-  }, []);
+  const closeDeleteModal = () =>
+    setDeleteModal({ isOpen: false, type: null, index: null, title: "" });
 
-  const confirmDelete = useCallback(async (updateFunction?: (newList: T[]) => Promise<void>) => {
-    if (deleteModal.type === 'all') {
-      const newEmptyItem = createNewItem();
-      setList([newEmptyItem]);
-      setSearch("");
-      setSortOrder('asc');
-      setShowValidation(false);
-      
-      if (exists && updateFunction) {
-        try {
-          await updateFunction([newEmptyItem]);
-        } catch (err: any) {
-          console.error("Erro ao limpar itens:", err);
-        }
-      }
-    } else if (deleteModal.type === 'single' && deleteModal.index !== null) {
-      if (list.length === 1) {
-        const newEmptyItem = createNewItem();
-        setList([newEmptyItem]);
-        if (exists && updateFunction) await updateFunction([newEmptyItem]);
-      } else {
-        const newList = list.filter((_, i) => i !== deleteModal.index);
-        setList(newList);
-        if (exists && updateFunction) await updateFunction(newList);
-      }
+  const confirmDelete = async (
+    updateFn?: (list: T[]) => Promise<any>
+  ) => {
+    let newList = list;
+
+    if (deleteModal.type === "all") {
+      newList = [createNewItem()];
     }
-    
+
+    if (deleteModal.type === "single" && deleteModal.index !== null) {
+      newList =
+        list.length === 1
+          ? [createNewItem()]
+          : list.filter((_, i) => i !== deleteModal.index);
+    }
+
+    setList(newList);
+    if (exists && updateFn) await updateFn(newList);
     closeDeleteModal();
-  }, [deleteModal, list, exists, createNewItem, closeDeleteModal]);
+  };
 
-  const clearFilters = useCallback(() => {
-    setSearch("");
-    setSortOrder('asc');
-  }, []);
-
-  const getCompleteCount = useCallback((): number => {
-    if (validationFields.length === 0) return list.length;
-    
-    return list.filter(item => 
-      validationFields.every(field => {
-        const value = item[field];
-        if (typeof value === 'string') return value.trim() !== "";
-        if (Array.isArray(value)) return value.some((v: string) => v.trim() !== "");
-        return !!value;
+  const completeCount = useMemo(() => {
+    if (!validationFields.length) return list.length;
+    return list.filter((item) =>
+      validationFields.every((f) => {
+        const v = item[f];
+        return typeof v === "string" ? v.trim() : !!v;
       })
     ).length;
   }, [list, validationFields]);
@@ -294,7 +208,6 @@ export function useListManagement<T extends { id?: string }>({
     list,
     setList,
     exists,
-    setExists,
     loading,
     setLoading,
     success,
@@ -306,12 +219,11 @@ export function useListManagement<T extends { id?: string }>({
     sortOrder,
     setSortOrder,
     showValidation,
-    setShowValidation,
     deleteModal,
     newItemRef,
     filteredItems,
-    canAddNewItem: canAddNewItem(),
-    completeCount: getCompleteCount(),
+    canAddNewItem,
+    completeCount,
     isLimitReached,
     currentPlanLimit,
     currentPlanType,
@@ -320,6 +232,9 @@ export function useListManagement<T extends { id?: string }>({
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    clearFilters,
+    clearFilters: () => {
+      setSearch("");
+      setSortOrder("asc");
+    },
   };
 }

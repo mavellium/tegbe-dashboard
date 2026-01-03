@@ -26,48 +26,48 @@ export type AggregateFormData = {
 
 export type FormDataMinAggregateOutputType = {
   id: string | null
-  createdAt: Date | null
   type: string | null
   subtype: string | null
+  createdAt: Date | null
 }
 
 export type FormDataMaxAggregateOutputType = {
   id: string | null
-  createdAt: Date | null
   type: string | null
   subtype: string | null
+  createdAt: Date | null
 }
 
 export type FormDataCountAggregateOutputType = {
   id: number
   values: number
-  createdAt: number
   type: number
   subtype: number
+  createdAt: number
   _all: number
 }
 
 
 export type FormDataMinAggregateInputType = {
   id?: true
-  createdAt?: true
   type?: true
   subtype?: true
+  createdAt?: true
 }
 
 export type FormDataMaxAggregateInputType = {
   id?: true
-  createdAt?: true
   type?: true
   subtype?: true
+  createdAt?: true
 }
 
 export type FormDataCountAggregateInputType = {
   id?: true
   values?: true
-  createdAt?: true
   type?: true
   subtype?: true
+  createdAt?: true
   _all?: true
 }
 
@@ -146,9 +146,9 @@ export type FormDataGroupByArgs<ExtArgs extends runtime.Types.Extensions.Interna
 export type FormDataGroupByOutputType = {
   id: string
   values: runtime.JsonValue
-  createdAt: Date
   type: string
   subtype: string
+  createdAt: Date
   _count: FormDataCountAggregateOutputType | null
   _min: FormDataMinAggregateOutputType | null
   _max: FormDataMaxAggregateOutputType | null
@@ -175,36 +175,37 @@ export type FormDataWhereInput = {
   NOT?: Prisma.FormDataWhereInput | Prisma.FormDataWhereInput[]
   id?: Prisma.StringFilter<"FormData"> | string
   values?: Prisma.JsonFilter<"FormData">
-  createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
   type?: Prisma.StringFilter<"FormData"> | string
   subtype?: Prisma.StringFilter<"FormData"> | string
+  createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
 }
 
 export type FormDataOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   values?: Prisma.SortOrder
-  createdAt?: Prisma.SortOrder
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
 }
 
 export type FormDataWhereUniqueInput = Prisma.AtLeast<{
   id?: string
+  type_subtype?: Prisma.FormDataTypeSubtypeCompoundUniqueInput
   AND?: Prisma.FormDataWhereInput | Prisma.FormDataWhereInput[]
   OR?: Prisma.FormDataWhereInput[]
   NOT?: Prisma.FormDataWhereInput | Prisma.FormDataWhereInput[]
   values?: Prisma.JsonFilter<"FormData">
-  createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
   type?: Prisma.StringFilter<"FormData"> | string
   subtype?: Prisma.StringFilter<"FormData"> | string
-}, "id">
+  createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
+}, "id" | "type_subtype">
 
 export type FormDataOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   values?: Prisma.SortOrder
-  createdAt?: Prisma.SortOrder
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
   _count?: Prisma.FormDataCountOrderByAggregateInput
   _max?: Prisma.FormDataMaxOrderByAggregateInput
   _min?: Prisma.FormDataMinOrderByAggregateInput
@@ -216,87 +217,92 @@ export type FormDataScalarWhereWithAggregatesInput = {
   NOT?: Prisma.FormDataScalarWhereWithAggregatesInput | Prisma.FormDataScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"FormData"> | string
   values?: Prisma.JsonWithAggregatesFilter<"FormData">
-  createdAt?: Prisma.DateTimeWithAggregatesFilter<"FormData"> | Date | string
   type?: Prisma.StringWithAggregatesFilter<"FormData"> | string
   subtype?: Prisma.StringWithAggregatesFilter<"FormData"> | string
+  createdAt?: Prisma.DateTimeWithAggregatesFilter<"FormData"> | Date | string
 }
 
 export type FormDataCreateInput = {
   id?: string
   values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
   createdAt?: Date | string
-  type?: string
-  subtype?: string
 }
 
 export type FormDataUncheckedCreateInput = {
   id?: string
   values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
   createdAt?: Date | string
-  type?: string
-  subtype?: string
 }
 
 export type FormDataUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FormDataUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FormDataCreateManyInput = {
   id?: string
   values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
   createdAt?: Date | string
-  type?: string
-  subtype?: string
 }
 
 export type FormDataUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
 export type FormDataUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
-  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type FormDataTypeSubtypeCompoundUniqueInput = {
+  type: string
+  subtype: string
 }
 
 export type FormDataCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   values?: Prisma.SortOrder
-  createdAt?: Prisma.SortOrder
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
 }
 
 export type FormDataMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  createdAt?: Prisma.SortOrder
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
 }
 
 export type FormDataMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
-  createdAt?: Prisma.SortOrder
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
+  createdAt?: Prisma.SortOrder
 }
 
 export type StringFieldUpdateOperationsInput = {
@@ -312,36 +318,36 @@ export type DateTimeFieldUpdateOperationsInput = {
 export type FormDataSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   values?: boolean
-  createdAt?: boolean
   type?: boolean
   subtype?: boolean
+  createdAt?: boolean
 }, ExtArgs["result"]["formData"]>
 
 export type FormDataSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   values?: boolean
-  createdAt?: boolean
   type?: boolean
   subtype?: boolean
+  createdAt?: boolean
 }, ExtArgs["result"]["formData"]>
 
 export type FormDataSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   values?: boolean
-  createdAt?: boolean
   type?: boolean
   subtype?: boolean
+  createdAt?: boolean
 }, ExtArgs["result"]["formData"]>
 
 export type FormDataSelectScalar = {
   id?: boolean
   values?: boolean
-  createdAt?: boolean
   type?: boolean
   subtype?: boolean
+  createdAt?: boolean
 }
 
-export type FormDataOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "values" | "createdAt" | "type" | "subtype", ExtArgs["result"]["formData"]>
+export type FormDataOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "values" | "type" | "subtype" | "createdAt", ExtArgs["result"]["formData"]>
 
 export type $FormDataPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "FormData"
@@ -349,9 +355,9 @@ export type $FormDataPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     values: runtime.JsonValue
-    createdAt: Date
     type: string
     subtype: string
+    createdAt: Date
   }, ExtArgs["result"]["formData"]>
   composites: {}
 }
@@ -777,9 +783,9 @@ export interface Prisma__FormDataClient<T, Null = never, ExtArgs extends runtime
 export interface FormDataFieldRefs {
   readonly id: Prisma.FieldRef<"FormData", 'String'>
   readonly values: Prisma.FieldRef<"FormData", 'Json'>
-  readonly createdAt: Prisma.FieldRef<"FormData", 'DateTime'>
   readonly type: Prisma.FieldRef<"FormData", 'String'>
   readonly subtype: Prisma.FieldRef<"FormData", 'String'>
+  readonly createdAt: Prisma.FieldRef<"FormData", 'DateTime'>
 }
     
 

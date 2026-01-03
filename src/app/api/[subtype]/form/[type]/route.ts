@@ -1,15 +1,12 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import prisma from "@/lib/prisma";
 
-/**
- * Upload de arquivos usando Vercel Blob
- */
-async function uploadToBlob(file: File): Promise<string> {
-  const filename = `${Date.now()}-${file.name}`;
-
-  const blob = await put(filename, file, {
+/* =========================================================
+   Upload helper
+========================================================= */
+async function uploadToBlob(file: File) {
+  const blob = await put(`${Date.now()}-${file.name}`, file, {
     access: "public",
     token: process.env.BLOB_READ_WRITE_TOKEN,
     contentType: file.type,
@@ -18,164 +15,112 @@ async function uploadToBlob(file: File): Promise<string> {
   return blob.url;
 }
 
-/**
- * Parser do FormData mantendo compatibilidade
- */
-async function parseFormData(form: FormData): Promise<any[]> {
-  const values: any[] = [];
-  const fileFields: Record<string, File> = {};
+/* =========================================================
+   UPSERT (POST e PUT usam o mesmo código)
+========================================================= */
+async function handleUpsert(
+  req: NextRequest,
+  context: { params: Promise<{ type: string; subtype: string }> }
+) {
+  const { type, subtype } = await context.params;
+  const form = await req.formData();
 
-  for (const [key, value] of form.entries()) {
-    if (value instanceof File) {
-      fileFields[key] = value;
-      continue;
-    }
+  const rawValues = form.get("values");
+  const values = rawValues ? JSON.parse(rawValues as string) : [];
+  const safeValues = Array.isArray(values) ? values : [];
 
-    if (!key.startsWith("values[")) continue;
-
-    const match = key.match(/values\[(\d+)\]\[(\w+)\](?:\[(\d+)\])?/);
-    if (!match) continue;
-
-    const index = Number(match[1]);
-    const field = match[2];
-    const arrayIndex = match[3];
-
-    if (!values[index]) values[index] = {};
-
-    if (arrayIndex !== undefined) {
-      if (!Array.isArray(values[index][field])) {
-        values[index][field] = [];
-      }
-      values[index][field][Number(arrayIndex)] = value;
-    } else {
-      values[index][field] = value;
+  // uploads
+  for (let i = 0; i < safeValues.length; i++) {
+    const file = form.get(`file${i}`) as File | null;
+    if (file && file.size > 0) {
+      const url = await uploadToBlob(file);
+      safeValues[i].image = url;
     }
   }
 
-  for (const [key, file] of Object.entries(fileFields)) {
-    if (!file || file.size === 0) continue;
+  // 🔥 UPSERT POR type + subtype
+  const record = await prisma.formData.upsert({
+    where: {
+      type_subtype: {
+        type,
+        subtype,
+      },
+    },
+    update: {
+      values: safeValues,
+    },
+    create: {
+      type,
+      subtype,
+      values: safeValues,
+    },
+  });
 
-    const url = await uploadToBlob(file);
-
-    const imageMatch = key.match(/file(\d+)/);
-    const videoMatch = key.match(/video(\d+)/);
-
-    if (imageMatch) {
-      const index = Number(imageMatch[1]);
-      values[index] ??= {};
-      values[index].image = url;
-    }
-
-    if (videoMatch) {
-      const index = Number(videoMatch[1]);
-      values[index] ??= {};
-      values[index].video = url;
-    }
-  }
-
-  return values;
+  return NextResponse.json(record);
 }
 
-/**
- * POST — cria novo registro
- */
+/* =========================================================
+   POST
+========================================================= */
 export async function POST(
   req: NextRequest,
   context: { params: Promise<{ type: string; subtype: string }> }
 ) {
   try {
-    const { type, subtype } = await context.params;
-
-    const form = await req.formData();
-    const values = await parseFormData(form);
-
-    const created = await prisma.formData.create({
-      data: { type, subtype, values },
-    });
-
-    return NextResponse.json(created);
+    return await handleUpsert(req, context);
   } catch (err) {
     console.error("POST ERROR:", err);
-    return NextResponse.json({ error: "Erro" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao salvar" }, { status: 500 });
   }
 }
 
-/**
- * GET — lista por type + subtype
- */
-export async function GET(
+/* =========================================================
+   PUT
+========================================================= */
+export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ type: string; subtype: string }> }
 ) {
   try {
-    const { type, subtype } = await context.params;
-
-    const list = await prisma.formData.findMany({
-      where: { type, subtype },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return NextResponse.json(list, {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-      },
-    });
-  } catch (err) {
-    console.error("GET ERROR:", err);
-    return NextResponse.json(
-      { error: "Erro ao listar" },
-      {
-        status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-        },
-      }
-    );
-  }
-}
-
-/**
- * PUT — atualiza por ID
- */
-export async function PUT(req: NextRequest) {
-  try {
-    const form = await req.formData();
-    const id = form.get("id")?.toString();
-
-    if (!id) {
-      return NextResponse.json({ error: "ID não enviado" }, { status: 400 });
-    }
-
-    const values = await parseFormData(form);
-
-    const updated = await prisma.formData.update({
-      where: { id },
-      data: { values },
-    });
-
-    return NextResponse.json(updated);
+    return await handleUpsert(req, context);
   } catch (err) {
     console.error("PUT ERROR:", err);
-    return NextResponse.json({ error: "Erro" }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao atualizar" }, { status: 500 });
   }
 }
 
-/**
- * DELETE — remove por ID
- */
-export async function DELETE(req: NextRequest) {
-  try {
-    const id = req.nextUrl.searchParams.get("id");
+/* =========================================================
+   GET
+========================================================= */
+export async function GET(
+  _req: NextRequest,
+  context: { params: Promise<{ type: string; subtype: string }> }
+) {
+  const { type, subtype } = await context.params;
 
-    if (!id) {
-      return NextResponse.json({ error: "ID não enviado" }, { status: 400 });
-    }
+  const record = await prisma.formData.findUnique({
+    where: {
+      type_subtype: { type, subtype },
+    },
+  });
 
-    await prisma.formData.delete({ where: { id } });
+  return NextResponse.json(record ?? null);
+}
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("DELETE ERROR:", err);
-    return NextResponse.json({ error: "Erro ao excluir" }, { status: 500 });
-  }
+/* =========================================================
+   DELETE
+========================================================= */
+export async function DELETE(
+  _req: NextRequest,
+  context: { params: Promise<{ type: string; subtype: string }> }
+) {
+  const { type, subtype } = await context.params;
+
+  await prisma.formData.delete({
+    where: {
+      type_subtype: { type, subtype },
+    },
+  });
+
+  return NextResponse.json({ success: true });
 }

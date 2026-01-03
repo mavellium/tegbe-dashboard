@@ -18,8 +18,15 @@
       },
       "menuItems": [
         { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/" },
+        { "name": "Cabeçalho", "icon": "Newspaper", "href": "/header" },
         { "name": "Headline", "icon": "HelpCircle", "href": "/headline" },
-        { "name": "Passo a Passo", "icon": "Building", "href": "/steps" }
+        { "name": "Logos", "icon": "HelpCircle", "href": "/logos" },
+        { "name": "Passo a Passo", "icon": "HelpCircle", "href": "/steps" },
+        { "name": "Ecommerce", "icon": "HelpCircle", "href": "/ecommerce" },
+        { "name": "Setores", "icon": "HelpCircle", "href": "/setors" },
+        { "name": "Seção Imagem", "icon": "HelpCircle", "href": "/section-images" },
+        { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer" },
+        { "name": "Ads", "icon": "HelpCircle", "href": "/ads" }
       ]
     },
     {

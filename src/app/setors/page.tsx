@@ -7,7 +7,7 @@ import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Layers, X, GripVertical, ArrowUpDown } from "lucide-react";
+import { TrendingUp, X, GripVertical, ArrowUpDown, Bold } from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { SearchSortBar } from "@/components/Manage/SearchSortBar";
 import { ItemHeader } from "@/components/Manage/ItemHeader";
@@ -35,13 +35,11 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import ClientOnly from "@/components/ClientOnly";
 
-interface StepItem {
+interface SetorsItem {
   id?: string;
   title: string;
-  subtitle: string;
-  description: string;
+  image: string;
   file?: File | null;
-  image?: string;
 }
 
 const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string, alt?: string }) => {
@@ -52,7 +50,7 @@ const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string
       <img
         src={imageUrl}
         alt={alt}
-        className="h-32 w-32 object-cover rounded-xl border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200"
+        className="h-40 w-40 object-cover rounded-xl border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200"
         onError={(e) => {
           console.error('Erro ao carregar imagem:', imageUrl);
           e.currentTarget.style.display = 'none';
@@ -64,9 +62,9 @@ const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string
       <Image
         src={imageUrl}
         alt={alt}
-        width={128}
-        height={128}
-        className="h-32 w-32 object-cover rounded-xl border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200"
+        width={160}
+        height={160}
+        className="h-40 w-40 object-cover rounded-xl border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200"
         onError={(e) => {
           console.error('Erro ao carregar imagem:', imageUrl);
           e.currentTarget.style.display = 'none';
@@ -76,39 +74,39 @@ const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string
   }
 };
 
-interface SortableStepItemProps {
-  step: StepItem;
+interface SortableSetorsItemProps {
+  item: SetorsItem;
   index: number;
   originalIndex: number;
   isLastInOriginalList: boolean;
   isLastAndEmpty: boolean;
   showValidation: boolean;
-  stepList: StepItem[];
-  handleChange: (index: number, field: keyof StepItem, value: any) => void;
+  itemList: SetorsItem[];
+  handleChange: (index: number, field: keyof SetorsItem, value: any) => void;
   handleFileChange: (index: number, file: File | null) => void;
   openDeleteSingleModal: (index: number, title: string) => void;
   setExpandedImage: (image: string | null) => void;
-  getImageUrl: (step: StepItem) => string;
+  getImageUrl: (item: SetorsItem) => string;
   setNewItemRef?: (node: HTMLDivElement | null) => void;
 }
 
-function SortableStepItem({
-  step,
+function SortableSetorsItem({
+  item,
   index,
   originalIndex,
   isLastInOriginalList,
   isLastAndEmpty,
   showValidation,
-  stepList,
+  itemList,
   handleChange,
   handleFileChange,
   openDeleteSingleModal,
   setExpandedImage,
   getImageUrl,
   setNewItemRef,
-}: SortableStepItemProps) {
+}: SortableSetorsItemProps) {
   const stableId = useId();
-  const sortableId = step.id || `step-${index}-${stableId}`;
+  const sortableId = item.id || `Setors-${index}-${stableId}`;
 
   const {
     attributes,
@@ -125,11 +123,9 @@ function SortableStepItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const hasTitle = step.title.trim() !== "";
-  const hasSubtitle = step.subtitle.trim() !== "";
-  const hasDescription = step.description.trim() !== "";
-  const hasImage = Boolean(step.image?.trim() !== "" || step.file);
-  const imageUrl = getImageUrl(step);
+  const hasTitle = item.title.trim() !== "";
+  const hasImage = Boolean(item.image?.trim() !== "" || item.file);
+  const imageUrl = getImageUrl(item);
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -149,7 +145,7 @@ function SortableStepItem({
       className={`relative ${isDragging ? 'z-50' : ''}`}
     >
       <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-        isLastInOriginalList && showValidation && !hasTitle ? 'ring-2 ring-red-500' : ''
+        isLastInOriginalList && showValidation && (!hasTitle || !hasImage) ? 'ring-2 ring-red-500' : ''
       } ${isDragging ? 'shadow-lg scale-105' : ''}`}>
         <div className="p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
           <div className="flex items-start justify-between mb-4">
@@ -172,14 +168,12 @@ function SortableStepItem({
                 index={originalIndex}
                 fields={[
                   { label: 'Título', hasValue: hasTitle },
-                  { label: 'Subtítulo', hasValue: hasSubtitle },
-                  { label: 'Descrição', hasValue: hasDescription },
                   { label: 'Imagem', hasValue: hasImage }
                 ]}
                 showValidation={showValidation}
                 isLast={isLastInOriginalList}
-                onDelete={() => openDeleteSingleModal(originalIndex, step.title)}
-                showDelete={stepList.length > 1}
+                onDelete={() => openDeleteSingleModal(originalIndex, item.title)}
+                showDelete={itemList.length > 1}
               />
             </div>
           </div>
@@ -188,20 +182,20 @@ function SortableStepItem({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Imagem
+                  Imagem do Item
                 </label>
 
                 <ImageUpload
                   imageUrl={imageUrl}
                   hasImage={hasImage}
-                  file={step.file || null}
+                  file={item.file || null}
                   onFileChange={(file) => handleFileChange(originalIndex, file)}
                   onExpand={setExpandedImage}
-                  label="Imagem da Etapa"
-                  altText="Preview da etapa"
-                  imageInfo={hasImage && !step.file
+                  label="Imagem de Destaque"
+                  altText="Preview do item"
+                  imageInfo={hasImage && !item.file
                     ? "Imagem atual do servidor. Selecione um novo arquivo para substituir."
-                    : "Formatos suportados: JPG, PNG, WEBP."}
+                    : "Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 400x400px."}
                   customPreview={imageUrl ? <ImagePreviewComponent imageUrl={imageUrl} /> : undefined}
                 />
               </div>
@@ -209,39 +203,14 @@ function SortableStepItem({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 flex items-center gap-2">
                   Título
                 </label>
-                <Input
-                  type="text"
-                  placeholder="Ex: Aprender"
-                  value={step.title}
-                  onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
-                  className="font-medium"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Subtítulo
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Ex: Do zero ao primeiro faturamento."
-                  value={step.subtitle}
-                  onChange={(e: any) => handleChange(originalIndex, "subtitle", e.target.value)}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Descrição
-                </label>
                 <textarea
-                  placeholder="Validamos seu nicho e construímos sua base. Ideal para quem busca segurança no primeiro passo."
-                  value={step.description}
-                  onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
-                  rows={3}
+                  placeholder="Ex: **Fim do Acha que sabe**. O algoritmo muda toda semana. Pare de testar na sorte..."
+                  value={item.title}
+                  onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
+                  rows={5}
                   className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                 />
               </div>
@@ -253,19 +222,17 @@ function SortableStepItem({
   );
 }
 
-export default function StepsPage({ 
-  type = "steps", 
+export default function SetorsPage({ 
+  type = "setors", 
   subtype = "tegbe-institucional"
 }: { 
   type: string; 
   subtype: string; 
 }) {
-  const defaultStep = useMemo(() => ({ 
+  const defaultItem = useMemo(() => ({ 
     title: "", 
-    subtitle: "", 
-    description: "",
+    image: "",
     file: null, 
-    image: "" 
   }), []);
 
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
@@ -273,8 +240,8 @@ export default function StepsPage({
   const apiBase = `/api/${subtype}/form`;
 
   const {
-    list: stepList,
-    setList: setStepList,
+    list: itemList,
+    setList: setItemList,
     exists,
     loading,
     setLoading,
@@ -287,7 +254,7 @@ export default function StepsPage({
     sortOrder,
     setSortOrder,
     showValidation,
-    filteredItems: filteredSteps,
+    filteredItems: filteredItems,
     deleteModal,
     newItemRef,
     canAddNewItem,
@@ -301,14 +268,14 @@ export default function StepsPage({
     closeDeleteModal,
     confirmDelete,
     clearFilters,
-  } = useListManagement<StepItem>({
+  } = useListManagement<SetorsItem>({
     type,
-    apiPath: `${apiBase}/${type}`, // Caminho dinâmico com subtype
-    defaultItem: defaultStep,
-    validationFields: ["title", "subtitle", "description"]
+    apiPath: `${apiBase}/${type}`,
+    defaultItem,
+    validationFields: ["title", "image"]
   });
 
-  const remainingSlots = Math.max(0, currentPlanLimit - stepList.length);
+  const remainingSlots = Math.max(0, currentPlanLimit - itemList.length);
 
   const setNewItemRef = useCallback((node: HTMLDivElement | null) => {
     if (newItemRef && node) {
@@ -333,16 +300,16 @@ export default function StepsPage({
     if (!over) return;
 
     if (active.id !== over.id) {
-      const oldIndex = stepList.findIndex((item) => 
+      const oldIndex = itemList.findIndex((item) => 
         item.id === active.id || item.id?.includes(active.id as string)
       );
-      const newIndex = stepList.findIndex((item) => 
+      const newIndex = itemList.findIndex((item) => 
         item.id === over.id || item.id?.includes(over.id as string)
       );
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newList = arrayMove(stepList, oldIndex, newIndex);
-        setStepList(newList);
+        const newList = arrayMove(itemList, oldIndex, newIndex);
+        setItemList(newList);
       }
     }
   };
@@ -355,12 +322,12 @@ export default function StepsPage({
     setErrorMsg("");
 
     try {
-      const filteredList = stepList.filter(
-        s => s.title.trim() && s.subtitle.trim() && s.description.trim()
+      const filteredList = itemList.filter(
+        item => item.title.trim() && (item.image.trim() || item.file)
       );
 
       if (!filteredList.length) {
-        setErrorMsg("Adicione ao menos uma etapa completa.");
+        setErrorMsg("Adicione ao menos um item completo com título e imagem.");
         return;
       }
 
@@ -371,14 +338,13 @@ export default function StepsPage({
       fd.append(
         "values",
         JSON.stringify(
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           filteredList.map(({ file, ...rest }) => rest)
         )
       );
 
-      filteredList.forEach((s, i) => {
-        if (s.file) {
-          fd.append(`file${i}`, s.file);
+      filteredList.forEach((item, i) => {
+        if (item.file) {
+          fd.append(`file${i}`, item.file);
         }
       });
 
@@ -398,11 +364,11 @@ export default function StepsPage({
 
       const normalized = saved.values.map((v: any, i: number) => ({
         ...v,
-        id: v.id || `step-${Date.now()}-${i}`,
+        id: v.id || `Setors-${Date.now()}-${i}`,
         file: null,
       }));
 
-      setStepList(normalized);
+      setItemList(normalized);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
@@ -413,59 +379,56 @@ export default function StepsPage({
     }
   };
 
-  const handleChange = (index: number, field: keyof StepItem, value: any) => {
-    const newList = [...stepList];
+  const handleChange = (index: number, field: keyof SetorsItem, value: any) => {
+    const newList = [...itemList];
     newList[index] = { ...newList[index], [field]: value };
-    setStepList(newList);
+    setItemList(newList);
   };
 
   const handleFileChange = (index: number, file: File | null) => {
-    const newList = [...stepList];
+    const newList = [...itemList];
     newList[index] = { ...newList[index], file };
-    setStepList(newList);
+    setItemList(newList);
   };
 
-  const getImageUrl = (step: StepItem): string => {
-    if (step.file) {
-      return URL.createObjectURL(step.file);
+  const getImageUrl = (item: SetorsItem): string => {
+    if (item.file) {
+      return URL.createObjectURL(item.file);
     }
-    if (step.image) {
-      if (step.image.startsWith('http') || step.image.startsWith('//')) {
-        return step.image;
+    if (item.image) {
+      if (item.image.startsWith('http') || item.image.startsWith('//')) {
+        return item.image;
       } else {
-        return `https://mavellium.com.br${step.image.startsWith('/') ? '' : '/'}${step.image}`;
+        return `https://mavellium.com.br${item.image.startsWith('/') ? '' : '/'}${item.image}`;
       }
     }
     return "";
   };
 
-  const updateSteps = async (list: StepItem[]) => {
+  const updateItems = async (list: SetorsItem[]) => {
     if (!exists) return;
 
     const filteredList = list.filter(
-      s => s.title.trim() || s.subtitle.trim() || s.description.trim() || s.file || s.image
+      item => item.title.trim() || item.file || item.image
     );
 
     const fd = new FormData();
     
     fd.append("id", exists.id);
     
-    filteredList.forEach((s, i) => {
-      fd.append(`values[${i}][title]`, s.title);
-      fd.append(`values[${i}][subtitle]`, s.subtitle);
-      fd.append(`values[${i}][description]`, s.description);
-      fd.append(`values[${i}][image]`, s.image || "");
+    filteredList.forEach((item, i) => {
+      fd.append(`values[${i}][title]`, item.title);
+      fd.append(`values[${i}][image]`, item.image || "");
       
-      if (s.file) {
-        fd.append(`file${i}`, s.file);
+      if (item.file) {
+        fd.append(`file${i}`, item.file);
       }
       
-      if (s.id) {
-        fd.append(`values[${i}][id]`, s.id);
+      if (item.id) {
+        fd.append(`values[${i}][id]`, item.id);
       }
     });
 
-    // Use a URL dinâmica com subtype
     const res = await fetch(`${apiBase}/${type}`, {
       method: "PUT",
       body: fd,
@@ -485,17 +448,17 @@ export default function StepsPage({
   };
 
   const stableIds = useMemo(
-    () => stepList.map((item, index) => item.id ?? `step-${index}`),
-    [stepList]
+    () => itemList.map((item, index) => item.id ?? `Setors-${index}`),
+    [itemList]
   );
 
   return (
     <ManageLayout
-      headerIcon={Layers}
-      title="Etapas"
-      description="Gerencie as etapas do processo de e-commerce"
+      headerIcon={TrendingUp}
+      title="Itens de setor"
+      description="Gerencie os itens de setor"
       exists={!!exists}
-      itemName="Etapa"
+      itemName="Setores"
     >
       <div className="mb-6 space-y-4">
         <SearchSortBar
@@ -504,10 +467,10 @@ export default function StepsPage({
           sortOrder={sortOrder}
           setSortOrder={setSortOrder}
           onClearFilters={clearFilters}
-          searchPlaceholder="Buscar etapas..."
-          total={stepList.length}
-          showing={filteredSteps.length}
-          searchActiveText="ⓘ Busca ativa - não é possível adicionar nova etapa"
+          searchPlaceholder="Buscar itens de crescimento..."
+          total={itemList.length}
+          showing={filteredItems.length}
+          searchActiveText="ⓘ Busca ativa - não é possível adicionar novo item"
           currentPlanType={currentPlanType}
           currentPlanLimit={currentPlanLimit}
           remainingSlots={remainingSlots}
@@ -519,98 +482,87 @@ export default function StepsPage({
         <form onSubmit={handleSubmit}>
           <AnimatePresence>
             {search ? (
-              filteredSteps.map((step: any) => {
-                const originalIndex = stepList.findIndex(s => s.id === step.id);
-                const hasTitle = step.title.trim() !== "";
-                const hasSubtitle = step.subtitle.trim() !== "";
-                const hasDescription = step.description.trim() !== "";
-                const hasImage = Boolean(step.image?.trim() !== "" || step.file);
-                const isLastInOriginalList = originalIndex === stepList.length - 1;
-                const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasSubtitle && !hasDescription;
-                const imageUrl = getImageUrl(step);
+              filteredItems.map((item: any) => {
+                const originalIndex = itemList.findIndex(i => i.id === item.id);
+                const hasTitle = item.title.trim() !== "";
+                const hasImage = Boolean(item.image?.trim() !== "" || item.file);
+                const isLastInOriginalList = originalIndex === itemList.length - 1;
+                const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasImage;
+                const imageUrl = getImageUrl(item);
 
                 return (
                   <div
-                    key={step.id || `step-${originalIndex}`}
+                    key={item.id || `Setors-${originalIndex}`}
                     ref={isLastAndEmpty ? setNewItemRef : null}
                   >
                     <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-                      isLastInOriginalList && showValidation && !hasTitle ? 'ring-2 ring-red-500' : ''
+                      isLastInOriginalList && showValidation && (!hasTitle || !hasImage) ? 'ring-2 ring-red-500' : ''
                     }`}>
                       <div className="p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
                         <ItemHeader
                           index={originalIndex}
                           fields={[
                             { label: 'Título', hasValue: hasTitle },
-                            { label: 'Subtítulo', hasValue: hasSubtitle },
-                            { label: 'Descrição', hasValue: hasDescription },
                             { label: 'Imagem', hasValue: hasImage }
                           ]}
                           showValidation={showValidation}
                           isLast={isLastInOriginalList}
-                          onDelete={() => openDeleteSingleModal(originalIndex, step.title)}
-                          showDelete={stepList.length > 1}
+                          onDelete={() => openDeleteSingleModal(originalIndex, item.title)}
+                          showDelete={itemList.length > 1}
                         />
                         
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="space-y-4">
                             <div>
                               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Imagem
+                                Imagem do Item
                               </label>
 
                               <ImageUpload
                                 imageUrl={imageUrl}
                                 hasImage={hasImage}
-                                file={step.file || null}
+                                file={item.file || null}
                                 onFileChange={(file) => handleFileChange(originalIndex, file)}
                                 onExpand={setExpandedImage}
-                                label="Imagem da Etapa"
-                                altText="Preview da etapa"
-                                imageInfo={hasImage && !step.file
+                                label="Imagem de Destaque"
+                                altText="Preview do item"
+                                imageInfo={hasImage && !item.file
                                   ? "Imagem atual do servidor. Selecione um novo arquivo para substituir."
-                                  : "Formatos suportados: JPG, PNG, WEBP."}
+                                  : "Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 400x400px."}
                               />
                             </div>
                           </div>
 
                           <div className="space-y-4">
                             <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 flex items-center gap-2">
                                 Título
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: Aprender"
-                                value={step.title}
-                                onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
-                                className="font-medium"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Subtítulo
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: Do zero ao primeiro faturamento."
-                                value={step.subtitle}
-                                onChange={(e: any) => handleChange(originalIndex, "subtitle", e.target.value)}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Descrição
+                                <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded">
+                                  <Bold className="w-3 h-3" />
+                                  Use **texto** para negrito
+                                </span>
                               </label>
                               <textarea
-                                placeholder="Validamos seu nicho e construímos sua base. Ideal para quem busca segurança no primeiro passo."
-                                value={step.description}
-                                onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
-                                rows={3}
+                                placeholder="Ex: **Fim do Acha que sabe**. O algoritmo muda toda semana. Pare de testar na sorte..."
+                                value={item.title}
+                                onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
+                                rows={5}
                                 className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
                               />
+                              <div className="mt-2 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
+                                <div className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">Preview:</div>
+                                <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                                  {item.title ? (
+                                    <div dangerouslySetInnerHTML={{
+                                      __html: item.title
+                                        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-blue-600 dark:text-blue-400">$1</strong>')
+                                        .replace(/\n/g, '<br />')
+                                    }} />
+                                  ) : (
+                                    <span className="text-zinc-400 dark:text-zinc-500 italic">Digite um título para ver a prévia...</span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -630,24 +582,23 @@ export default function StepsPage({
                     items={stableIds}
                     strategy={verticalListSortingStrategy}
                   >
-                    {stepList.map((step, index) => {
+                    {itemList.map((item, index) => {
                       const originalIndex = index;
-                      const hasTitle = step.title.trim() !== "";
-                      const hasSubtitle = step.subtitle.trim() !== "";
-                      const hasDescription = step.description.trim() !== "";
-                      const isLastInOriginalList = index === stepList.length - 1;
-                      const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasSubtitle && !hasDescription;
+                      const hasTitle = item.title.trim() !== "";
+                      const hasImage = Boolean(item.image?.trim() !== "" || item.file);
+                      const isLastInOriginalList = index === itemList.length - 1;
+                      const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasImage;
 
                       return (
-                        <SortableStepItem
+                        <SortableSetorsItem
                           key={stableIds[index]}
-                          step={step}
+                          item={item}
                           index={index}
                           originalIndex={originalIndex}
                           isLastInOriginalList={isLastInOriginalList}
                           isLastAndEmpty={isLastAndEmpty}
                           showValidation={showValidation}
-                          stepList={stepList}
+                          itemList={itemList}
                           handleChange={handleChange}
                           handleFileChange={handleFileChange}
                           openDeleteSingleModal={openDeleteSingleModal}
@@ -673,19 +624,19 @@ export default function StepsPage({
         isSaving={loading}
         exists={!!exists}
         completeCount={completeCount}
-        totalCount={stepList.length}
-        itemName="Etapa"
-        icon={Layers}
+        totalCount={itemList.length}
+        itemName="Item de Crescimento"
+        icon={TrendingUp}
       />
 
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
-        onConfirm={() => confirmDelete(updateSteps)}
+        onConfirm={() => confirmDelete(updateItems)}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={stepList.length}
-        itemName="Etapa"
+        totalItems={itemList.length}
+        itemName="Item de Crescimento"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />

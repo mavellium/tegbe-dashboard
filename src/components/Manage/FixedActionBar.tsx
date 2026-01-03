@@ -7,7 +7,7 @@ import { LucideIcon } from "lucide-react";
 
 interface FixedActionBarProps {
   onDeleteAll: () => void;
-  onAddNew: () => void;
+  onAddNew?: () => void;
   onSubmit: () => void;
   isAddDisabled: boolean;
   isSaving: boolean;
@@ -60,16 +60,20 @@ export function FixedActionBar({
                   Limpar Tudo
                 </Button>
                 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={onAddNew}
-                  disabled={isAddDisabled}
-                  className="flex-1 sm:flex-none justify-center"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo {itemName}
-                </Button>
+                {
+                  onAddNew && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={onAddNew}
+                      disabled={isAddDisabled}
+                      className="flex-1 sm:flex-none justify-center"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Novo {itemName}
+                    </Button>
+                  )
+                }
 
                 <Button
                   type="button"

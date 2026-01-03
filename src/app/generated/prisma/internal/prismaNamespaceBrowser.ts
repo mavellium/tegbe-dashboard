@@ -74,9 +74,9 @@ export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof
 export const FormDataScalarFieldEnum = {
   id: 'id',
   values: 'values',
-  createdAt: 'createdAt',
   type: 'type',
-  subtype: 'subtype'
+  subtype: 'subtype',
+  createdAt: 'createdAt'
 } as const
 
 export type FormDataScalarFieldEnum = (typeof FormDataScalarFieldEnum)[keyof typeof FormDataScalarFieldEnum]
