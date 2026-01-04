@@ -2,13 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState, useCallback, useId } from "react";
+import { useMemo, useState, useCallback, useId, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Tag, X, GripVertical, ArrowUpDown, Users, Trophy, Hash } from "lucide-react";
+import { Tag, X, GripVertical, ArrowUpDown, Users, Trophy, Hash, Plus } from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { SearchSortBar } from "@/components/Manage/SearchSortBar";
 import { ItemHeader } from "@/components/Manage/ItemHeader";
@@ -78,6 +78,128 @@ const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string
   }
 };
 
+// Componente para gerenciar tags
+const TagsManager = ({ 
+  tags, 
+  onAddTag, 
+  onRemoveTag, 
+  onClearAll 
+}: { 
+  tags: string[]; 
+  onAddTag: (tag: string) => void;
+  onRemoveTag: (index: number) => void;
+  onClearAll: () => void;
+}) => {
+  const [newTag, setNewTag] = useState("");
+  const [error, setError] = useState("");
+
+  const handleAddTag = () => {
+    const trimmedTag = newTag.trim();
+    
+    if (!trimmedTag) {
+      setError("Digite uma tag");
+      return;
+    }
+    
+    if (tags.includes(trimmedTag)) {
+      setError("Esta tag já existe");
+      return;
+    }
+    
+    if (tags.length >= 10) {
+      setError("Limite de 10 tags atingido");
+      return;
+    }
+    
+    onAddTag(trimmedTag);
+    setNewTag("");
+    setError("");
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddTag();
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <Input
+            type="text"
+            placeholder="Digite uma tag (ex: E-commerce)"
+            value={newTag}
+            onChange={(e: any) => {
+              setNewTag(e.target.value);
+              setError("");
+            }}
+            onKeyPress={handleKeyPress}
+            className="border-zinc-300 dark:border-zinc-600"
+          />
+        </div>
+        <Button
+          type="button"
+          onClick={handleAddTag}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4"
+        >
+          <Plus className="w-4 h-4" />
+          Adicionar
+        </Button>
+      </div>
+      
+      {error && (
+        <p className="text-sm text-red-500">{error}</p>
+      )}
+      
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+            <Tag className="w-4 h-4" />
+            <span>{tags.length} tag(s)</span>
+          </div>
+          {tags.length > 0 && (
+            <Button
+              type="button"
+              onClick={onClearAll}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              variant="danger"
+            >
+              Limpar todas
+            </Button>
+          )}
+        </div>
+        
+        <div className="flex flex-wrap gap-2 min-h-[40px]">
+          {tags.map((tag, index) => (
+            <div
+              key={index}
+              className="group inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            >
+              <Hash className="w-3 h-3" />
+              <span>{tag}</span>
+              <button
+                type="button"
+                onClick={() => onRemoveTag(index)}
+                className="ml-1 text-blue-800/60 hover:text-blue-800 dark:text-blue-200/60 dark:hover:text-blue-200 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+          
+          {tags.length === 0 && (
+            <div className="w-full text-center py-3 text-zinc-400 dark:text-zinc-500 text-sm italic">
+              Nenhuma tag adicionada. Adicione tags para categorizar o cliente.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface SortableClienteItemProps {
   cliente: ClienteItem;
   index: number;
@@ -145,17 +267,19 @@ function SortableClienteItem({
     [setNodeRef, isLastAndEmpty, setNewItemRef]
   );
 
-  const handleTagsChange = (tagsString: string) => {
-    // Converte string separada por vírgulas em array
-    const tagsArray = tagsString
-      .split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag !== "");
-    
-    handleChange(originalIndex, "tags", tagsArray);
+  const handleAddTag = (tag: string) => {
+    const newTags = [...cliente.tags, tag];
+    handleChange(originalIndex, "tags", newTags);
   };
 
-  const tagsString = cliente.tags.join(', ');
+  const handleRemoveTag = (tagIndex: number) => {
+    const newTags = cliente.tags.filter((_, index) => index !== tagIndex);
+    handleChange(originalIndex, "tags", newTags);
+  };
+
+  const handleClearAllTags = () => {
+    handleChange(originalIndex, "tags", []);
+  };
 
   return (
     <div
@@ -234,32 +358,6 @@ function SortableClienteItem({
                   className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-900/20"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Tags (separadas por vírgula)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Ex: E-commerce, Gestão, Marketing Digital"
-                  value={tagsString}
-                  onChange={(e: any) => handleTagsChange(e.target.value)}
-                />
-                
-                {cliente.tags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {cliente.tags.map((tag, tagIndex) => (
-                      <span
-                        key={tagIndex}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                      >
-                        <Hash className="w-3 h-3" />
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
 
             <div className="space-y-4">
@@ -285,6 +383,18 @@ function SortableClienteItem({
                   placeholder="Ex: Loja de Decorações • Garça/SP"
                   value={cliente.description}
                   onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  Tags
+                </label>
+                <TagsManager
+                  tags={cliente.tags}
+                  onAddTag={handleAddTag}
+                  onRemoveTag={handleRemoveTag}
+                  onClearAll={handleClearAllTags}
                 />
               </div>
             </div>
@@ -442,7 +552,7 @@ export default function CasosSucessoPage({
         ...v,
         id: v.id || `cliente-${Date.now()}-${i}`,
         file: null,
-        tags: v.tags || []
+        tags: Array.isArray(v.tags) ? v.tags : []
       }));
 
       setClienteList(normalized);
@@ -573,6 +683,20 @@ export default function CasosSucessoPage({
                 const isLastAndEmpty = isLastInOriginalList && !hasName && !hasDescription && !hasResult;
                 const imageUrl = getImageUrl(cliente);
 
+                const handleAddTag = (tag: string) => {
+                  const newTags = [...(cliente.tags || []), tag];
+                  handleChange(originalIndex, "tags", newTags);
+                };
+
+                const handleRemoveTag = (tagIndex: number) => {
+                  const newTags = cliente.tags.filter((_: any, index: number) => index !== tagIndex);
+                  handleChange(originalIndex, "tags", newTags);
+                };
+
+                const handleClearAllTags = () => {
+                  handleChange(originalIndex, "tags", []);
+                };
+
                 return (
                   <div
                     key={cliente.id || `cliente-${originalIndex}`}
@@ -636,30 +760,6 @@ export default function CasosSucessoPage({
                                 className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-900/20"
                               />
                             </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Tags (separadas por vírgula)
-                              </label>
-                              <div className="flex items-center gap-2 mb-2">
-                                <Tag className="w-4 h-4 text-blue-500" />
-                                <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                                  Categorias do cliente
-                                </span>
-                              </div>
-                              <Input
-                                type="text"
-                                placeholder="Ex: E-commerce, Gestão, Marketing Digital"
-                                value={Array.isArray(cliente.tags) ? cliente.tags.join(', ') : cliente.tags}
-                                onChange={(e: any) => {
-                                  const tagsArray = e.target.value
-                                    .split(',')
-                                    .map((tag: string) => tag.trim())
-                                    .filter((tag: string) => tag !== "");
-                                  handleChange(originalIndex, "tags", tagsArray);
-                                }}
-                              />
-                            </div>
                           </div>
 
                           <div className="space-y-4">
@@ -691,6 +791,18 @@ export default function CasosSucessoPage({
                                 placeholder="Ex: Loja de Decorações • Garça/SP"
                                 value={cliente.description}
                                 onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                Tags
+                              </label>
+                              <TagsManager
+                                tags={cliente.tags || []}
+                                onAddTag={handleAddTag}
+                                onRemoveTag={handleRemoveTag}
+                                onClearAll={handleClearAllTags}
                               />
                             </div>
                           </div>

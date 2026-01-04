@@ -1,5 +1,5 @@
 import { HeadlinePageComponent } from "@/layout/HeadlineTheme";
 
 export default function Page() {
-  return <HeadlinePageComponent activeTab="ecommerce" />;
+  return <HeadlinePageComponent activeTab="cursos" />;
 }

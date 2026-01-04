@@ -9,26 +9,21 @@ import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import ColorPicker from "@/components/ColorPicker";
 import { 
-  Users,
-  Target,
-  Eye,
-  Heart,
+  ShoppingBag,
+  Image as ImageIcon,
   ChevronDown, 
   ChevronUp,
   Plus,
   Trash2,
   Upload,
   Settings,
-  Sparkles,
+  Phone,
   Link as LinkIcon,
   MessageCircle,
   Check,
   LucideIcon,
-  Globe,
-  Award,
-  Zap,
-  Shield,
-  Star
+  Target,
+  Sparkles
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -37,43 +32,59 @@ import { useJsonManagement } from "@/hooks/useJsonManagement";
 import Image from "next/image";
 import IconSelector from "@/components/IconSelector";
 
-interface DnaCard {
-  id: number;
-  tipo: "valor" | "missao" | "visao" | "diferencial";
-  titulo: string;
-  descricao: string;
-  icone: string;
-  corIcone: string;
-  corFundo: string;
-  imagem: string;
-  ordem: number;
-  destaque: boolean;
-  fraseDestaque?: string;
+interface Feature {
+  text: string;
+  icon: string;
 }
 
-interface DnaData {
-  id: string;
-  titulo: string;
-  subtitulo: string;
+interface CTA {
+  text: string;
+  action: "whatsapp" | "link" | "email" | "phone";
+  value: string;
+}
+
+interface CardData {
+  id: number;
+  title: string;
+  highlightedText: string;
+  description: string;
+  icon: string;
+  iconBgColor: string;
   backgroundColor: string;
-  textoIntroducao: string;
-  cards: DnaCard[];
+  primaryColor: string;
+  backgroundImage: string;
+  features: Feature[];
+  cta: CTA;
+  hasPhoneImage?: boolean;
+  phoneImage?: string;
+  phoneImageSize?: {
+    width: number;
+    height: number;
+  };
+}
+
+interface RoiData {
+  id: string;
+  title: string;
+  subtitle: string;
+  backgroundColor: string;
+  cards: CardData[];
   // Para tratar propriedades como cards[0], cards[1], etc.
   [key: string]: any;
 }
 
 interface CardFiles {
   [cardId: number]: {
-    imagem: File | null;
+    backgroundImage: File | null;
+    phoneImage: File | null;
   };
 }
 
-const defaultDnaData: DnaData = {
-  id: "dna-section",
-  titulo: "Nosso DNA",
-  subtitulo: "Os valores que nos guiam e a missão que nos move",
-  backgroundColor: "#FFFFFF",
-  textoIntroducao: "Somos impulsionados por valores sólidos e uma visão clara do futuro. Conheça os princípios que norteiam cada decisão e ação em nossa empresa.",
+const defaultRoiData: RoiData = {
+  id: "roi-section",
+  title: "Nossas Soluções",
+  subtitle: "Estratégias personalizadas para cada marketplace",
+  backgroundColor: "#F4F4F4",
   cards: []
 };
 
@@ -167,7 +178,7 @@ interface ImageUploadProps {
   aspectRatio?: string;
 }
 
-const ImageUpload = ({ label, currentImage, selectedFile, onFileChange, aspectRatio = "aspect-square" }: ImageUploadProps) => {
+const ImageUpload = ({ label, currentImage, selectedFile, onFileChange, aspectRatio = "aspect-video" }: ImageUploadProps) => {
   const [previewUrl, setPreviewUrl] = useState<string>("");
 
   useEffect(() => {
@@ -222,7 +233,7 @@ const ImageUpload = ({ label, currentImage, selectedFile, onFileChange, aspectRa
           </div>
         ) : (
           <div className={`w-full ${aspectRatio} flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600`}>
-            <Sparkles className="w-12 h-12 text-zinc-400" />
+            <ImageIcon className="w-12 h-12 text-zinc-400" />
           </div>
         )}
         
@@ -260,11 +271,11 @@ const ImageUpload = ({ label, currentImage, selectedFile, onFileChange, aspectRa
               ) : (
                 <>
                   <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                    <Sparkles className="w-8 h-8 text-zinc-400" />
+                    <ImageIcon className="w-8 h-8 text-zinc-400" />
                   </div>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 text-center">
                     Upload recomendado: JPG, PNG ou WebP<br/>
-                    Tamanho ideal: 400x400px
+                    Tamanho ideal: 800x600px
                   </p>
                   <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
                     <Upload className="w-4 h-4" />
@@ -289,34 +300,100 @@ const ImageUpload = ({ label, currentImage, selectedFile, onFileChange, aspectRa
   );
 };
 
-// Função para obter ícone padrão baseado no tipo
-const getDefaultIconByType = (tipo: DnaCard["tipo"]): string => {
-  const iconMap: Record<DnaCard["tipo"], string> = {
-    valor: "mdi:heart",
-    missao: "mdi:target",
-    visao: "mdi:eye",
-    diferencial: "mdi:star"
+// Componente FeaturesEditor
+interface FeaturesEditorProps {
+  features: Feature[];
+  onChange: (features: Feature[]) => void;
+}
+
+const FeaturesEditor = ({ features, onChange }: FeaturesEditorProps) => {
+  const addFeature = () => {
+    onChange([...features, { text: "", icon: "mdi:check" }]);
   };
-  return iconMap[tipo];
+
+  const updateFeature = (index: number, field: keyof Feature, value: string) => {
+    const newFeatures = [...features];
+    newFeatures[index] = { ...newFeatures[index], [field]: value };
+    onChange(newFeatures);
+  };
+
+  const removeFeature = (index: number) => {
+    const newFeatures = features.filter((_, i) => i !== index);
+    onChange(newFeatures);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+          <Check className="w-5 h-5" />
+          Benefícios ({features.length})
+        </h4>
+        <Button
+          type="button"
+          onClick={addFeature}
+          className="flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          Adicionar Benefício
+        </Button>
+      </div>
+
+      {features.length === 0 ? (
+        <Card className="p-8 text-center">
+          <Check className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
+          <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            Nenhum benefício adicionado
+          </h4>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+            Adicione os benefícios desta solução
+          </p>
+          <Button
+            type="button"
+            onClick={addFeature}
+            className="flex items-center gap-2 mx-auto"
+          >
+            <Plus className="w-4 h-4" />
+            Adicionar Primeiro Benefício
+          </Button>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {features.map((feature, index) => (
+            <Card key={index} className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <Input
+                    type="text"
+                    value={feature.text}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      updateFeature(index, "text", e.target.value)
+                    }
+                    placeholder="Ex: Análise completa do marketplace"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={() => removeFeature(index)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
-// Função para obter cor padrão baseado no tipo
-const getDefaultColorByType = (tipo: DnaCard["tipo"]): string => {
-  const colorMap: Record<DnaCard["tipo"], string> = {
-    valor: "#EF4444",
-    missao: "#3B82F6",
-    visao: "#8B5CF6",
-    diferencial: "#10B981"
-  };
-  return colorMap[tipo];
-};
-
-export default function DnaPage() {
+export default function RoiPage() {
   const [files, setFiles] = useState<CardFiles>({});
   
   const {
-    data: dnaData,
-    setData: setDnaData,
+    data: roiData,
+    setData: setRoiData,
     updateNested,
     loading,
     success,
@@ -324,18 +401,18 @@ export default function DnaPage() {
     save,
     exists,
     reload
-  } = useJsonManagement<DnaData>({
-    apiPath: "/api/tegbe-institucional/json/dna",
-    defaultData: defaultDnaData,
+  } = useJsonManagement<RoiData>({
+    apiPath: "/api/tegbe-institucional/json/roi",
+    defaultData: defaultRoiData,
   });
 
   // Processar os dados para mesclar propriedades como cards[0], cards[1] com o array cards
-  const [processedData, setProcessedData] = useState<DnaData>(defaultDnaData);
+  const [processedData, setProcessedData] = useState<RoiData>(defaultRoiData);
 
   useEffect(() => {
-    if (dnaData) {
+    if (roiData) {
       // Criar uma cópia dos dados
-      const dataCopy = { ...dnaData };
+      const dataCopy = { ...roiData };
       
       // Verificar se há propriedades como cards[0], cards[1], etc.
       const cardRegex = /cards\[(\d+)\]/;
@@ -363,7 +440,7 @@ export default function DnaPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProcessedData(dataCopy);
     }
-  }, [dnaData]);
+  }, [roiData]);
 
   const [expandedSections, setExpandedSections] = useState({
     geral: true,
@@ -387,10 +464,9 @@ export default function DnaPage() {
     // Verificar seção geral
     if (
       processedData.id.trim() !== "" &&
-      processedData.titulo.trim() !== "" &&
-      processedData.subtitulo.trim() !== "" &&
-      processedData.backgroundColor.trim() !== "" &&
-      processedData.textoIntroducao.trim() !== ""
+      processedData.title.trim() !== "" &&
+      processedData.subtitle.trim() !== "" &&
+      processedData.backgroundColor.trim() !== ""
     ) {
       count++;
     }
@@ -398,9 +474,12 @@ export default function DnaPage() {
     // Verificar cards
     if (processedData.cards.length > 0) {
       const hasValidCards = processedData.cards.some(card => 
-        card.titulo.trim() !== "" && 
-        card.descricao.trim() !== "" &&
-        card.icone.trim() !== ""
+        card.title.trim() !== "" && 
+        card.highlightedText.trim() !== "" &&
+        card.description.trim() !== "" &&
+        card.icon.trim() !== "" &&
+        card.cta.text.trim() !== "" &&
+        card.cta.value.trim() !== ""
       );
       if (hasValidCards) count++;
     }
@@ -434,29 +513,34 @@ export default function DnaPage() {
     updateNested(`cards.${cardIndex}.${path}`, value);
   };
 
-  const handleCardFileChange = (cardId: number, file: File | null) => {
+  const handleCardFileChange = (cardId: number, type: "backgroundImage" | "phoneImage", file: File | null) => {
     setFiles(prev => ({
       ...prev,
       [cardId]: {
         ...prev[cardId],
-        imagem: file
+        [type]: file
       }
     }));
   };
 
   const addCard = () => {
     const currentCards = [...processedData.cards];
-    const newCard: DnaCard = {
+    const newCard: CardData = {
       id: currentCards.length > 0 ? Math.max(...currentCards.map(c => c.id)) + 1 : 1,
-      tipo: "valor",
-      titulo: "",
-      descricao: "",
-      icone: "mdi:heart",
-      corIcone: "#EF4444",
-      corFundo: "#FEF2F2",
-      imagem: "",
-      ordem: currentCards.length + 1,
-      destaque: false
+      title: "",
+      highlightedText: "",
+      description: "",
+      icon: "mdi:rocket",
+      iconBgColor: "#0071E3",
+      backgroundColor: "#0A0A0A",
+      primaryColor: "#0071E3",
+      backgroundImage: "",
+      features: [],
+      cta: {
+        text: "Saiba mais",
+        action: "link",
+        value: ""
+      }
     };
 
     handleChange("cards", [...currentCards, newCard]);
@@ -477,29 +561,6 @@ export default function DnaPage() {
     });
   };
 
-  const moveCard = (index: number, direction: "up" | "down") => {
-    const currentCards = [...processedData.cards];
-    if (
-      (direction === "up" && index === 0) ||
-      (direction === "down" && index === currentCards.length - 1)
-    ) {
-      return;
-    }
-
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-    const cardToMove = currentCards[index];
-    
-    // Atualizar ordens
-    cardToMove.ordem = direction === "up" ? index : index + 2;
-    currentCards[newIndex].ordem = direction === "up" ? index + 1 : index + 1;
-    
-    // Reordenar array
-    const [movedCard] = currentCards.splice(index, 1);
-    currentCards.splice(newIndex, 0, movedCard);
-    
-    handleChange("cards", currentCards);
-  };
-
   const handleSubmit = async () => {
     const fd = new FormData();
     
@@ -508,8 +569,11 @@ export default function DnaPage() {
 
     // Processar arquivos de imagem para cada card
     Object.entries(files).forEach(([cardId, cardFiles]) => {
-      if (cardFiles.imagem) {
-        fd.append(`file:cards[${parseInt(cardId)-1}].imagem`, cardFiles.imagem, cardFiles.imagem.name);
+      if (cardFiles.backgroundImage) {
+        fd.append(`file:cards[${parseInt(cardId)-1}].backgroundImage`, cardFiles.backgroundImage, cardFiles.backgroundImage.name);
+      }
+      if (cardFiles.phoneImage) {
+        fd.append(`file:cards[${parseInt(cardId)-1}].phoneImage`, cardFiles.phoneImage, cardFiles.phoneImage.name);
       }
     });
 
@@ -534,17 +598,17 @@ export default function DnaPage() {
     setDeleteModal({
       isOpen: true,
       type: "all",
-      title: "TODOS OS VALORES"
+      title: "TODAS AS SOLUÇÕES"
     });
   };
 
   const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/dna", {
+    await fetch("/api/tegbe-institucional/json/roi", {
       method: "DELETE",
     });
 
-    setDnaData(defaultDnaData);
-    setProcessedData(defaultDnaData);
+    setRoiData(defaultRoiData);
+    setProcessedData(defaultRoiData);
     setFiles({});
     setExpandedCards([]);
 
@@ -557,26 +621,6 @@ export default function DnaPage() {
       type: "all", 
       title: "" 
     });
-  };
-
-  const getIconByType = (tipo: DnaCard["tipo"]) => {
-    switch (tipo) {
-      case "valor": return Heart;
-      case "missao": return Target;
-      case "visao": return Eye;
-      case "diferencial": return Star;
-      default: return Heart;
-    }
-  };
-
-  const getTypeColor = (tipo: DnaCard["tipo"]) => {
-    switch (tipo) {
-      case "valor": return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
-      case "missao": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-      case "visao": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-      case "diferencial": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
-    }
   };
 
   const renderGeralSection = () => {
@@ -592,7 +636,7 @@ export default function DnaPage() {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
               handleChange("id", e.target.value)
             }
-            placeholder="dna-section"
+            placeholder="roi-section"
           />
         </div>
 
@@ -604,11 +648,11 @@ export default function DnaPage() {
             </label>
             <Input
               type="text"
-              value={processedData.titulo}
+              value={processedData.title}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("titulo", e.target.value)
+                handleChange("title", e.target.value)
               }
-              placeholder="Nosso DNA"
+              placeholder="Nossas Soluções"
             />
           </div>
 
@@ -628,39 +672,20 @@ export default function DnaPage() {
           </label>
           <Input
             type="text"
-            value={processedData.subtitulo}
+            value={processedData.subtitle}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleChange("subtitulo", e.target.value)
+              handleChange("subtitle", e.target.value)
             }
-            placeholder="Os valores que nos guiam e a missão que nos move"
+            placeholder="Estratégias personalizadas para cada marketplace"
           />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Texto de Introdução
-          </label>
-          <textarea
-            value={processedData.textoIntroducao}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              handleChange("textoIntroducao", e.target.value)
-            }
-            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[100px]"
-            rows={3}
-            placeholder="Texto introdutório sobre os valores da empresa..."
-          />
-          <p className="text-xs text-zinc-500 mt-1">
-            Este texto aparecerá no início da seção, antes dos cards
-          </p>
         </div>
       </div>
     );
   };
 
-  const renderCard = (card: DnaCard, index: number) => {
-    const cardFiles = files[card.id] || { imagem: null };
+  const renderCard = (card: CardData, index: number) => {
+    const cardFiles = files[card.id] || { backgroundImage: null, phoneImage: null };
     const isExpanded = expandedCards.includes(card.id);
-    const TypeIcon = getIconByType(card.tipo);
 
     return (
       <div key={card.id} className="space-y-4">
@@ -669,51 +694,17 @@ export default function DnaPage() {
           className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-3">
-            <TypeIcon className="w-5 h-5" />
+            <ShoppingBag className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
             <div>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 text-xs rounded-full ${getTypeColor(card.tipo)}`}>
-                  {card.tipo.toUpperCase()}
-                </span>
-                {card.destaque && (
-                  <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-                    DESTAQUE
-                  </span>
-                )}
-              </div>
-              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mt-1">
-                {card.titulo || "Sem título"}
+              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+                Card {index + 1}: {card.title || "Sem título"}
               </h3>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">
-                {card.descricao || "Sem descrição"}
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {card.highlightedText ? `Destaque: ${card.highlightedText}` : "Sem destaque"}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="flex flex-col gap-1">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  moveCard(index, "up");
-                }}
-                disabled={index === 0}
-              >
-                ↑
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  moveCard(index, "down");
-                }}
-                disabled={index === processedData.cards.length - 1}
-              >
-                ↓
-              </Button>
-            </div>
             <Button
               type="button"
               variant="danger"
@@ -748,52 +739,31 @@ export default function DnaPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                          Tipo
+                          Título
                         </label>
-                        <select
-                          value={card.tipo}
-                          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
-                            const newType = e.target.value as DnaCard["tipo"];
-                            handleCardChange(index, "tipo", newType);
-                            handleCardChange(index, "icone", getDefaultIconByType(newType));
-                            handleCardChange(index, "corIcone", getDefaultColorByType(newType));
-                          }}
-                          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                        >
-                          <option value="valor">Valor</option>
-                          <option value="missao">Missão</option>
-                          <option value="visao">Visão</option>
-                          <option value="diferencial">Diferencial</option>
-                        </select>
+                        <Input
+                          type="text"
+                          value={card.title}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleCardChange(index, "title", e.target.value)
+                          }
+                          placeholder="Ex: Consultoria Oficial"
+                        />
                       </div>
 
                       <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                          Ordem
+                          Texto Destacado
                         </label>
                         <Input
-                          type="number"
-                          value={card.ordem.toString()}
+                          type="text"
+                          value={card.highlightedText}
                           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleCardChange(index, "ordem", parseInt(e.target.value))
+                            handleCardChange(index, "highlightedText", e.target.value)
                           }
-                          min="1"
+                          placeholder="Ex: Mercado Livre"
                         />
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Título
-                      </label>
-                      <Input
-                        type="text"
-                        value={card.titulo}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleCardChange(index, "titulo", e.target.value)
-                        }
-                        placeholder="Ex: Transparência"
-                      />
                     </div>
 
                     <div>
@@ -801,68 +771,25 @@ export default function DnaPage() {
                         Descrição
                       </label>
                       <textarea
-                        value={card.descricao}
+                        value={card.description}
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                          handleCardChange(index, "descricao", e.target.value)
+                          handleCardChange(index, "description", e.target.value)
                         }
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[120px]"
-                        rows={4}
-                        placeholder="Descreva este valor, missão ou visão..."
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[100px]"
+                        rows={3}
+                        placeholder="Descrição detalhada do serviço..."
                       />
                     </div>
 
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-zinc-800 dark:text-zinc-200">
-                          Destaque
-                        </h4>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-zinc-600 dark:text-zinc-400">Destacar:</span>
-                          <div
-                            onClick={() => handleCardChange(index, "destaque", !card.destaque)}
-                            className={`w-10 h-5 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
-                              card.destaque ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-700"
-                            }`}
-                          >
-                            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${
-                              card.destaque ? "translate-x-5" : ""
-                            }`} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {card.destaque && (
-                        <div>
-                          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                            Frase de Destaque
-                          </label>
-                          <Input
-                            type="text"
-                            value={card.fraseDestaque || ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                              handleCardChange(index, "fraseDestaque", e.target.value)
-                            }
-                            placeholder="Frase curta e impactante para destacar"
-                          />
-                          <p className="text-xs text-zinc-500 mt-1">
-                            Esta frase aparecerá de forma destacada no card
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Coluna 2: Design e Imagem */}
-                  <div className="space-y-6">
                     {/* Ícone e cores */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                           Ícone
                         </label>
                         <IconSelector
-                          value={card.icone}
-                          onChange={(value) => handleCardChange(index, "icone", value)}
+                          value={card.icon}
+                          onChange={(value) => handleCardChange(index, "icon", value)}
                           label="Selecione um ícone"
                         />
                       </div>
@@ -870,9 +797,18 @@ export default function DnaPage() {
                       <div>
                         <ColorPropertyInput
                           label="Cor do Ícone"
-                          value={card.corIcone}
-                          onChange={(color) => handleCardChange(index, "corIcone", color)}
-                          description="Cor principal do ícone"
+                          value={card.iconBgColor}
+                          onChange={(color) => handleCardChange(index, "iconBgColor", color)}
+                          description="Cor de fundo do ícone"
+                        />
+                      </div>
+
+                      <div>
+                        <ColorPropertyInput
+                          label="Cor Primária"
+                          value={card.primaryColor}
+                          onChange={(color) => handleCardChange(index, "primaryColor", color)}
+                          description="Cor principal para textos e bordas"
                         />
                       </div>
                     </div>
@@ -880,20 +816,171 @@ export default function DnaPage() {
                     <div>
                       <ColorPropertyInput
                         label="Cor de Fundo do Card"
-                        value={card.corFundo}
-                        onChange={(color) => handleCardChange(index, "corFundo", color)}
-                        description="Cor de fundo do card"
+                        value={card.backgroundColor}
+                        onChange={(color) => handleCardChange(index, "backgroundColor", color)}
+                        description="Cor de fundo do card completo"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Coluna 2: Imagens e CTA */}
+                  <div className="space-y-6">
+                    {/* Imagem de Fundo */}
+                    <ImageUpload
+                      label="Imagem de Fundo do Card"
+                      currentImage={card.backgroundImage || ""}
+                      selectedFile={cardFiles.backgroundImage}
+                      onFileChange={(file) => handleCardFileChange(card.id, "backgroundImage", file)}
+                      aspectRatio="aspect-video"
+                    />
+
+                    {/* Phone Image */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                          <Phone className="w-5 h-5" />
+                          Imagem de Telefone
+                        </h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-zinc-600 dark:text-zinc-400">Ativar:</span>
+                          <div
+                            onClick={() => handleCardChange(index, "hasPhoneImage", !card.hasPhoneImage)}
+                            className={`w-10 h-5 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
+                              card.hasPhoneImage ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700"
+                            }`}
+                          >
+                            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${
+                              card.hasPhoneImage ? "translate-x-5" : ""
+                            }`} />
+                          </div>
+                        </div>
+                      </div>
+
+                      {card.hasPhoneImage && (
+                        <div className="space-y-4">
+                          <ImageUpload
+                            label="Imagem do Telefone"
+                            currentImage={card.phoneImage || ""}
+                            selectedFile={cardFiles.phoneImage}
+                            onFileChange={(file) => handleCardFileChange(card.id, "phoneImage", file)}
+                            aspectRatio="aspect-[2/3]"
+                          />
+
+                          {card.phoneImageSize && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                  Largura (px)
+                                </label>
+                                <Input
+                                  type="number"
+                                  value={card.phoneImageSize.width.toString()}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleCardChange(index, "phoneImageSize", {
+                                      ...card.phoneImageSize,
+                                      width: parseInt(e.target.value)
+                                    })
+                                  }
+                                  placeholder="400"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                  Altura (px)
+                                </label>
+                                <Input
+                                  type="number"
+                                  value={card.phoneImageSize.height.toString()}
+                                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleCardChange(index, "phoneImageSize", {
+                                      ...card.phoneImageSize,
+                                      height: parseInt(e.target.value)
+                                    })
+                                  }
+                                  placeholder="600"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Benefícios */}
+                <div className="space-y-6">
+                  <FeaturesEditor
+                    features={card.features}
+                    onChange={(features) => handleCardChange(index, "features", features)}
+                  />
+                </div>
+
+                {/* CTA */}
+                <div className="space-y-6 p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg">
+                  <h4 className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                    <Target className="w-5 h-5" />
+                    Call to Action (CTA)
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        Texto do Botão
+                      </label>
+                      <Input
+                        type="text"
+                        value={card.cta.text}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          handleCardChange(index, "cta.text", e.target.value)
+                        }
+                        placeholder="Ex: Contratar"
                       />
                     </div>
 
-                    {/* Imagem */}
-                    <ImageUpload
-                      label="Imagem do Card (Opcional)"
-                      currentImage={card.imagem || ""}
-                      selectedFile={cardFiles.imagem}
-                      onFileChange={(file) => handleCardFileChange(card.id, file)}
-                      aspectRatio="aspect-square"
-                    />
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        Ação
+                      </label>
+                      <select
+                        value={card.cta.action}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                          handleCardChange(index, "cta.action", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                      >
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="link">Link</option>
+                        <option value="email">Email</option>
+                        <option value="phone">Telefone</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                        Valor
+                      </label>
+                      <Input
+                        type="text"
+                        value={card.cta.value}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          handleCardChange(index, "cta.value", e.target.value)
+                        }
+                        placeholder={card.cta.action === "whatsapp" ? "https://wa.me/5514991779502" : "/casos-de-sucesso"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    {card.cta.action === "whatsapp" && <MessageCircle className="w-4 h-4" />}
+                    {card.cta.action === "link" && <LinkIcon className="w-4 h-4" />}
+                    {card.cta.action === "email" && <span>@</span>}
+                    {card.cta.action === "phone" && <Phone className="w-4 h-4" />}
+                    <span>
+                      Ação: {card.cta.action === "whatsapp" ? "Abrir WhatsApp" : 
+                            card.cta.action === "link" ? "Navegar para URL" :
+                            card.cta.action === "email" ? "Enviar Email" : "Ligar"}
+                    </span>
                   </div>
                 </div>
               </Card>
@@ -906,11 +993,11 @@ export default function DnaPage() {
 
   return (
     <ManageLayout
-      headerIcon={Users}
-      title="DNA da Empresa"
-      description="Gerencie os valores, missão, visão e diferenciais da empresa"
+      headerIcon={ShoppingBag}
+      title="Soluções & ROI"
+      description="Gerencie as soluções e cards de ROI com imagens, benefícios e CTAs"
       exists={!!exists}
-      itemName="DNA"
+      itemName="Soluções"
     >
       <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
         {/* Seção Geral */}
@@ -943,9 +1030,9 @@ export default function DnaPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <SectionHeader
-              title={`Elementos do DNA (${processedData.cards.length})`}
+              title={`Cards de Soluções (${processedData.cards.length})`}
               section="cards"
-              icon={Heart}
+              icon={ShoppingBag}
               isExpanded={expandedSections.cards}
               onToggle={() => toggleSection("cards")}
             />
@@ -955,7 +1042,7 @@ export default function DnaPage() {
               className="flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
-              Adicionar Elemento
+              Adicionar Card
             </Button>
           </div>
 
@@ -970,12 +1057,12 @@ export default function DnaPage() {
                 <Card className="p-6 space-y-6">
                   {processedData.cards.length === 0 ? (
                     <div className="text-center py-12">
-                      <Users className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
+                      <ShoppingBag className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
                       <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Nenhum elemento do DNA adicionado
+                        Nenhum card de solução adicionado
                       </h4>
                       <p className="text-zinc-600 dark:text-zinc-400 mb-6 max-w-md mx-auto">
-                        Comece adicionando valores, missão, visão e diferenciais da empresa
+                        Comece adicionando cards para mostrar suas soluções e casos de ROI
                       </p>
                       <Button
                         type="button"
@@ -983,14 +1070,12 @@ export default function DnaPage() {
                         className="flex items-center gap-2 mx-auto"
                       >
                         <Plus className="w-4 h-4" />
-                        Adicionar Primeiro Elemento
+                        Adicionar Primeiro Card
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      {processedData.cards
-                        .sort((a, b) => a.ordem - b.ordem)
-                        .map((card, index) => renderCard(card, index))}
+                      {processedData.cards.map((card, index) => renderCard(card, index))}
                     </div>
                   )}
                 </Card>
@@ -1008,8 +1093,8 @@ export default function DnaPage() {
           exists={!!exists}
           completeCount={completeCount}
           totalCount={totalCount}
-          itemName="DNA"
-          icon={Users}
+          itemName="Soluções"
+          icon={ShoppingBag}
         />
       </form>
 
@@ -1020,7 +1105,7 @@ export default function DnaPage() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={processedData.cards.length}
-        itemName="Elemento"
+        itemName="Solução"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />

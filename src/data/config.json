@@ -35,6 +35,7 @@
             { "name": "Passo a Passo", "icon": "HelpCircle", "href": "/steps" },
             { "name": "Ecommerce", "icon": "HelpCircle", "href": "/ecommerce" },
             { "name": "Setores", "icon": "HelpCircle", "href": "/setors" },
+            { "name": "ROI", "icon": "HelpCircle", "href": "/roi" },
             { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-images" },
             { "name": "DNA", "icon": "HelpCircle", "href": "/dna" },
             { "name": "Notícias", "icon": "HelpCircle", "href": "/news" },
@@ -92,6 +93,26 @@
             { "name": "Localização", "icon": "HelpCircle", "href": "/localizacao-sobre" },
             { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-sobre" },
             { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer-sobre" }
+          ]
+        },
+
+        {
+          "type": "group",
+          "title": "Curso",
+          "icon": "FileText",
+          "children": [
+            { "name": "Cabeçalho", "icon": "Newspaper", "href": "/header-curso" },
+            { "name": "Headline", "icon": "HelpCircle", "href": "/headline-curso" },
+            { "name": "Aprender", "icon": "HelpCircle", "href": "/aprender-curso" },
+            { "name": "Bastidores", "icon": "HelpCircle", "href": "/video-curso" },
+            { "name": "Cursos", "icon": "HelpCircle", "href": "/cursos-curso" },
+            { "name": "Alunos", "icon": "HelpCircle", "href": "/alunos-curso" },
+            { "name": "Galeria", "icon": "HelpCircle", "href": "/galeria-curso" },
+            { "name": "Empresa", "icon": "HelpCircle", "href": "/expertise-curso" },
+            { "name": "Concorrencia", "icon": "HelpCircle", "href": "/concorrentes-curso" },
+            { "name": "Planos/Preços", "icon": "HelpCircle", "href": "/preco-curso" },
+            { "name": "Faq", "icon": "HelpCircle", "href": "/faq-curso" },
+            { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer-curso" }
           ]
         }
       ]
