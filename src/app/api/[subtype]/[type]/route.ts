@@ -8,7 +8,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-// 👉 Preflight (OBRIGATÓRIO para evitar erro de CORS)
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
@@ -16,7 +15,6 @@ export async function OPTIONS() {
   });
 }
 
-// GET: Buscar dados por type e subtype
 export async function GET(
   _req: NextRequest,
   context: { params: Promise<{ type: string; subtype: string }> }
@@ -31,45 +29,26 @@ export async function GET(
           subtype,
         },
       },
+      select: {
+        values: true,
+      },
     });
 
     if (!formData) {
       return NextResponse.json(
-        {
-          success: false,
-          message: `Nenhum dado encontrado para ${type}/${subtype}`,
-          exists: false,
-        },
-        {
-          status: 404,
-          headers: corsHeaders,
-        }
+        null,
+        { status: 404, headers: corsHeaders }
       );
     }
 
     return NextResponse.json(
-      {
-        success: true,
-        data: formData.values,
-        exists: true,
-        id: formData.id,
-        createdAt: formData.createdAt,
-      },
-      {
-        headers: corsHeaders,
-      }
+      formData.values,
+      { headers: corsHeaders }
     );
   } catch (error) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Erro interno do servidor",
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      },
-      {
-        status: 500,
-        headers: corsHeaders,
-      }
+      { error: "Erro interno do servidor" },
+      { status: 500, headers: corsHeaders }
     );
   }
 }
