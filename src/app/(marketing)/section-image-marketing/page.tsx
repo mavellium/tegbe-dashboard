@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -15,11 +15,14 @@ import {
   ChevronDown, 
   ChevronUp,
   Upload,
-  X
+  X,
+  LucideIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { useJsonManagement } from "@/hooks/useJsonManagement";
+import Image from "next/image";
 
 interface HeroImageData {
   image: {
@@ -127,42 +130,97 @@ const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string
   }
 
   return (
-    <img
-      src={imageUrl}
-      alt={alt}
-      className="w-full h-48 object-cover rounded-lg border-2 border-zinc-300 dark:border-zinc-600"
-      onError={(e) => {
-        console.error('Erro ao carregar imagem:', imageUrl);
-        e.currentTarget.style.display = 'none';
-        e.currentTarget.parentElement!.innerHTML = `
-          <div class="w-full h-48 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-zinc-300 dark:border-zinc-600">
-            <div class="text-center">
-              <svg class="w-12 h-12 text-zinc-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <p class="text-sm text-zinc-500">Erro ao carregar imagem</p>
-            </div>
-          </div>
-        `;
-      }}
-    />
+    <div className="w-full h-48 relative rounded-lg border-2 border-zinc-300 dark:border-zinc-600 overflow-hidden">
+      <Image
+        src={imageUrl}
+        alt={alt}
+        fill
+        className="object-cover"
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        onError={(e) => {
+          console.error('Erro ao carregar imagem:', imageUrl);
+          const target = e.currentTarget;
+          target.style.display = 'none';
+          const parent = target.parentElement;
+          if (parent) {
+            parent.innerHTML = `
+              <div class="w-full h-48 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+                <div class="text-center">
+                  <svg class="w-12 h-12 text-zinc-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p class="text-sm text-zinc-500">Erro ao carregar imagem</p>
+                </div>
+              </div>
+            `;
+          }
+        }}
+      />
+    </div>
   );
 };
 
+// Componente SectionHeader movido para fora
+interface SectionHeaderProps {
+  title: string;
+  section: "home" | "ecommerce" | "marketing";
+  icon: LucideIcon;
+  isExpanded: boolean;
+  onToggle: (section: "home" | "ecommerce" | "marketing") => void;
+}
+
+const SectionHeader = ({
+  title,
+  section,
+  icon: Icon,
+  isExpanded,
+  onToggle
+}: SectionHeaderProps) => (
+  <button
+    type="button"
+    onClick={() => onToggle(section)}
+    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+  >
+    <div className="flex items-center gap-3">
+      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+        {title}
+      </h3>
+      <span className="text-xs px-2 py-1 bg-zinc-200 dark:bg-zinc-700 rounded">
+        {section === "home" ? "Home" : section === "ecommerce" ? "E-commerce" : "Marketing"}
+      </span>
+    </div>
+    {isExpanded ? (
+      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+    ) : (
+      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+    )}
+  </button>
+);
+
 export default function HeroImagesPage() {
-  const [heroData, setHeroData] = useState<HeroImageData>(defaultHeroData);
   const [heroFiles, setHeroFiles] = useState<HeroFiles>({
     home: null,
     ecommerce: null,
     marketing: null
   });
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const {
+    data: heroData,
+    setData: setHeroData,
+    loading,
+    success,
+    errorMsg,
+    save,
+    exists,
+    reload
+  } = useJsonManagement<HeroImageData>({
+    apiPath: "/api/tegbe-institucional/json/hero-images",
+    defaultData: defaultHeroData,
+  });
   const [expandedSections, setExpandedSections] = useState({
-    home: true,
+    home: false,
     ecommerce: false,
-    marketing: false
+    marketing: true
   });
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
@@ -173,9 +231,6 @@ export default function HeroImagesPage() {
     url: string;
     alt: string;
   } | null>(null);
-
-  const apiBase = "/api/tegbe-institucional/form";
-  const type = "hero-images";
 
   // Calcular campos completos
   const calculateCompleteCount = useCallback(() => {
@@ -191,81 +246,8 @@ export default function HeroImagesPage() {
 
   const completeCount = calculateCompleteCount();
   const totalCount = 3; // home, ecommerce, marketing
-  const exists = heroData.image.home !== "" || heroData.image.ecommerce !== "" || heroData.image.marketing !== "";
   const canAddNewItem = false;
   const isLimitReached = false;
-
-  const fetchExistingData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${apiBase}/${type}`);
-
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Dados recebidos da API:", data);
-        
-        if (data && data.values && Array.isArray(data.values) && data.values.length > 0) {
-          const fetchedData = data.values[0];
-          console.log("Fetched data:", fetchedData);
-          
-          // Função para garantir que um valor seja string
-          const ensureString = (value: any): string => {
-            if (typeof value === 'string') return value;
-            if (value === null || value === undefined) return "";
-            return String(value);
-          };
-          
-          // Função para extrair valor da seção
-          const getSectionValue = (obj: any, section: string): string => {
-            if (!obj) return "";
-            
-            // Se o objeto tem a estrutura { home: ..., ecommerce: ..., marketing: ... }
-            if (typeof obj === 'object' && obj[section] !== undefined) {
-              return ensureString(obj[section]);
-            }
-            
-            // Se for uma string simples (formato antigo)
-            if (typeof obj === 'string' && section === 'home') {
-              return obj;
-            }
-            
-            return "";
-          };
-          
-          setHeroData({
-            image: {
-              home: getSectionValue(fetchedData.image, 'home'),
-              ecommerce: getSectionValue(fetchedData.image, 'ecommerce'),
-              marketing: getSectionValue(fetchedData.image, 'marketing')
-            },
-            alt: {
-              home: getSectionValue(fetchedData.alt, 'home'),
-              ecommerce: getSectionValue(fetchedData.alt, 'ecommerce'),
-              marketing: getSectionValue(fetchedData.alt, 'marketing')
-            },
-            objectPosition: {
-              home: getSectionValue(fetchedData.objectPosition, 'home'),
-              ecommerce: getSectionValue(fetchedData.objectPosition, 'ecommerce'),
-              marketing: getSectionValue(fetchedData.objectPosition, 'marketing')
-            }
-          });
-        } else {
-          console.log("Sem dados na resposta, usando padrão");
-        }
-      } else {
-        console.log("Nenhum dado encontrado, usando padrão");
-      }
-    } catch (error) {
-      console.error("Erro ao buscar dados:", error);
-      setErrorMsg("Erro ao carregar dados do servidor");
-    } finally {
-      setLoading(false);
-    }
-  }, [apiBase]);
-
-  useEffect(() => {
-    fetchExistingData();
-  }, [fetchExistingData]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -312,91 +294,28 @@ export default function HeroImagesPage() {
     return "";
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSubmit = async () => {
+    const fd = new FormData();
 
-    setLoading(true);
-    setSuccess(false);
-    setErrorMsg("");
-
-    try {
-      // Primeiro, verificar se já existe um registro
-      const checkRes = await fetch(`${apiBase}/${type}`);
-      let existingId = null;
-      
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        if (checkData && checkData.id) {
-          existingId = checkData.id;
-        }
-      }
-
-      // Preparar dados para envio
-      const fd = new FormData();
-      
-      // Adicionar o ID se existir
-      if (existingId) {
-        fd.append("id", existingId);
-      }
-
-      // Preparar os dados atuais para envio
-      const dataToSend = { ...heroData };
-
-      // Adicionar arquivos para cada seção
-      const sections = ['home', 'ecommerce', 'marketing'] as const;
-      
-      // Limitar a 3 arquivos (file0, file1, file2) como a API espera
-      let fileIndex = 0;
-      sections.forEach((section) => {
-        if (heroFiles[section]) {
-          fd.append(`file${fileIndex}`, heroFiles[section]!);
-          fileIndex++;
-        }
-      });
-
-      // Enviar os dados como array
-      fd.append("values", JSON.stringify([dataToSend]));
-
-      console.log("Enviando dados:", {
-        values: [dataToSend],
-        filesCount: fileIndex,
-        existingId
-      });
-
-      const method = existingId ? "PUT" : "POST";
-      const res = await fetch(`${apiBase}/${type}`, {
-        method,
-        body: fd,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        console.error("Erro da API:", errorData);
-        throw new Error(errorData.error || "Erro ao salvar imagens de fundo");
-      }
-
-      const saved = await res.json();
-      console.log("Resposta da API:", saved);
-
-      // Recarregar dados após salvar
-      fetchExistingData();
-      
-      // Limpar arquivos após upload bem-sucedido
-      setHeroFiles({
-        home: null,
-        ecommerce: null,
-        marketing: null
-      });
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-      
-    } catch (err: any) {
-      console.error("Erro no submit:", err);
-      setErrorMsg(err.message || "Erro ao salvar");
-    } finally {
-      setLoading(false);
+    if (heroFiles.home) {
+      fd.append("file:image.home", heroFiles.home);
     }
+
+    if (heroFiles.ecommerce) {
+      fd.append("file:image.ecommerce", heroFiles.ecommerce);
+    }
+
+    if (heroFiles.marketing) {
+      fd.append("file:image.marketing", heroFiles.marketing);
+    }
+
+    await save(fd);
+    await reload();
+    setHeroFiles({
+      home: null,
+      ecommerce: null,
+      marketing: null,
+    });
   };
 
   const handleSubmitWrapper = () => {
@@ -412,38 +331,17 @@ export default function HeroImagesPage() {
   };
 
   const confirmDelete = async () => {
-    try {
-      // Obter o ID do registro atual
-      const res = await fetch(`${apiBase}/${type}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data && data.id) {
-          const deleteRes = await fetch(`${apiBase}/${type}`, {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ id: data.id }),
-          });
+    await fetch("/api/tegbe-institucional/json/hero-images", {
+      method: "DELETE",
+    });
 
-          if (deleteRes.ok) {
-            setHeroData(defaultHeroData);
-            setHeroFiles({
-              home: null,
-              ecommerce: null,
-              marketing: null
-            });
-            setSuccess(true);
-            setTimeout(() => setSuccess(false), 3000);
-          } else {
-            throw new Error("Erro ao deletar imagens");
-          }
-        }
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Erro ao deletar");
-    }
-    
+    setHeroData(defaultHeroData);
+    setHeroFiles({
+      home: null,
+      ecommerce: null,
+      marketing: null,
+    });
+
     closeDeleteModal();
   };
 
@@ -454,37 +352,6 @@ export default function HeroImagesPage() {
       title: "" 
     });
   };
-
-  const SectionHeader = ({
-    title,
-    section,
-    icon: Icon,
-  }: {
-    title: string;
-    section: keyof typeof expandedSections;
-    icon: any;
-  }) => (
-    <button
-      type="button"
-      onClick={() => toggleSection(section)}
-      className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-    >
-      <div className="flex items-center gap-3">
-        <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-        <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-          {title}
-        </h3>
-        <span className="text-xs px-2 py-1 bg-zinc-200 dark:bg-zinc-700 rounded">
-          {section === "home" ? "Home" : section === "ecommerce" ? "E-commerce" : "Marketing"}
-        </span>
-      </div>
-      {expandedSections[section] ? (
-        <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      ) : (
-        <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      )}
-    </button>
-  );
 
   const renderImageSection = (section: "home" | "ecommerce" | "marketing") => {
     const imageUrl = getImageUrl(section);
@@ -695,7 +562,7 @@ export default function HeroImagesPage() {
       headerIcon={ImageIcon}
       title="Imagens de Fundo (Hero)"
       description="Gerencie as imagens de fundo das páginas Home, E-commerce e Marketing"
-      exists={exists}
+      exists={!!exists} // Corrigido: Convertendo para boolean
       itemName="Configuração de Imagens"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
@@ -705,6 +572,8 @@ export default function HeroImagesPage() {
             title="Imagem de Fundo - Home"
             section="home"
             icon={Home}
+            isExpanded={expandedSections.home}
+            onToggle={toggleSection}
           />
 
           <motion.div
@@ -724,6 +593,8 @@ export default function HeroImagesPage() {
             title="Imagem de Fundo - E-commerce"
             section="ecommerce"
             icon={ShoppingBag}
+            isExpanded={expandedSections.ecommerce}
+            onToggle={toggleSection}
           />
 
           <motion.div
@@ -743,6 +614,8 @@ export default function HeroImagesPage() {
             title="Imagem de Fundo - Marketing"
             section="marketing"
             icon={Megaphone}
+            isExpanded={expandedSections.marketing}
+            onToggle={toggleSection}
           />
 
           <motion.div
@@ -762,7 +635,7 @@ export default function HeroImagesPage() {
           onSubmit={handleSubmitWrapper}
           isAddDisabled={!canAddNewItem || isLimitReached}
           isSaving={loading}
-          exists={exists}
+          exists={!!exists} // Corrigido: Convertendo para boolean
           completeCount={completeCount}
           totalCount={totalCount}
           itemName="Imagem"
@@ -817,24 +690,28 @@ export default function HeroImagesPage() {
                 </div>
                 
                 {expandedImage.url && (
-                  <img
-                    src={expandedImage.url}
-                    alt={expandedImage.alt}
-                    className="max-w-full max-h-[70vh] object-contain rounded-lg"
-                    onError={(e) => {
-                      console.error('Erro ao carregar imagem expandida:', expandedImage.url);
-                      const target = e.currentTarget as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent) {
-                        parent.innerHTML = `
-                          <div class="flex items-center justify-center h-64">
-                            <p class="text-zinc-500">Erro ao carregar imagem</p>
-                          </div>
-                        `;
-                      }
-                    }}
-                  />
+                  <div className="relative w-full h-[70vh]">
+                    <Image
+                      src={expandedImage.url}
+                      alt={expandedImage.alt}
+                      fill
+                      className="object-contain rounded-lg"
+                      sizes="100vw"
+                      onError={(e) => {
+                        console.error('Erro ao carregar imagem expandida:', expandedImage.url);
+                        const target = e.currentTarget;
+                        target.style.display = 'none';
+                        const parent = target.parentElement;
+                        if (parent) {
+                          parent.innerHTML = `
+                            <div class="flex items-center justify-center h-64">
+                              <p class="text-zinc-500">Erro ao carregar imagem</p>
+                            </div>
+                          `;
+                        }
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             </motion.div>

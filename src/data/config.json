@@ -17,16 +17,83 @@
         "backgroundBody": "#000"
       },
       "menuItems": [
-        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/" },
-        { "name": "Cabeçalho", "icon": "Newspaper", "href": "/header" },
-        { "name": "Headline", "icon": "HelpCircle", "href": "/headline" },
-        { "name": "Logos", "icon": "HelpCircle", "href": "/logos" },
-        { "name": "Passo a Passo", "icon": "HelpCircle", "href": "/steps" },
-        { "name": "Ecommerce", "icon": "HelpCircle", "href": "/ecommerce" },
-        { "name": "Setores", "icon": "HelpCircle", "href": "/setors" },
-        { "name": "Seção Imagem", "icon": "HelpCircle", "href": "/section-images" },
-        { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer" },
-        { "name": "Ads", "icon": "HelpCircle", "href": "/ads" }
+        {
+          "type": "item",
+          "name": "Dashboard",
+          "icon": "LayoutDashboard",
+          "href": "/"
+        },
+
+        {
+          "type": "group",
+          "title": "Home",
+          "icon": "FileText",
+          "children": [
+            { "name": "Cabeçalho", "icon": "Newspaper", "href": "/header" },
+            { "name": "Headline", "icon": "HelpCircle", "href": "/headline" },
+            { "name": "Logos", "icon": "HelpCircle", "href": "/logos" },
+            { "name": "Passo a Passo", "icon": "HelpCircle", "href": "/steps" },
+            { "name": "Ecommerce", "icon": "HelpCircle", "href": "/ecommerce" },
+            { "name": "Setores", "icon": "HelpCircle", "href": "/setors" },
+            { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-images" },
+            { "name": "DNA", "icon": "HelpCircle", "href": "/dna" },
+            { "name": "Notícias", "icon": "HelpCircle", "href": "/news" },
+            { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer" }
+          ]
+        },
+
+        {
+          "type": "group",
+          "title": "Ecommerce",
+          "icon": "FileText",
+          "children": [
+            { "name": "Cabeçalho", "icon": "Newspaper", "href": "/header-ecommerce" },
+            { "name": "Headline", "icon": "HelpCircle", "href": "/headline-ecommerce" },
+            { "name": "Venda mais", "icon": "HelpCircle", "href": "/venda-mais-ecommerce" },
+            { "name": "Cards home", "icon": "HelpCircle", "href": "/cards" },
+            { "name": "Logos", "icon": "HelpCircle", "href": "/logos-ecommerce" },
+            { "name": "Cards ecommerce", "icon": "HelpCircle", "href": "/cards-ecommerce" },
+            { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-images-ecommerce" },
+            { "name": "Equipe", "icon": "HelpCircle", "href": "/equipe-ecommerce" },
+            { "name": "Empresa Cases", "icon": "HelpCircle", "href": "/company-ecommerce" },
+            { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-ecommerce" },
+            { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer-ecommerce" }
+          ]
+        },
+
+        {
+          "type": "group",
+          "title": "Marketing",
+          "icon": "FileText",
+          "children": [
+            { "name": "Cabeçalho", "icon": "Newspaper", "href": "/header-marketing" },
+            { "name": "Headline", "icon": "HelpCircle", "href": "/headline-marketing" },
+            { "name": "Cards Marketing", "icon": "HelpCircle", "href": "/cards-marketing" },
+            { "name": "Explore Detalhes", "icon": "HelpCircle", "href": "/explore-detail-marketing" },
+            { "name": "Empresas", "icon": "HelpCircle", "href": "/empresas-marketing" },
+            { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-image-marketing" },
+            { "name": "Equipe", "icon": "HelpCircle", "href": "/equipe-marketing" },
+            { "name": "Empresa cases", "icon": "HelpCircle", "href": "/company-marketing" },
+            { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-marketing" },
+            { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer-marketing" }
+          ]
+        },
+
+        {
+          "type": "group",
+          "title": "Sobre",
+          "icon": "FileText",
+          "children": [
+            { "name": "Cabeçalho", "icon": "Newspaper", "href": "/header-sobre" },
+            { "name": "Socios", "icon": "HelpCircle", "href": "/socios-sobre" },
+            { "name": "História", "icon": "HelpCircle", "href": "/historia-sobre" },
+            { "name": "Empresas", "icon": "HelpCircle", "href": "/empresas-sobre" },
+            { "name": "Métricas", "icon": "HelpCircle", "href": "/metricas-sobre" },
+            { "name": "Localização", "icon": "HelpCircle", "href": "/localizacao-sobre" },
+            { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-sobre" },
+            { "name": "Rodapé", "icon": "HelpCircle", "href": "/footer-sobre" }
+          ]
+        }
       ]
     },
     {
@@ -46,8 +113,8 @@
         "backgroundBody": "#000"
       },
       "menuItems": [
-        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/tegpro/dashboard" },
-        { "name": "Personalização", "icon": "FileText", "href": "/tegpro/personalizacao" }
+        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/tegpro/dashboard", "type": "item" },
+        { "name": "Personalização", "icon": "FileText", "href": "/tegpro/personalizacao", "type": "item" }
       ]
     },
     {
@@ -67,8 +134,8 @@
         "backgroundBody": "#000"
       },
       "menuItems": [
-        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/tegbe/dashboard" },
-        { "name": "Personalização", "icon": "FileText", "href": "/tegbe/personalizacao" }
+        { "name": "Dashboard", "icon": "LayoutDashboard", "href": "/tegbe/dashboard", "type": "item" },
+        { "name": "Personalização", "icon": "FileText", "href": "/tegbe/personalizacao", "type": "item" }
       ]
     }
   ],

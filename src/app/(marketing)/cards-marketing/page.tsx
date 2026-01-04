@@ -324,7 +324,7 @@ function SortableServiceItem({
 }
 
 export default function ComoFazemosPage({ 
-  type = "como-fazemos", 
+  type = "cards", 
   subtype = "tegbe-institucional"
 }: { 
   type: string; 
@@ -333,8 +333,8 @@ export default function ComoFazemosPage({
   const defaultItem = useMemo(() => defaultComoFazemosData, []);
   
   const [expandedSections, setExpandedSections] = useState({
-    home: true,
-    marketing: false,
+    home: false,
+    marketing: true,
     ecommerce: false,
     sobre: false
   });

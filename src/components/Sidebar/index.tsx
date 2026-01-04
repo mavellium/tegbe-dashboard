@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Menu, 
@@ -12,7 +12,8 @@ import {
   Building, 
   PlayCircle,
   LayoutDashboard,
-  ChevronDown
+  ChevronDown,
+  LogOutIcon
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -33,8 +34,8 @@ export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState<boolean | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<number | null>(null);
   const [showSiteSwitcher, setShowSiteSwitcher] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const pathname = usePathname();
   const [year] = useState(() => new Date().getFullYear());
   const sidebarRef = useRef<HTMLElement>(null);
@@ -42,6 +43,77 @@ export default function Sidebar() {
   const siteSwitcherRef = useRef<HTMLDivElement>(null);
   
   const { currentSite, setCurrentSite, sites } = useSite();
+
+  // Função otimizada para verificar se um link está ativo
+  const isActiveLink = useCallback((href: string, exact: boolean = false) => {
+    if (!href) return false;
+    
+    if (href === "/") return pathname === "/";
+    
+    if (exact) {
+      // Verificação exata - remove trailing slash para consistência
+      const normalizedPathname = pathname.endsWith('/') && pathname !== '/' 
+        ? pathname.slice(0, -1) 
+        : pathname;
+      const normalizedHref = href.endsWith('/') && href !== '/' 
+        ? href.slice(0, -1) 
+        : href;
+      
+      return normalizedPathname === normalizedHref;
+    }
+    
+    // Verificação de prefixo (apenas para grupos)
+    return pathname.startsWith(href);
+  }, [pathname]);
+
+  // Função otimizada para verificar se um grupo está ativo
+  const isGroupActive = useCallback((group: any) => {
+    if (!group.children || group.children.length === 0) return false;
+    
+    return group.children.some((child: any) => {
+      if (!child.href) return false;
+      return isActiveLink(child.href, true);
+    });
+  }, [isActiveLink]);
+
+  // Calcular grupos que devem estar abertos com base na rota atual
+  const groupsToOpen = useMemo(() => {
+    const groups: Record<string, boolean> = {};
+    
+    if (!currentSite?.menuItems) return groups;
+    
+    currentSite.menuItems.forEach((item: any) => {
+      if (item.type === "group" && item.children) {
+        const isActive = item.children.some((child: any) => 
+          isActiveLink(child.href, true)
+        );
+        
+        // Se algum filho está ativo, o grupo deve estar aberto
+        if (isActive) {
+          groups[item.title] = true;
+        }
+      }
+    });
+    
+    return groups;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, currentSite, isActiveLink]);
+  
+  useEffect(() => {
+    if (Object.keys(groupsToOpen).length > 0) {    
+      setOpenGroups(prev => ({
+        ...prev,
+        ...groupsToOpen
+      }));
+    }
+  }, [groupsToOpen]);
+
+  const toggleGroup = (title: string) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [title]: !prev[title],
+    }));
+  };
 
   const closeSidebar = useCallback(() => {
     if (isMobile) {
@@ -101,13 +173,37 @@ export default function Sidebar() {
     };
   }, [isMobile, isOpen, closeSidebar, showSiteSwitcher]);
 
-  const isActiveLink = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
-  };
-
   const sidebarWidth = isMobile ? (isOpen ? "w-80" : "w-0") : (isCollapsed ? "w-20" : "w-80");
   const router = useRouter();
+
+  const clearAllCookies = () => {
+    const cookies = document.cookie.split(";");
+    
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i];
+      const eqPos = cookie.indexOf("=");
+      const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+      
+      document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      
+      document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=" + window.location.hostname + ";";
+    }
+    
+    localStorage.clear();
+    sessionStorage.clear();
+  };
+
+  const handleLogout = () => {
+    clearAllCookies();
+    if (window.confirm("Tem certeza que deseja sair? Todos os dados locais serão limpos.")) {
+      console.log("Logout realizado com sucesso");
+      router.push("/login");
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+    }
+  };
+
   return (
     <>
       {isMobile && !isOpen && (
@@ -374,88 +470,188 @@ export default function Sidebar() {
 
             {/* Menu List */}
             <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-              {currentSite.menuItems.map((item, index) => {
-                const Icon = iconMap[item.icon];
-                const isActive = isActiveLink(item.href);
-                
+              {currentSite.menuItems.map((item: any) => {
+                /* ===============================
+                  ITEM SIMPLES (fora de grupo)
+                =============================== */
+                if (item.type === "item") {
+                  const Icon = iconMap[item.icon];
+                  const isActive = isActiveLink(item.href, true); // Usa verificação exata
+
+                  return (
+                    <motion.div
+                      key={item.name}
+                      whileHover={{ x: 4 }}
+                    >
+                      <Link
+                        href={item.href}
+                        onClick={isMobile ? closeSidebar : undefined}
+                        className={`
+                          flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 relative
+                          ${isActive
+                            ? "bg-[var(--color-primary)] text-white"
+                            : "text-[var(--color-secondary)]/80 hover:bg-white/10"
+                          }
+                          ${isCollapsed && !isMobile ? "justify-center px-3" : ""}
+                        `}
+                      >
+                        <Icon size={22} />
+
+                        {(!isCollapsed || isMobile) && (
+                          <span className="text-sm font-medium">
+                            {item.name}
+                          </span>
+                        )}
+                      </Link>
+                    </motion.div>
+                  );
+                }
+
+                /* ===============================
+                  GRUPO (accordion)
+                =============================== */
+                const GroupIcon = item.icon ? iconMap[item.icon] : null;
+                const isGroupCurrentlyActive = isGroupActive(item);
+                const isGroupOpen = openGroups[item.title] ?? isGroupCurrentlyActive;
+
                 return (
-                  <motion.div
-                    key={item.name}
-                    onHoverStart={() => setHoveredItem(index)}
-                    onHoverEnd={() => setHoveredItem(null)}
-                    whileHover={{ x: 4 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={isMobile ? closeSidebar : undefined}
+                  <div key={item.title} className="space-y-1">
+                    {/* Header do grupo */}
+                    <button
+                      onClick={() => toggleGroup(item.title)}
                       className={`
-                        flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group relative
-                        ${isActive 
-                          ? 'text-white shadow-[var(--color-shadow)] bg-[var(--color-primary)]'
-                          : 'text-[var(--color-secondary)]/80 hover:bg-[var(--color-secondary)]/10 hover:text-[var(--color-secondary)]'
+                        w-full flex items-center justify-between px-4 py-3 rounded-xl
+                        transition-all duration-200
+                        ${isGroupCurrentlyActive
+                          ? "bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
+                          : "text-[var(--color-secondary)]/80 hover:bg-white/10"
                         }
-                        ${isCollapsed && !isMobile ? 'justify-center px-3' : ''}
+                        ${isCollapsed && !isMobile ? "justify-center" : ""}
                       `}
                     >
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeIndicator"
-                          className="absolute left-0 w-1 h-6 bg-white rounded-r-full"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.15 }}
+                      <div className="flex items-center gap-3">
+                        {GroupIcon && <GroupIcon size={20} />}
+                        {(!isCollapsed || isMobile) && (
+                          <span className="text-sm font-semibold">
+                            {item.title}
+                          </span>
+                        )}
+                      </div>
+
+                      {(!isCollapsed || isMobile) && (
+                        <ChevronDown
+                          size={16}
+                          className={`transition-transform ${isGroupOpen ? "rotate-180" : ""}`}
                         />
                       )}
-                      
-                      <motion.div
-                        className={`
-                          transition-all duration-200 flex-shrink-0
-                          ${isActive ? 'scale-110' : 'group-hover:scale-105'}
-                        `}
-                        layout
-                      >
-                        <Icon 
-                          size={22} 
-                          className={`
-                            ${isActive 
-                              ? 'text-white' 
-                              : 'text-[var(--color-secondary)]/60 group-hover:text-[var(--color-secondary)]'
-                            }
-                          `} 
-                        />
-                      </motion.div>
-                      
-                      <AnimatePresence>
-                        {(!isCollapsed || isMobile) && (
-                          <motion.span
-                            initial={{ opacity: 0, x: -5 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -5 }}
-                            transition={{ duration: 0.15 }}
-                            className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis"
-                            layout
-                          >
-                            {item.name}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
+                    </button>
 
-                      {(isCollapsed && !isMobile) && hoveredItem === index && (
+                    {/* Itens filhos */}
+                    <AnimatePresence>
+                      {isGroupOpen && (!isCollapsed || isMobile) && (
                         <motion.div
-                          initial={{ opacity: 0, x: 8 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 8 }}
-                          className="absolute left-full ml-2 px-3 py-2 bg-[var(--color-aside)] text-[var(--color-secondary)] text-sm rounded-lg shadow-[var(--color-shadow)] whitespace-nowrap z-50 border border-[var(--color-border)]"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="ml-6 space-y-1 overflow-hidden"
                         >
-                          {item.name}
-                          <div className="absolute top-1/2 -left-1 w-2 h-2 bg-[var(--color-aside)] transform -translate-y-1/2 rotate-45 border-l border-t border-[var(--color-border)]" />
+                          {item.children.map((child: any) => {
+                            const ChildIcon = iconMap[child.icon];
+                            const isActive = isActiveLink(child.href, true); // Usa verificação exata
+
+                            return (
+                              <Link
+                                key={child.name}
+                                href={child.href}
+                                onClick={isMobile ? closeSidebar : undefined}
+                                className={`
+                                  flex items-center gap-3 px-3 py-2 rounded-lg text-sm
+                                  transition-all duration-200
+                                  ${isActive
+                                    ? "bg-[var(--color-primary)] text-white"
+                                    : "text-[var(--color-secondary)]/70 hover:bg-white/10"
+                                  }
+                                `}
+                              >
+                                <ChildIcon size={16} />
+                                <span>{child.name}</span>
+                              </Link>
+                            );
+                          })}
                         </motion.div>
                       )}
-                    </Link>
-                  </motion.div>
+                    </AnimatePresence>
+                  </div>
                 );
               })}
+
+              {/* Botão de Sair - Estilizado e melhorado */}
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="mt-8 pt-6 border-t border-[var(--color-border)]/30"
+              >
+                <button
+                  onClick={() => {
+                    if (isMobile) closeSidebar();
+                    handleLogout();
+                  }}
+                  className={`
+                    group relative
+                    flex items-center justify-center gap-3
+                    px-4 py-3 rounded-xl
+                    transition-all duration-300
+                    w-full
+                    overflow-hidden
+                    bg-[var(--color-primary)]
+                    hover:from-[var(--color-primary-dark)] hover:to-[var(--color-primary)]
+                    text-white font-medium
+                    shadow-lg hover:shadow-xl
+                    active:scale-[0.99]
+                    ${isCollapsed && !isMobile ? "px-3 py-3" : ""}
+                  `}
+                >
+                  {/* Efeito de brilho no hover */}
+                  <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-all duration-300" />
+                  
+                  {/* Ícone com animação */}
+                  <motion.div
+                    whileHover={{ x: -2 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <LogOutIcon 
+                      size={22} 
+                      className="transition-transform duration-300"
+                    />
+                  </motion.div>
+
+                  {(!isCollapsed || isMobile) && (
+                    <motion.span 
+                      className="text-sm font-semibold"
+                      whileHover={{ x: 2 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      Sair do Sistema
+                    </motion.span>
+                  )}
+                  
+                  {/* Tooltip para modo colapsado */}
+                  {isCollapsed && !isMobile && (
+                    <div className="
+                      absolute left-full ml-2 px-2 py-1
+                      bg-gray-900 text-white text-xs rounded
+                      opacity-0 group-hover:opacity-100
+                      transition-opacity duration-200
+                      whitespace-nowrap
+                      pointer-events-none
+                      z-50
+                    ">
+                      Sair do Sistema
+                      <div className="absolute top-1/2 right-full -translate-y-1/2 w-0 h-0 border-t-4 border-b-4 border-l-0 border-r-4 border-r-gray-900 border-transparent"></div>
+                    </div>
+                  )}
+                </button>
+              </motion.div>
             </nav>
 
             {/* Footer da Sidebar */}

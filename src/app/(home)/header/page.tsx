@@ -27,10 +27,11 @@ interface ThemeColors {
 
 interface HeaderData {
   id?: string;
-  institucional: ThemeColors;
+  home: ThemeColors;
+  ecommerce: ThemeColors;
   marketing: ThemeColors;
   sobre: ThemeColors;
-  defaultTheme: "institucional" | "marketing" | "sobre";
+  defaultTheme: "home" | "ecommerce" | "marketing" | "sobre";
   showThemeSwitcher: boolean;
   stickyHeader: boolean;
   headerHeight: string;
@@ -40,7 +41,17 @@ interface HeaderData {
 }
 
 const defaultHeaderData: HeaderData = {
-  institucional: {
+  home: {
+    primary: "#10B981",
+    hoverBg: "#34D399",
+    textOnPrimary: "#FFFFFF",
+    accentText: "#10B981",
+    hoverText: "#10B981",
+    border: "#34D399",
+    glow: "#10B981",
+    underline: "#10B981",
+  },
+  ecommerce: {
     primary: "#FFCC00",
     hoverBg: "#FFDB15",
     textOnPrimary: "#000000",
@@ -70,7 +81,7 @@ const defaultHeaderData: HeaderData = {
     glow: "#0071E3",
     underline: "#0071E3",
   },
-  defaultTheme: "institucional",
+  defaultTheme: "home",
   showThemeSwitcher: true,
   stickyHeader: true,
   headerHeight: "4rem",
@@ -148,7 +159,7 @@ export default function HeaderThemePage() {
     themes: true,
     config: false,
   });
-  const [activeThemeTab, setActiveThemeTab] = useState<"institucional" | "marketing" | "sobre">("institucional");
+  const [activeThemeTab, setActiveThemeTab] = useState<"home" | "ecommerce" | "marketing" | "sobre">("home");
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     type: "single" as "single" | "all",
@@ -178,15 +189,25 @@ export default function HeaderThemePage() {
           // Converter classes Tailwind para hex para exibição
           const transformedData: HeaderData = {
             id: data.id,
-            institucional: {
-              primary: extractHexFromTailwind(fetchedData.institucional?.primary || ""),
-              hoverBg: extractHexFromTailwind(fetchedData.institucional?.hoverBg || ""),
-              textOnPrimary: extractHexFromTailwind(fetchedData.institucional?.textOnPrimary || ""),
-              accentText: extractHexFromTailwind(fetchedData.institucional?.accentText || ""),
-              hoverText: extractHexFromTailwind(fetchedData.institucional?.hoverText || ""),
-              border: extractHexFromTailwind(fetchedData.institucional?.border || ""),
-              glow: extractHexFromTailwind(fetchedData.institucional?.glow || ""),
-              underline: extractHexFromTailwind(fetchedData.institucional?.underline || ""),
+            home: {
+              primary: extractHexFromTailwind(fetchedData.home?.primary || ""),
+              hoverBg: extractHexFromTailwind(fetchedData.home?.hoverBg || ""),
+              textOnPrimary: extractHexFromTailwind(fetchedData.home?.textOnPrimary || ""),
+              accentText: extractHexFromTailwind(fetchedData.home?.accentText || ""),
+              hoverText: extractHexFromTailwind(fetchedData.home?.hoverText || ""),
+              border: extractHexFromTailwind(fetchedData.home?.border || ""),
+              glow: extractHexFromTailwind(fetchedData.home?.glow || ""),
+              underline: extractHexFromTailwind(fetchedData.home?.underline || ""),
+            },
+            ecommerce: {
+              primary: extractHexFromTailwind(fetchedData.ecommerce?.primary || ""),
+              hoverBg: extractHexFromTailwind(fetchedData.ecommerce?.hoverBg || ""),
+              textOnPrimary: extractHexFromTailwind(fetchedData.ecommerce?.textOnPrimary || ""),
+              accentText: extractHexFromTailwind(fetchedData.ecommerce?.accentText || ""),
+              hoverText: extractHexFromTailwind(fetchedData.ecommerce?.hoverText || ""),
+              border: extractHexFromTailwind(fetchedData.ecommerce?.border || ""),
+              glow: extractHexFromTailwind(fetchedData.ecommerce?.glow || ""),
+              underline: extractHexFromTailwind(fetchedData.ecommerce?.underline || ""),
             },
             marketing: {
               primary: extractHexFromTailwind(fetchedData.marketing?.primary || ""),
@@ -208,7 +229,7 @@ export default function HeaderThemePage() {
               glow: extractHexFromTailwind(fetchedData.sobre?.glow || ""),
               underline: extractHexFromTailwind(fetchedData.sobre?.underline || ""),
             },
-            defaultTheme: fetchedData.defaultTheme || "institucional",
+            defaultTheme: fetchedData.defaultTheme || "home",
             showThemeSwitcher: fetchedData.showThemeSwitcher !== false,
             stickyHeader: fetchedData.stickyHeader !== false,
             headerHeight: fetchedData.headerHeight || "4rem",
@@ -257,7 +278,7 @@ export default function HeaderThemePage() {
   };
 
   const handleThemeChange = (
-    theme: "institucional" | "marketing" | "sobre",
+    theme: "home" | "ecommerce" | "marketing" | "sobre",
     property: keyof ThemeColors,
     hexColor: string
   ) => {
@@ -269,7 +290,7 @@ export default function HeaderThemePage() {
     const dataForApi = { ...headerData };
     
     // Converter todas as cores hex para Tailwind classes
-    const themes: ("institucional" | "marketing" | "sobre")[] = ["institucional", "marketing", "sobre"];
+    const themes: ("home" | "ecommerce" | "marketing" | "sobre")[] = ["home", "ecommerce", "marketing", "sobre"];
     
     themes.forEach(theme => {
       Object.keys(dataForApi[theme]).forEach((property) => {
@@ -327,15 +348,25 @@ export default function HeaderThemePage() {
         // Converter de volta para hex
         const transformedData: HeaderData = {
           id: saved.id,
-          institucional: {
-            primary: extractHexFromTailwind(savedData.institucional?.primary || ""),
-            hoverBg: extractHexFromTailwind(savedData.institucional?.hoverBg || ""),
-            textOnPrimary: extractHexFromTailwind(savedData.institucional?.textOnPrimary || ""),
-            accentText: extractHexFromTailwind(savedData.institucional?.accentText || ""),
-            hoverText: extractHexFromTailwind(savedData.institucional?.hoverText || ""),
-            border: extractHexFromTailwind(savedData.institucional?.border || ""),
-            glow: extractHexFromTailwind(savedData.institucional?.glow || ""),
-            underline: extractHexFromTailwind(savedData.institucional?.underline || ""),
+          home: {
+            primary: extractHexFromTailwind(savedData.home?.primary || ""),
+            hoverBg: extractHexFromTailwind(savedData.home?.hoverBg || ""),
+            textOnPrimary: extractHexFromTailwind(savedData.home?.textOnPrimary || ""),
+            accentText: extractHexFromTailwind(savedData.home?.accentText || ""),
+            hoverText: extractHexFromTailwind(savedData.home?.hoverText || ""),
+            border: extractHexFromTailwind(savedData.home?.border || ""),
+            glow: extractHexFromTailwind(savedData.home?.glow || ""),
+            underline: extractHexFromTailwind(savedData.home?.underline || ""),
+          },
+          ecommerce: {
+            primary: extractHexFromTailwind(savedData.ecommerce?.primary || ""),
+            hoverBg: extractHexFromTailwind(savedData.ecommerce?.hoverBg || ""),
+            textOnPrimary: extractHexFromTailwind(savedData.ecommerce?.textOnPrimary || ""),
+            accentText: extractHexFromTailwind(savedData.ecommerce?.accentText || ""),
+            hoverText: extractHexFromTailwind(savedData.ecommerce?.hoverText || ""),
+            border: extractHexFromTailwind(savedData.ecommerce?.border || ""),
+            glow: extractHexFromTailwind(savedData.ecommerce?.glow || ""),
+            underline: extractHexFromTailwind(savedData.ecommerce?.underline || ""),
           },
           marketing: {
             primary: extractHexFromTailwind(savedData.marketing?.primary || ""),
@@ -357,7 +388,7 @@ export default function HeaderThemePage() {
             glow: extractHexFromTailwind(savedData.sobre?.glow || ""),
             underline: extractHexFromTailwind(savedData.sobre?.underline || ""),
           },
-          defaultTheme: savedData.defaultTheme || "institucional",
+          defaultTheme: savedData.defaultTheme || "home",
           showThemeSwitcher: savedData.showThemeSwitcher !== false,
           stickyHeader: savedData.stickyHeader !== false,
           headerHeight: savedData.headerHeight || "4rem",
@@ -457,7 +488,7 @@ export default function HeaderThemePage() {
     themeKey,
     label,
   }: {
-    themeKey: "institucional" | "marketing" | "sobre";
+    themeKey: "home" | "ecommerce" | "marketing" | "sobre";
     label: string;
   }) => (
     <button
@@ -479,7 +510,7 @@ export default function HeaderThemePage() {
     label,
     description,
   }: {
-    theme: "institucional" | "marketing" | "sobre";
+    theme: "home" | "ecommerce" | "marketing" | "sobre";
     property: keyof ThemeColors;
     label: string;
     description: string;
@@ -541,7 +572,8 @@ export default function HeaderThemePage() {
               <div className="space-y-6">
                 {/* Tabs de Temas */}
                 <div className="flex gap-2">
-                  <ThemeTab themeKey="institucional" label="Institucional" />
+                  <ThemeTab themeKey="home" label="Home" />
+                  <ThemeTab themeKey="ecommerce" label="Ecommerce" />
                   <ThemeTab themeKey="marketing" label="Marketing" />
                   <ThemeTab themeKey="sobre" label="Sobre" />
                 </div>
