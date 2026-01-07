@@ -30,6 +30,6 @@
     "src/**/*.mts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
-  ],
+, "src/components/ColorPropertyInput"  ],
   "exclude": ["node_modules"]
 }
