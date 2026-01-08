@@ -86,20 +86,6 @@
 
         {
           "type": "group",
-          "title": "Sobre",
-          "icon": "FileText",
-          "children": [
-            { "name": "Socios", "icon": "HelpCircle", "href": "/socios-sobre" },
-            { "name": "História", "icon": "HelpCircle", "href": "/historia-sobre" },
-            { "name": "Empresas", "icon": "HelpCircle", "href": "/empresas-sobre" },
-            { "name": "Métricas", "icon": "HelpCircle", "href": "/metricas-sobre" },
-            { "name": "Localização", "icon": "HelpCircle", "href": "/localizacao-sobre" },
-            { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-sobre" }
-          ]
-        },
-
-        {
-          "type": "group",
           "title": "Curso",
           "icon": "FileText",
           "children": [
@@ -111,8 +97,21 @@
             { "name": "Galeria", "icon": "HelpCircle", "href": "/galeria-curso" },
             { "name": "Empresa", "icon": "HelpCircle", "href": "/expertise-curso" },
             { "name": "Concorrencia", "icon": "HelpCircle", "href": "/concorrentes-curso" },
-            { "name": "Planos/Preços", "icon": "HelpCircle", "href": "/preco-curso" },
             { "name": "Faq", "icon": "HelpCircle", "href": "/faq-curso" }
+          ]
+        },
+
+        {
+          "type": "group",
+          "title": "Sobre",
+          "icon": "FileText",
+          "children": [
+            { "name": "Socios", "icon": "HelpCircle", "href": "/socios-sobre" },
+            { "name": "História", "icon": "HelpCircle", "href": "/historia-sobre" },
+            { "name": "Empresas", "icon": "HelpCircle", "href": "/empresas-sobre" },
+            { "name": "Métricas", "icon": "HelpCircle", "href": "/metricas-sobre" },
+            { "name": "Localização", "icon": "HelpCircle", "href": "/localizacao-sobre" },
+            { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-sobre" }
           ]
         }
       ]

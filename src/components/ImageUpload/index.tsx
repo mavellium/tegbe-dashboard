@@ -99,10 +99,9 @@ export const ImageUpload = ({
                 }}
                 onClick={handleImageClick}
               >
-                <Image
+                <img
                   src={imageUrl}
                   alt="Image preview"
-                  fill={!previewWidth && !previewHeight}
                   width={previewWidth || undefined}
                   height={previewHeight || undefined}
                   className="object-cover"
@@ -231,7 +230,7 @@ export const ImageUpload = ({
                   <img
                     src={imageUrl}
                     alt="Preview expandido"
-                    className="max-w-full max-h-[80vh] object-contain rounded-2xl"
+                    className="max-w-full max-h-[80vh] min-h-[100px] min-w-[100px] object-contain rounded-2xl"
                   />
                 </div>
               </div>

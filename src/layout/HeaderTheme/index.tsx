@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { TextArea } from "@/components/TextArea";
 import { ImageUpload } from "@/components/ImageUpload";
-import { Palette, Layout, Settings, Globe, Image as ImageIcon, FileText, Tag } from "lucide-react";
+import { Palette, Layout, Settings, Image as ImageIcon, Tag, Link as LinkIcon } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
@@ -16,9 +15,14 @@ import { SectionHeader } from "@/components/SectionHeader";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
 import { extractHexFromTailwind, hexToTailwindClass } from "@/lib/colorUtils";
 import Loading from "@/components/Loading";
+import { useJsonManagement } from "@/hooks/useJsonManagement";
 
-// Tipos
-interface ThemeColors {
+interface LinkItem {
+  name: string;
+  href: string;
+}
+
+interface VariantTheme {
   primary: string;
   hoverBg: string;
   textOnPrimary: string;
@@ -29,114 +33,164 @@ interface ThemeColors {
   underline: string;
 }
 
-interface Configs {
-  logo: string;
-  favicon: string;
-  siteTitle: string;
-  siteDescription: string;
-}
-
-interface HeaderData {
+type HeaderData = {
   id?: string;
-  theme: ThemeColors;
-  configs: Configs;
-}
+  general: {
+    logo: string;
+    logoAlt: string;
+    consultantBadge: string;
+    ctaLink: string;
+    ctaText: string;
+  };
+  links: LinkItem[];
+  variants: {
+    ecommerce: VariantTheme;
+    marketing: VariantTheme;
+    sobre: VariantTheme;
+    cursos: VariantTheme;
+  };
+};
 
 const defaultHeaderData: HeaderData = {
-  theme: {
-    primary: "bg-[#FFCC00]",
-    hoverBg: "hover:bg-[#FFDB15]",
-    textOnPrimary: "text-black",
-    accentText: "text-[#FFCC00]",
-    hoverText: "group-hover:text-[#FFCC00]",
-    border: "border-yellow-500/30",
-    glow: "shadow-[0_0_20px_rgba(255,204,0,0.4)]",
-    underline: "bg-[#FFCC00]"
-  },
-  configs: {
+  general: {
     logo: "",
-    favicon: "",
-    siteTitle: "Tegbe - Aceleradora de E-commerce",
-    siteDescription: "Transformamos operação técnica em lucro real através de dados e estratégia."
+    logoAlt: "",
+    consultantBadge: "",
+    ctaLink: "",
+    ctaText: ""
+  },
+  links: [
+    { name: "Home", href: "/" },
+  ],
+  variants: {
+    ecommerce: {
+      primary: "bg-[#FFCC00]",
+      hoverBg: "hover:bg-[#FFDB15]",
+      textOnPrimary: "text-black",
+      accentText: "text-[#FFCC00]",
+      hoverText: "group-hover:text-[#FFCC00]",
+      border: "border-yellow-500/30",
+      glow: "shadow-[0_0_20px_rgba(255,204,0,0.4)]",
+      underline: "bg-[#FFCC00]"
+    },
+    marketing: {
+      primary: "bg-[#E31B63]",
+      hoverBg: "hover:bg-[#FF1758]",
+      textOnPrimary: "text-white",
+      accentText: "text-[#E31B63]",
+      hoverText: "group-hover:text-[#E31B63]",
+      border: "border-rose-500/30",
+      glow: "shadow-[0_0_20px_rgba(227,27,99,0.4)]",
+      underline: "bg-[#E31B63]"
+    },
+    sobre: {
+      primary: "bg-[#0071E3]",
+      hoverBg: "hover:bg-[#2B8CFF]",
+      textOnPrimary: "text-white",
+      accentText: "text-[#0071E3]",
+      hoverText: "group-hover:text-[#0071E3]",
+      border: "border-blue-500/30",
+      glow: "shadow-[0_0_20px_rgba(0,113,227,0.4)]",
+      underline: "bg-[#0071E3]"
+    },
+    cursos: {
+      primary: "bg-[#FFD700]",
+      hoverBg: "hover:bg-[#E5C100]",
+      textOnPrimary: "text-black",
+      accentText: "text-[#FFD700]",
+      hoverText: "group-hover:text-[#FFD700]",
+      border: "border-[#FFD700]/30",
+      glow: "shadow-[0_0_25px_rgba(255,215,0,0.3)]",
+      underline: "bg-[#FFD700]"
+    }
   }
 };
 
-// Função para mesclar dados com padrão
-const mergeWithDefaults = (apiData: any): HeaderData => {
-  if (!apiData) return defaultHeaderData;
+const mergeWithDefaults = (apiData: any, defaultData: HeaderData): HeaderData => {
+  if (!apiData) return defaultData;
   
   return {
     id: apiData.id,
-    theme: {
-      primary: apiData.theme?.primary || defaultHeaderData.theme.primary,
-      hoverBg: apiData.theme?.hoverBg || defaultHeaderData.theme.hoverBg,
-      textOnPrimary: apiData.theme?.textOnPrimary || defaultHeaderData.theme.textOnPrimary,
-      accentText: apiData.theme?.accentText || defaultHeaderData.theme.accentText,
-      hoverText: apiData.theme?.hoverText || defaultHeaderData.theme.hoverText,
-      border: apiData.theme?.border || defaultHeaderData.theme.border,
-      glow: apiData.theme?.glow || defaultHeaderData.theme.glow,
-      underline: apiData.theme?.underline || defaultHeaderData.theme.underline,
+    general: {
+      logo: apiData.general?.logo || defaultData.general.logo,
+      logoAlt: apiData.general?.logoAlt || defaultData.general.logoAlt,
+      consultantBadge: apiData.general?.consultantBadge || defaultData.general.consultantBadge,
+      ctaLink: apiData.general?.ctaLink || defaultData.general.ctaLink,
+      ctaText: apiData.general?.ctaText || defaultData.general.ctaText,
     },
-    configs: {
-      logo: apiData.configs?.logo || defaultHeaderData.configs.logo,
-      favicon: apiData.configs?.favicon || defaultHeaderData.configs.favicon,
-      siteTitle: apiData.configs?.siteTitle || defaultHeaderData.configs.siteTitle,
-      siteDescription: apiData.configs?.siteDescription || defaultHeaderData.configs.siteDescription,
+    links: apiData.links || defaultData.links,
+    variants: {
+      ecommerce: {
+        primary: apiData.variants?.ecommerce?.primary || defaultData.variants.ecommerce.primary,
+        hoverBg: apiData.variants?.ecommerce?.hoverBg || defaultData.variants.ecommerce.hoverBg,
+        textOnPrimary: apiData.variants?.ecommerce?.textOnPrimary || defaultData.variants.ecommerce.textOnPrimary,
+        accentText: apiData.variants?.ecommerce?.accentText || defaultData.variants.ecommerce.accentText,
+        hoverText: apiData.variants?.ecommerce?.hoverText || defaultData.variants.ecommerce.hoverText,
+        border: apiData.variants?.ecommerce?.border || defaultData.variants.ecommerce.border,
+        glow: apiData.variants?.ecommerce?.glow || defaultData.variants.ecommerce.glow,
+        underline: apiData.variants?.ecommerce?.underline || defaultData.variants.ecommerce.underline,
+      },
+      marketing: {
+        primary: apiData.variants?.marketing?.primary || defaultData.variants.marketing.primary,
+        hoverBg: apiData.variants?.marketing?.hoverBg || defaultData.variants.marketing.hoverBg,
+        textOnPrimary: apiData.variants?.marketing?.textOnPrimary || defaultData.variants.marketing.textOnPrimary,
+        accentText: apiData.variants?.marketing?.accentText || defaultData.variants.marketing.accentText,
+        hoverText: apiData.variants?.marketing?.hoverText || defaultData.variants.marketing.hoverText,
+        border: apiData.variants?.marketing?.border || defaultData.variants.marketing.border,
+        glow: apiData.variants?.marketing?.glow || defaultData.variants.marketing.glow,
+        underline: apiData.variants?.marketing?.underline || defaultData.variants.marketing.underline,
+      },
+      sobre: {
+        primary: apiData.variants?.sobre?.primary || defaultData.variants.sobre.primary,
+        hoverBg: apiData.variants?.sobre?.hoverBg || defaultData.variants.sobre.hoverBg,
+        textOnPrimary: apiData.variants?.sobre?.textOnPrimary || defaultData.variants.sobre.textOnPrimary,
+        accentText: apiData.variants?.sobre?.accentText || defaultData.variants.sobre.accentText,
+        hoverText: apiData.variants?.sobre?.hoverText || defaultData.variants.sobre.hoverText,
+        border: apiData.variants?.sobre?.border || defaultData.variants.sobre.border,
+        glow: apiData.variants?.sobre?.glow || defaultData.variants.sobre.glow,
+        underline: apiData.variants?.sobre?.underline || defaultData.variants.sobre.underline,
+      },
+      cursos: {
+        primary: apiData.variants?.cursos?.primary || defaultData.variants.cursos.primary,
+        hoverBg: apiData.variants?.cursos?.hoverBg || defaultData.variants.cursos.hoverBg,
+        textOnPrimary: apiData.variants?.cursos?.textOnPrimary || defaultData.variants.cursos.textOnPrimary,
+        accentText: apiData.variants?.cursos?.accentText || defaultData.variants.cursos.accentText,
+        hoverText: apiData.variants?.cursos?.hoverText || defaultData.variants.cursos.hoverText,
+        border: apiData.variants?.cursos?.border || defaultData.variants.cursos.border,
+        glow: apiData.variants?.cursos?.glow || defaultData.variants.cursos.glow,
+        underline: apiData.variants?.cursos?.underline || defaultData.variants.cursos.underline,
+      }
     }
   };
 };
 
 export const HeaderThemePageComponent: React.FC = () => {
-  const [headerData, setHeaderData] = useState<HeaderData>(defaultHeaderData);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
+  const {
+    data: headerData,
+    setData: setHeaderData,
+    exists,
+    loading,
+    success,
+    errorMsg,
+    deleteModal,
+    fileStates,
+    updateNested,
+    setFileState,
+    save,
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
+  } = useJsonManagement<HeaderData>({
+    apiPath: "/api/tegbe-institucional/json/header",
+    defaultData: defaultHeaderData,
+    mergeFunction: mergeWithDefaults,
+  });
+
   const [expandedSections, setExpandedSections] = useState({
-    siteConfig: true,
-    theme: false,
+    general: true,
+    links: false,
+    colors: false,
   });
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "single" as "single" | "all",
-    title: "",
-  });
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [faviconFile, setFaviconFile] = useState<File | null>(null);
-
-  const apiBase = "/api/tegbe-institucional/json";
-  const type = "header";
-
-  const completeCount = 12; 
-  const totalCount = 12;
-  const exists = !!headerData.id;
-  const canAddNewItem = true;
-  const isLimitReached = false;
-
-  const fetchExistingData = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`${apiBase}/${type}`);
-
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Dados recebidos da API (header):", data);
-        
-        if (data) {
-          const mergedData = mergeWithDefaults(data);
-          setHeaderData(mergedData);
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao buscar dados do header:", error);
-      setErrorMsg("Erro ao carregar dados do servidor");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchExistingData();
-  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -145,126 +199,58 @@ export const HeaderThemePageComponent: React.FC = () => {
     }));
   };
 
-  const handleThemeChange = (property: keyof ThemeColors, hexColor: string) => {
-    const tailwindClass = hexToTailwindClass(property, hexColor);
-    setHeaderData(prev => ({
-      ...prev,
-      theme: {
-        ...prev.theme,
-        [property]: tailwindClass
-      }
-    }));
-  };
-
-  const handleConfigChange = (path: string, value: any) => {
-    const keys = path.split('.');
-    setHeaderData(prev => {
-      const newData = { ...prev };
-      let current: any = newData;
-      
-      for (let i = 0; i < keys.length - 1; i++) {
-        if (!current[keys[i]]) current[keys[i]] = {};
-        current = current[keys[i]];
-      }
-      
-      current[keys[keys.length - 1]] = value;
-      return newData;
-    });
-  };
+  const completeCount = 5 + headerData.links.length * 2 + 8;
+  const totalCount = 5 + 10 * 2 + 8;
+  const canAddNewItem = true;
+  const isLimitReached = false;
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
-    setLoading(true);
-    setSuccess(false);
-    setErrorMsg("");
-
     try {
-      const dataToSend = { ...headerData };
-      const fd = new FormData();
-
-      fd.append("values", JSON.stringify(dataToSend));
-
-      // Adicionar arquivos de logo e favicon se existirem
-      if (logoFile) {
-        fd.append('file:configs.logo', logoFile);
-      }
-
-      if (faviconFile) {
-        fd.append('file:configs.favicon', faviconFile);
-      }
-
-      const method = dataToSend.id ? "PUT" : "POST";
-
-      const res = await fetch(`${apiBase}/${type}`, {
-        method,
-        body: fd,
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Erro ao salvar configurações do header");
-      }
-
-      const saved = await res.json();
-      console.log("Dados salvos (header):", saved);
-      
-      if (saved) {
-        const mergedData = mergeWithDefaults(saved);
-        setHeaderData(mergedData);
-      }
-
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message || "Erro ao salvar");
-    } finally {
-      setLoading(false);
-      setLogoFile(null);
-      setFaviconFile(null);
+      await save();
+    } catch (err) {
+      // Erro já tratado no hook
     }
   };
 
-  const handleSubmitWrapper = () => {
-    handleSubmit();
-  };
-
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODAS AS CONFIGURAÇÕES DO HEADER",
+  // Função para alterar uma propriedade de cor em TODAS as variantes
+  const handleColorsChange = (property: keyof VariantTheme, hexColor: string) => {
+    const tailwindClass = hexToTailwindClass(property as any, hexColor);
+    
+    // Atualizar todas as variantes com a mesma cor
+    const updatedVariants = { ...headerData.variants };
+    
+    (Object.keys(updatedVariants) as Array<keyof typeof updatedVariants>).forEach((variant) => {
+      updatedVariants[variant] = {
+        ...updatedVariants[variant],
+        [property]: tailwindClass
+      };
     });
+
+    // Atualizar o estado
+    updateNested('variants', updatedVariants);
   };
 
-  const confirmDelete = async () => {
-    try {
-      const res = await fetch(`${apiBase}/${type}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        setHeaderData(defaultHeaderData);
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
-      } else {
-        throw new Error("Erro ao deletar");
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Erro ao deletar");
-    } finally {
-      closeDeleteModal();
-    }
+  // Funções para gerenciar links
+  const handleLinkChange = (index: number, field: 'name' | 'href', value: string) => {
+    const newLinks = [...headerData.links];
+    newLinks[index] = { ...newLinks[index], [field]: value };
+    updateNested('links', newLinks);
   };
 
-  const closeDeleteModal = () => {
-    setDeleteModal({ isOpen: false, type: "single", title: "" });
+  const handleAddLink = () => {
+    const newLinks = [...headerData.links, { name: "", href: "" }];
+    updateNested('links', newLinks);
+  };
+
+  const handleRemoveLink = (index: number) => {
+    const newLinks = headerData.links.filter((_, i) => i !== index);
+    updateNested('links', newLinks);
   };
 
   if (loading && !exists) {
     return (
-      <Loading layout={Layout} exists={exists}></Loading>
+      <Loading layout={Layout} exists={!!exists}></Loading>
     );
   }
 
@@ -272,33 +258,178 @@ export const HeaderThemePageComponent: React.FC = () => {
     <ManageLayout
       headerIcon={Layout}
       title="Personalização do Header"
-      description="Configure o tema e configurações do cabeçalho do site"
-      exists={exists}
-      itemName="Header Theme"
+      description="Configure o header do site incluindo logo, links e cores"
+      exists={!!exists}
+      itemName="Header"
     >
-      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+      <form onSubmit={(e) => handleSubmit(e)} className="space-y-6 pb-32">
+        {/* Seção Geral */}
         <div className="space-y-4">
           <SectionHeader
-            title="Tema do Header"
-            section="theme"
-            icon={Palette}
-            isExpanded={expandedSections.theme}
-            onToggle={() => toggleSection("theme")}
+            title="Configurações Gerais"
+            section="general"
+            icon={Settings}
+            isExpanded={expandedSections.general}
+            onToggle={() => toggleSection("general")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.theme ? "auto" : 0 }}
+            animate={{ height: expandedSections.general ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6">
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5" />
+                    Logos
+                  </h3>
+                  
+                  <ImageUpload
+                    label="Logo do Site"
+                    description="Imagem principal do site (recomendado: PNG transparente)"
+                    currentImage={headerData.general.logo}
+                    selectedFile={fileStates['general.logo'] || null}
+                    onFileChange={(file) => setFileState('general.logo', file)}
+                    aspectRatio="aspect-[4/1]"
+                    previewWidth={200}
+                    previewHeight={200}
+                  />
+
+                  <Input
+                    label="Texto Alternativo do Logo"
+                    value={headerData.general.logoAlt}
+                    onChange={(e) => updateNested('general.logoAlt', e.target.value)}
+                    placeholder="Ex: Tegbe Logo"
+                  />
+
+                  <ImageUpload
+                    label="Badge de Consultor"
+                    description="Selo de consultoria certificada"
+                    currentImage={headerData.general.consultantBadge}
+                    selectedFile={fileStates['general.consultantBadge'] || null}
+                    onFileChange={(file) => setFileState('general.consultantBadge', file)}
+                    aspectRatio="aspect-square"
+                    previewWidth={100}
+                    previewHeight={100}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                    <Tag className="w-5 h-5" />
+                    Call to Action (CTA)
+                  </h3>
+                  
+                  <Input
+                    label="Link do CTA"
+                    value={headerData.general.ctaLink}
+                    onChange={(e) => updateNested('general.ctaLink', e.target.value)}
+                    placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
+                  />
+
+                  <Input
+                    label="Texto do CTA"
+                    value={headerData.general.ctaText}
+                    onChange={(e) => updateNested('general.ctaText', e.target.value)}
+                    placeholder="Ex: Agendar agora"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Links */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Links de Navegação"
+            section="links"
+            icon={LinkIcon}
+            isExpanded={expandedSections.links}
+            onToggle={() => toggleSection("links")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.links ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6">
               <div className="space-y-6">
                 <div className="mb-4">
                   <h4 className="text-md font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
-                    Cores do Header
+                    Menu de Navegação
                   </h4>
                   <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Selecione as cores em formato hexadecimal. O sistema converterá automaticamente para classes Tailwind.
+                    Configure os links do menu principal. Cada link deve ter um nome e uma URL.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  {headerData.links.map((link, index) => (
+                    <div key={index} className="flex gap-4 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                      <div className="flex-1 space-y-3">
+                        <Input
+                          label="Nome do Link"
+                          value={link.name}
+                          onChange={(e) => handleLinkChange(index, 'name', e.target.value)}
+                          placeholder="Ex: Home"
+                        />
+                        <Input
+                          label="URL do Link"
+                          value={link.href}
+                          onChange={(e) => handleLinkChange(index, 'href', e.target.value)}
+                          placeholder="Ex: /"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLink(index)}
+                        className="mt-6 px-4 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition-colors h-fit"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <button
+                    type="button"
+                    onClick={handleAddLink}
+                    className="w-full py-3 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+                  >
+                    + Adicionar Novo Link
+                  </button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Cores Única */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Cores do Tema (Aplicadas a todas as páginas)"
+            section="colors"
+            icon={Palette}
+            isExpanded={expandedSections.colors}
+            onToggle={() => toggleSection("colors")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.colors ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6">
+              <div className="space-y-6">
+                <div className="mb-4">
+                  <h4 className="text-md font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+                    Configuração das Cores
+                  </h4>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                    As cores configuradas aqui serão aplicadas a todas as páginas (E-commerce, Marketing, Sobre, Cursos).
                   </p>
                 </div>
 
@@ -307,72 +438,72 @@ export const HeaderThemePageComponent: React.FC = () => {
                     property="primary"
                     label="Cor Primária (Background)"
                     description="Cor de fundo principal para botões e elementos destacados"
-                    currentHex={extractHexFromTailwind(headerData.theme.primary)}
-                    tailwindClass={headerData.theme.primary}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.primary)}
+                    tailwindClass={headerData.variants.ecommerce.primary}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
 
                   <ThemePropertyInput
                     property="hoverBg"
                     label="Background no Hover"
                     description="Cor de fundo quando o usuário passa o mouse"
-                    currentHex={extractHexFromTailwind(headerData.theme.hoverBg)}
-                    tailwindClass={headerData.theme.hoverBg}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.hoverBg)}
+                    tailwindClass={headerData.variants.ecommerce.hoverBg}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
 
                   <ThemePropertyInput
                     property="textOnPrimary"
                     label="Texto sobre Cor Primária"
                     description="Cor do texto quando sobre fundo primário"
-                    currentHex={extractHexFromTailwind(headerData.theme.textOnPrimary)}
-                    tailwindClass={headerData.theme.textOnPrimary}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.textOnPrimary)}
+                    tailwindClass={headerData.variants.ecommerce.textOnPrimary}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
 
                   <ThemePropertyInput
                     property="accentText"
                     label="Texto de Destaque"
                     description="Cor para texto destacado e links"
-                    currentHex={extractHexFromTailwind(headerData.theme.accentText)}
-                    tailwindClass={headerData.theme.accentText}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.accentText)}
+                    tailwindClass={headerData.variants.ecommerce.accentText}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
 
                   <ThemePropertyInput
                     property="hoverText"
                     label="Texto no Hover"
                     description="Cor do texto quando o usuário passa o mouse"
-                    currentHex={extractHexFromTailwind(headerData.theme.hoverText)}
-                    tailwindClass={headerData.theme.hoverText}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.hoverText)}
+                    tailwindClass={headerData.variants.ecommerce.hoverText}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
 
                   <ThemePropertyInput
                     property="border"
                     label="Cor da Borda"
                     description="Cor para bordas e separadores"
-                    currentHex={extractHexFromTailwind(headerData.theme.border)}
-                    tailwindClass={headerData.theme.border}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.border)}
+                    tailwindClass={headerData.variants.ecommerce.border}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
 
                   <ThemePropertyInput
                     property="glow"
                     label="Efeito Glow (Sombra)"
                     description="Cor da sombra para efeitos de destaque"
-                    currentHex={extractHexFromTailwind(headerData.theme.glow)}
-                    tailwindClass={headerData.theme.glow}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.glow)}
+                    tailwindClass={headerData.variants.ecommerce.glow}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
 
                   <ThemePropertyInput
                     property="underline"
                     label="Sublinhado"
                     description="Cor para sublinhados e destaques lineares"
-                    currentHex={extractHexFromTailwind(headerData.theme.underline)}
-                    tailwindClass={headerData.theme.underline}
-                    onThemeChange={(prop, hex) => handleThemeChange(prop, hex)}
+                    currentHex={extractHexFromTailwind(headerData.variants.ecommerce.underline)}
+                    tailwindClass={headerData.variants.ecommerce.underline}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
                   />
                 </div>
               </div>
@@ -380,95 +511,15 @@ export const HeaderThemePageComponent: React.FC = () => {
           </motion.div>
         </div>
 
-        <div className="space-y-4">
-          <SectionHeader
-            title="Configurações do Site"
-            section="siteConfig"
-            icon={Settings}
-            isExpanded={expandedSections.siteConfig}
-            onToggle={() => toggleSection("siteConfig")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.siteConfig ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6">
-              <div className="space-y-8">
-                {/* Logo do Site */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5" />
-                    Logo do Site
-                  </h3>
-                  
-                  <ImageUpload
-                    label="Logo do Site"
-                    description="Imagem principal do site (recomendado: PNG transparente, mínimo 200x50px)"
-                    currentImage={headerData.configs.logo}
-                    selectedFile={logoFile}
-                    onFileChange={setLogoFile}
-                    aspectRatio="aspect-[4/1]"
-                    previewWidth={200}
-                    previewHeight={200}
-                  />
-                </div>
-                
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                    <Globe className="w-5 h-5" />
-                    Favicon
-                  </h3>
-                  
-                  <ImageUpload
-                    label="Favicon"
-                    description="Ícone exibido na aba do navegador (recomendado: 32x32px ou 64x64px)"
-                    currentImage={headerData.configs.favicon}
-                    selectedFile={faviconFile}
-                    onFileChange={setFaviconFile}
-                    aspectRatio="aspect-square"
-                    previewWidth={64}
-                    previewHeight={64}
-                  />
-                </div>
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-                    <Tag className="w-5 h-5" />
-                    Informações do Site
-                  </h3>
-                  
-                  <Input
-                    label="Título do Site"
-                    value={headerData.configs.siteTitle}
-                    onChange={(e) => handleConfigChange('configs.siteTitle', e.target.value)}
-                    placeholder="Ex: Tegbe - Aceleradora de E-commerce"
-                  />
-
-                  <TextArea
-                    label="Descrição do Site"
-                    value={headerData.configs.siteDescription}
-                    onChange={(e) => handleConfigChange('configs.siteDescription', e.target.value)}
-                    placeholder="Ex: Transformamos operação técnica em lucro real através de dados e estratégia."
-                    rows={3}
-                  />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Fixed Action Bar */}
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
-          onSubmit={handleSubmitWrapper}
+          onSubmit={handleSubmit}
           isAddDisabled={!canAddNewItem || isLimitReached}
           isSaving={loading}
-          exists={exists}
+          exists={!!exists}
           completeCount={completeCount}
           totalCount={totalCount}
-          itemName="Header Theme"
+          itemName="Header"
           icon={Layout}
         />
       </form>
@@ -480,7 +531,7 @@ export const HeaderThemePageComponent: React.FC = () => {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Header Theme"
+        itemName="Header"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />

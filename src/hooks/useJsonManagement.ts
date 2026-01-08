@@ -1,22 +1,75 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// hooks/useJsonManagement.ts
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface UseJsonManagementProps<T> {
   apiPath: string;
   defaultData: T;
+  mergeFunction?: (apiData: any, defaultData: T) => T;
 }
 
 export function useJsonManagement<T>({
   apiPath,
   defaultData,
+  mergeFunction,
 }: UseJsonManagementProps<T>) {
   const [data, setData] = useState<T>(defaultData);
   const [exists, setExists] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    type: "single" as "single" | "all",
+    title: "",
+  });
+  const [fileStates, setFileStates] = useState<Record<string, File | null>>({});
+  
+  // Refs para armazenar os timeouts
+  const successTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Limpar timeouts quando o componente desmontar
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const showSuccess = useCallback((message?: string) => {
+    setSuccess(true);
+    
+    // Limpar timeout anterior se existir
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+    }
+    
+    // Configurar novo timeout para esconder a mensagem após 3 segundos
+    successTimeoutRef.current = setTimeout(() => {
+      setSuccess(false);
+    }, 3000);
+  }, []);
+
+  const showError = useCallback((message: string) => {
+    setErrorMsg(message);
+    
+    // Limpar timeout anterior se existir
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    
+    // Configurar novo timeout para esconder a mensagem após 5 segundos
+    errorTimeoutRef.current = setTimeout(() => {
+      setErrorMsg("");
+    }, 5000);
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -26,12 +79,16 @@ export function useJsonManagement<T>({
       const record = (await res.json()) as T | null;
       if (!record) return;
 
+      const mergedData = mergeFunction 
+        ? mergeFunction(record, defaultData)
+        : record;
+
       setExists(record);
-      setData(record);
+      setData(mergedData);
     } catch (err) {
       console.error("Erro ao carregar JSON:", err);
     }
-  }, [apiPath]);
+  }, [apiPath, defaultData, mergeFunction]);
 
   useEffect(() => {
     load();
@@ -65,51 +122,65 @@ export function useJsonManagement<T>({
     });
   }, []);
 
-  const save = useCallback(
-    async (formData?: FormData): Promise<T> => {
-      try {
-        setLoading(true);
-        setSuccess(false);
-        setErrorMsg("");
+  const setFileState = (field: string, file: File | null) => {
+    setFileStates(prev => ({
+      ...prev,
+      [field]: file,
+    }));
+  };
 
-        let body: BodyInit;
-        let headers: HeadersInit | undefined;
+  const save = useCallback(async (): Promise<T> => {
+    try {
+      setLoading(true);
+      setSuccess(false);
+      setErrorMsg("");
 
-        if (formData) {
-          formData.set("values", JSON.stringify(data));
-          body = formData;
-          headers = undefined;
-        } else {
-          body = JSON.stringify({ values: data });
-          headers = { "Content-Type": "application/json" };
+      // SEMPRE usar FormData quando há possibilidade de arquivos
+      const formData = new FormData();
+      formData.set("values", JSON.stringify(data));
+
+      // Adicionar arquivos ao FormData
+      Object.entries(fileStates).forEach(([field, file]) => {
+        if (file && file.size > 0) {
+          formData.append(`file:${field}`, file);
         }
+      });
 
-        const res = await fetch(apiPath, {
-          method: exists ? "PUT" : "POST",
-          body,
-          headers,
-        });
+      const res = await fetch(apiPath, {
+        method: exists ? "PUT" : "POST",
+        body: formData,
+        // NÃO definir Content-Type manualmente - o navegador fará isso automaticamente com o boundary correto
+      });
 
-        if (!res.ok) {
-          throw new Error("Erro ao salvar dados");
-        }
-
-        const record = (await res.json()) as T;
-
-        setExists(record);
-        setData(record);
-        setSuccess(true);
-
-        return record;
-      } catch (err: any) {
-        setErrorMsg(err.message || "Erro ao salvar");
-        throw err;
-      } finally {
-        setLoading(false);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Erro ${res.status}: ${errorText}`);
       }
-    },
-    [apiPath, data, exists]
-  );
+
+      const record = (await res.json()) as T;
+      const mergedData = mergeFunction 
+        ? mergeFunction(record, defaultData)
+        : record;
+
+      setExists(record);
+      setData(mergedData);
+      
+      // Mostrar sucesso temporário
+      showSuccess();
+      
+      // Limpar estados de arquivo após envio bem-sucedido
+      setFileStates({});
+
+      return record;
+    } catch (err: any) {
+      console.error("Erro ao salvar:", err);
+      const errorMessage = err.message || "Erro ao salvar";
+      showError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [apiPath, data, exists, defaultData, mergeFunction, fileStates, showSuccess, showError]);
 
   const remove = useCallback(async () => {
     try {
@@ -121,28 +192,65 @@ export function useJsonManagement<T>({
 
       setData(defaultData);
       setExists(null);
+      setFileStates({});
+      
+      // Mostrar sucesso temporário após deletar
+      showSuccess();
     } catch (err: any) {
-      setErrorMsg(err.message || "Erro ao deletar");
+      const errorMessage = err.message || "Erro ao deletar";
+      showError(errorMessage);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [apiPath, defaultData]);
+  }, [apiPath, defaultData, showSuccess, showError]);
+
+  const openDeleteAllModal = () => {
+    setDeleteModal({
+      isOpen: true,
+      type: "all",
+      title: `TODAS AS CONFIGURAÇÕES`,
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, type: "single", title: "" });
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await remove();
+    } catch (err) {
+      // Erro já tratado em remove()
+    } finally {
+      closeDeleteModal();
+    }
+  };
 
   return {
+    // Estados
     data,
     setData,
-
     exists,
     loading,
     success,
     errorMsg,
-
+    deleteModal,
+    fileStates,
+    
+    // Funções de atualização
     updateField,
     updateNested,
-
+    setFileState,
+    
+    // Funções de API
     save,
     remove,
     reload: load,
+    
+    // Funções de UI
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
   };
 }

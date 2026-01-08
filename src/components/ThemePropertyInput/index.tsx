@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Input } from "@/components/Input";
 import ColorPicker from "@/components/ColorPicker";
 
@@ -13,7 +14,7 @@ export interface ThemeColors {
 }
 
 interface ThemePropertyInputProps {
-  property: keyof ThemeColors;
+  property: any;
   label: string;
   description: string;
   currentHex: string;
