@@ -12,18 +12,12 @@ export function useJsonManagement<T>({
   apiPath,
   defaultData,
 }: UseJsonManagementProps<T>) {
-  /* =========================
-     STATE
-  ========================= */
   const [data, setData] = useState<T>(defaultData);
   const [exists, setExists] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  /* =========================
-     LOAD (GET)
-  ========================= */
   const load = useCallback(async () => {
     try {
       const res = await fetch(apiPath, { cache: "no-store" });
@@ -43,11 +37,6 @@ export function useJsonManagement<T>({
     load();
   }, [load]);
 
-  /* =========================
-     UPDATERS
-  ========================= */
-
-  // Atualiza campo de primeiro nível
   const updateField = useCallback(
     <K extends keyof T>(field: K, value: T[K]) => {
       setData((prev) => ({ ...prev, [field]: value }));
@@ -55,7 +44,6 @@ export function useJsonManagement<T>({
     []
   );
 
-  // Atualiza qualquer campo interno via path (image.home, buttons.0.label)
   const updateNested = useCallback((path: string, value: any) => {
     setData((prev: any) => {
       const clone = structuredClone(prev);
@@ -77,9 +65,6 @@ export function useJsonManagement<T>({
     });
   }, []);
 
-  /* =========================
-     SAVE (POST | PUT)
-  ========================= */
   const save = useCallback(
     async (formData?: FormData): Promise<T> => {
       try {
@@ -91,7 +76,6 @@ export function useJsonManagement<T>({
         let headers: HeadersInit | undefined;
 
         if (formData) {
-          // garante que o JSON atual sempre vá junto
           formData.set("values", JSON.stringify(data));
           body = formData;
           headers = undefined;
@@ -112,7 +96,6 @@ export function useJsonManagement<T>({
 
         const record = (await res.json()) as T;
 
-        // 🔥 sincroniza frontend com backend imediatamente
         setExists(record);
         setData(record);
         setSuccess(true);
@@ -128,9 +111,6 @@ export function useJsonManagement<T>({
     [apiPath, data, exists]
   );
 
-  /* =========================
-     DELETE
-  ========================= */
   const remove = useCallback(async () => {
     try {
       setLoading(true);
@@ -149,9 +129,6 @@ export function useJsonManagement<T>({
     }
   }, [apiPath, defaultData]);
 
-  /* =========================
-     RETURN
-  ========================= */
   return {
     data,
     setData,

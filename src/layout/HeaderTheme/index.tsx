@@ -404,15 +404,17 @@ export const HeaderThemePageComponent: React.FC = () => {
                   </h3>
                   
                   <ImageUpload
-                    label="Logo Principal"
+                    label="Logo do Site"
+                    description="Imagem principal do site (recomendado: PNG transparente, mínimo 200x50px)"
                     currentImage={headerData.configs.logo}
                     selectedFile={logoFile}
                     onFileChange={setLogoFile}
                     aspectRatio="aspect-[4/1]"
+                    previewWidth={200}
+                    previewHeight={200}
                   />
                 </div>
-
-                {/* Favicon */}
+                
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
                     <Globe className="w-5 h-5" />
@@ -421,10 +423,13 @@ export const HeaderThemePageComponent: React.FC = () => {
                   
                   <ImageUpload
                     label="Favicon"
+                    description="Ícone exibido na aba do navegador (recomendado: 32x32px ou 64x64px)"
                     currentImage={headerData.configs.favicon}
                     selectedFile={faviconFile}
                     onFileChange={setFaviconFile}
                     aspectRatio="aspect-square"
+                    previewWidth={64}
+                    previewHeight={64}
                   />
                 </div>
 
