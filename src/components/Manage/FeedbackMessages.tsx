@@ -5,7 +5,7 @@ import { Card } from "@/components/Card";
 
 interface FeedbackMessagesProps {
   success?: boolean;
-  errorMsg: string;
+  errorMsg: string | null;
 }
 
 export function FeedbackMessages({ success, errorMsg }: FeedbackMessagesProps) {

@@ -112,7 +112,6 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
     setSearch('');
   };
 
-  // Impedir rolagem da página quando dropdown estiver aberto
   useEffect(() => {
     if (showDropdown) {
       document.body.style.overflow = 'hidden';
@@ -180,17 +179,14 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
     let top = inputRect.bottom + 8;
     const width = Math.max(inputRect.width, 400);
 
-    // Ajustar para não sair da tela à direita
     if (left + width > viewportWidth - 16) {
       left = viewportWidth - width - 16;
     }
 
-    // Se não couber embaixo, colocar em cima
     if (top + 400 > viewportHeight) {
       top = inputRect.top - 400;
     }
 
-    // Garantir que não fique fora da tela no topo
     if (top < 16) {
       top = 16;
     }
@@ -250,6 +246,7 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
           
           {/* Dropdown fixo */}
           <div
+            // eslint-disable-next-line react-hooks/refs
             style={getPickerPosition()}
             className="fixed z-50 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg shadow-lg overflow-hidden max-h-[500px] flex flex-col"
           >

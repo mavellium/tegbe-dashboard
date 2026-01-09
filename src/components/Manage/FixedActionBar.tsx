@@ -12,7 +12,7 @@ interface FixedActionBarProps {
   isAddDisabled: boolean;
   isSaving: boolean;
   exists: boolean;
-  completeCount: number;
+  completeCount?: number;
   totalCount: number;
   itemName: string;
   itemNamePlural?: string;
@@ -44,7 +44,7 @@ export function FixedActionBar({
                 <div className="flex items-center gap-2">
                   {Icon && <Icon className="w-4 h-4" />}
                   <span>
-                    {completeCount} {completeCount === 1 ? itemName : itemNamePlural || `${itemName}s`} completos
+                    {completeCount} {completeCount === 1 ? itemName : itemNamePlural || `${itemName}s`} {completeCount && "completos"}
                   </span>
                 </div>
               </div>
