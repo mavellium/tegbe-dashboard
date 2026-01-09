@@ -358,9 +358,7 @@ export default function BenchmarkPage() {
 
   const handleSubmit = async () => {
     try {
-      const fd = new FormData();
-      fd.append("values", JSON.stringify(benchmarkData));
-      save(fd);
+      save();
       await reload();
     } catch (error) {
       console.error("Erro ao enviar dados:", error);

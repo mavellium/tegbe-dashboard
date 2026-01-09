@@ -251,7 +251,7 @@ export default function RoiPage() {
     });
 
     try {
-      await save(fd);
+      await save();
       await reload();
       
       setFiles({});

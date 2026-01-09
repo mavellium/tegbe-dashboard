@@ -476,7 +476,7 @@ export default function SuccessCasesPage() {
       }
     });
 
-    await save(fd);
+    await save();
     await reload();
     setFiles({ ecommerce: {}, marketing: {} });
   };

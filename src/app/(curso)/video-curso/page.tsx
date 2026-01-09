@@ -237,7 +237,7 @@ export default function BehindScenesPage() {
     try {
       const fd = new FormData();
       fd.append("values", JSON.stringify(processedData));
-      save(fd);
+      save();
       await reload();
     } catch (error) {
       console.error("Erro ao enviar dados:", error);

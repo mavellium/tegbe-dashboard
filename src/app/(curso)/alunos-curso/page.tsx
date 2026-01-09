@@ -437,9 +437,7 @@ export default function TestimonialsPage() {
   const handleSubmit = async () => {
 
     try {
-      const fd = new FormData();
-      fd.append("values", JSON.stringify(testimonialsData));
-      save(fd);
+      save();
       await reload();
       
       // Limpar os arquivos locais após o envio

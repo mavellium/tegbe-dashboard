@@ -347,7 +347,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
   const handleSubmitWrapper = () => {
     const fd = new FormData();
     fd.append("values", JSON.stringify(headlineData));
-    save(fd);
+    save();
   };
 
   const openDeleteAllModal = () => {

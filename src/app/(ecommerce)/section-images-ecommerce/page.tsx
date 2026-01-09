@@ -309,7 +309,7 @@ export default function HeroImagesPage() {
       fd.append("file:image.marketing", heroFiles.marketing);
     }
 
-    await save(fd);
+    await save();
     await reload();
     setHeroFiles({
       home: null,

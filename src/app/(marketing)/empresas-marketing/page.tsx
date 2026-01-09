@@ -574,7 +574,7 @@ export default function EcosystemPage() {
       }
     });
 
-    await save(fd);
+    await save();
     await reload();
     setFiles({ marketing: { row1: {}, row2: {} } });
   };

@@ -515,7 +515,7 @@ export default function DnaPage() {
 
     try {
       // Enviar tudo para o mesmo endpoint
-      await save(fd);
+      await save();
       await reload();
       
       // Limpar os arquivos locais após o envio

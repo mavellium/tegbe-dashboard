@@ -324,9 +324,7 @@ export default function WhyLearnPage() {
 
   const handleSubmit = async () => {
     try {
-      const fd = new FormData();
-      fd.append("values", JSON.stringify(whyLearnData));
-      save(fd);
+      save();
       await reload();
     } catch (error) {
       console.error("Erro ao enviar dados:", error);

@@ -368,7 +368,7 @@ export default function DnaPage() {
   const handleSubmit = async () => {
     const fd = new FormData();
     fd.append("values", JSON.stringify(dnaData));
-    save(fd);
+    save();
     await reload();
   };
 

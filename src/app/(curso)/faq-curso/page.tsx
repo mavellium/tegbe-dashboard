@@ -276,9 +276,7 @@ export default function FAQPage() {
 
   const handleSubmit = async () => {
     try {
-      const fd = new FormData();
-      fd.append("values", JSON.stringify(faqData));
-      save(fd);
+      save();
       await reload();
       await reload();
     } catch (error) {

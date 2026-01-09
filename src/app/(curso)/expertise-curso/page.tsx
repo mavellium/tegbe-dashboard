@@ -447,9 +447,7 @@ export default function MethodPage() {
     }
 
     try {
-      const fd = new FormData();
-      fd.append("values", JSON.stringify(methodData));
-      save(fd);
+      save();
       await reload();
       
       // Limpar o arquivo local após o envio

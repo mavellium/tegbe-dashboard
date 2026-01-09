@@ -303,7 +303,7 @@ export default function HeroPage() {
   const handleSubmitWrapper = () => {
     const fd = new FormData();
     fd.append("values", JSON.stringify(heroData));
-    save(fd);
+    save();
   };
 
   const openDeleteAllModal = () => {

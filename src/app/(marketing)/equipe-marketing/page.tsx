@@ -312,7 +312,7 @@ export default function HeroTextsPage() {
       // Depois salvar
       const fd = new FormData();
       fd.append("values", JSON.stringify(updatedData));
-      await save(fd);
+      await save();
       
       // Recarregar dados da API
       await reload();

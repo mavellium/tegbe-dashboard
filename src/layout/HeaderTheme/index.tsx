@@ -209,15 +209,12 @@ export const HeaderThemePageComponent: React.FC = () => {
     try {
       await save();
     } catch (err) {
-      // Erro já tratado no hook
     }
   };
 
-  // Função para alterar uma propriedade de cor em TODAS as variantes
   const handleColorsChange = (property: keyof VariantTheme, hexColor: string) => {
     const tailwindClass = hexToTailwindClass(property as any, hexColor);
     
-    // Atualizar todas as variantes com a mesma cor
     const updatedVariants = { ...headerData.variants };
     
     (Object.keys(updatedVariants) as Array<keyof typeof updatedVariants>).forEach((variant) => {
@@ -227,11 +224,9 @@ export const HeaderThemePageComponent: React.FC = () => {
       };
     });
 
-    // Atualizar o estado
     updateNested('variants', updatedVariants);
   };
 
-  // Funções para gerenciar links
   const handleLinkChange = (index: number, field: 'name' | 'href', value: string) => {
     const newLinks = [...headerData.links];
     newLinks[index] = { ...newLinks[index], [field]: value };

@@ -422,13 +422,10 @@ export const FooterPageComponent: React.FC = () => {
     updateNested('navigation', newNav);
   };
 
-  // Função para gerenciar links de conteúdo (replicar para todas as páginas)
   const handleContentLinksChange = (index: number, value: string) => {
-    // Usamos ecommerce como base para edição
     const newLinks = [...footerData.content.ecommerce.links];
     newLinks[index] = value;
     
-    // Replica automaticamente para todas as páginas
     pageKeys.forEach((page) => {
       updateNested(`content.${page}.links`, newLinks);
     });
@@ -489,7 +486,6 @@ export const FooterPageComponent: React.FC = () => {
       itemName="Footer"
     >
       <form onSubmit={(e) => handleSubmit(e)} className="space-y-6 pb-32">
-        {/* Seção Geral */}
         <div className="space-y-4">
           <SectionHeader
             title="Configurações Gerais"
@@ -680,7 +676,6 @@ export const FooterPageComponent: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Seção Conteúdo Único (aplica automaticamente a todas as páginas) */}
         <div className="space-y-4">
           <SectionHeader
             title="Conteúdo do Footer"
@@ -852,7 +847,6 @@ export const FooterPageComponent: React.FC = () => {
           </motion.div>
         </div>
 
-        {/* Seção Temas Única (aplica automaticamente a todas as páginas) */}
         <div className="space-y-4">
           <SectionHeader
             title="Tema Visual do Footer"

@@ -641,7 +641,7 @@ export default function DiagnosticoPage() {
 
     try {
       // Enviar tudo para o mesmo endpoint
-      await save(fd);
+      await save();
       await reload();
       
       // Limpar o arquivo local após o envio
