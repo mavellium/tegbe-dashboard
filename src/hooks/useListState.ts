@@ -12,6 +12,7 @@ interface UseListStateProps<T> {
 }
 
 interface UseListStateReturn<T> {
+  [x: string]: any;
   // Estado
   items: T[];
   filteredItems: T[];

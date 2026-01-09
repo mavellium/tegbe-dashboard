@@ -9,11 +9,10 @@ interface ColorPickerProps {
 }
 
 const presetColors = [
-  "#FFCC00", "#FF6B00", "#EF4444", "#22C55E", "#3B82F6",
-  "#8B5CF6", "#EC4899", "#06B6D4", "#F59E0B", "#84CC16",
-  "#020202", "#111827", "#374151", "#6B7280", "#9CA3AF", "#D1D5DB", "#F3F4F6",
-  "#FF3366", "#33CC33", "#3366FF", "#9933FF", "#FF6633",
-  "#FFE4B5", "#E0F2FE", "#FCE7F3", "#F0FDF4", "#FEF3C7",
+  "#EF4444", "#22C55E", "#3B82F6",
+  "#EC4899", "#06B6D4", "#F59E0B", "#84CC16",
+  "#111827", "#374151", "#6B7280", "#9CA3AF", "#D1D5DB", "#F3F4F6",
+  "#F0FDF4", "#FEF3C7",
 ];
 
 export default function ColorPicker({ color, onChange }: ColorPickerProps) {

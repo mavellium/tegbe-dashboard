@@ -40,6 +40,9 @@
           "icon": "FileText",
           "children": [
             { "name": "Headline", "icon": "HelpCircle", "href": "/headline" },
+            { "name": "Dores", "icon": "HelpCircle", "href": "/dores-home" },
+            { "name": "Como Fazemos", "icon": "HelpCircle", "href": "/como-fazemos-home" },
+            { "name": "Soluções", "icon": "HelpCircle", "href": "/solucoes-home" },
             { "name": "Logos", "icon": "HelpCircle", "href": "/logos" },
             { "name": "Passo a Passo", "icon": "HelpCircle", "href": "/steps" },
             { "name": "Ecommerce", "icon": "HelpCircle", "href": "/ecommerce" },
