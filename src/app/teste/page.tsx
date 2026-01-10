@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -20,7 +20,9 @@ import {
   XCircle,
   Palette,
   Tag,
-  Settings
+  Settings,
+  ImageIcon,
+  VideoIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -28,10 +30,13 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { useListState } from "@/hooks/useListState";
 import { Button } from "@/components/Button";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { hexToTailwindBgClass, tailwindToHex, hexToTailwindTextClass } from "@/lib/colors";
+import { hexToTailwindBgClass, tailwindToHex } from "@/lib/colors";
+
+// Importar componentes de upload
+import { ImageUpload } from "@/components/ImageUpload";
+import { VideoUpload } from "@/components/VideoUpload";
 
 interface Feature {
   id: string;
@@ -41,6 +46,18 @@ interface Feature {
   enabled: boolean;
   order: number;
   color?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+}
+
+interface GalleryItem {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  title: string;
+  description?: string;
+  order: number;
+  enabled: boolean;
 }
 
 interface ComponentConfig {
@@ -74,7 +91,9 @@ interface TestPageData {
     heroTitle: string;
     heroSubtitle: string;
     heroImage?: string;
+    heroVideo?: string;
     features: Feature[];
+    gallery: GalleryItem[];
     ctaText: string;
     ctaButtonText: string;
     ctaButtonLink: string;
@@ -112,6 +131,8 @@ const defaultTestPageData: TestPageData = {
   content: {
     heroTitle: "Bem-vindo à Página de Teste",
     heroSubtitle: "Este é um template base para IAs criarem novas páginas com componentes reutilizáveis",
+    heroImage: "",
+    heroVideo: "",
     features: [
       {
         id: "feat-001",
@@ -120,7 +141,8 @@ const defaultTestPageData: TestPageData = {
         description: "Carregamento otimizado para melhor performance com lazy loading",
         enabled: true,
         order: 0,
-        color: "blue-500"
+        color: "blue-500",
+        imageUrl: ""
       },
       {
         id: "feat-002",
@@ -129,7 +151,8 @@ const defaultTestPageData: TestPageData = {
         description: "Protegido com as melhores práticas de segurança e validação",
         enabled: true,
         order: 1,
-        color: "green-500"
+        color: "green-500",
+        videoUrl: ""
       },
       {
         id: "feat-003",
@@ -139,6 +162,26 @@ const defaultTestPageData: TestPageData = {
         enabled: true,
         order: 2,
         color: "amber-500"
+      }
+    ],
+    gallery: [
+      {
+        id: "gallery-001",
+        type: "image" as const,
+        url: "",
+        title: "Interface Moderna",
+        description: "Design limpo e intuitivo",
+        order: 0,
+        enabled: true
+      },
+      {
+        id: "gallery-002",
+        type: "video" as const,
+        url: "",
+        title: "Demonstração do Produto",
+        description: "Veja o produto em ação",
+        order: 1,
+        enabled: true
       }
     ],
     ctaText: "Pronto para começar? Crie sua próxima página em minutos!",
@@ -193,7 +236,9 @@ const mergeWithDefaults = (apiData: any, defaultData: TestPageData): TestPageDat
       heroTitle: apiData.content?.heroTitle || defaultData.content.heroTitle,
       heroSubtitle: apiData.content?.heroSubtitle || defaultData.content.heroSubtitle,
       heroImage: apiData.content?.heroImage || defaultData.content.heroImage,
+      heroVideo: apiData.content?.heroVideo || defaultData.content.heroVideo,
       features: apiData.content?.features || defaultData.content.features,
+      gallery: apiData.content?.gallery || defaultData.content.gallery,
       ctaText: apiData.content?.ctaText || defaultData.content.ctaText,
       ctaButtonText: apiData.content?.ctaButtonText || defaultData.content.ctaButtonText,
       ctaButtonLink: apiData.content?.ctaButtonLink || defaultData.content.ctaButtonLink,
@@ -223,38 +268,38 @@ export default function Page() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
+    fileStates,
+    setFileState,
   } = useJsonManagement<TestPageData>({
     apiPath: "/api/tegbe-institucional/json/test-page-template",
     defaultData: defaultTestPageData,
     mergeFunction: mergeWithDefaults,
   });
 
-  // Hook para gerenciar features com drag & drop
-  const featuresList = useListState<Feature>({
-    initialItems: pageData.content.features,
-    defaultItem: {
-      id: '',
-      icon: 'mdi:star',
-      title: '',
-      description: '',
-      enabled: true,
-      order: 0,
-      color: 'blue-500'
-    },
-    validationFields: ['title', 'description', 'icon'],
-    enableDragDrop: true
-  });
+  // Estados para listas
+  const [features, setFeatures] = useState<Feature[]>(pageData.content.features);
+  const [gallery, setGallery] = useState<GalleryItem[]>(pageData.content.gallery);
+  const [tags, setTags] = useState<TagItem[]>(pageData.metadata.tags);
 
-  // Hook para gerenciar tags
-  const tagsList = useListState<TagItem>({
-    initialItems: pageData.metadata.tags,
-    defaultItem: {
-      id: '',
-      text: ''
-    },
-    validationFields: ['text'],
-    enableDragDrop: true
-  });
+  // Estados para arquivos das features
+  const [featureImageFiles, setFeatureImageFiles] = useState<Record<string, File | null>>({});
+  const [featureVideoFiles, setFeatureVideoFiles] = useState<Record<string, File | null>>({});
+  
+  // Estado para arquivos da galeria
+  const [galleryFiles, setGalleryFiles] = useState<Record<string, File | null>>({});
+
+  // Sincronizar com pageData quando ele mudar
+  useEffect(() => {
+    setFeatures(pageData.content.features);
+  }, [pageData.content.features]);
+
+  useEffect(() => {
+    setGallery(pageData.content.gallery);
+  }, [pageData.content.gallery]);
+
+  useEffect(() => {
+    setTags(pageData.metadata.tags);
+  }, [pageData.metadata.tags]);
 
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
@@ -271,71 +316,131 @@ export default function Page() {
     }));
   };
 
-  // Funções para adicionar itens
+  // Funções para gerenciar features
   const handleAddFeature = () => {
-    const success = featuresList.addItem();
-    if (!success) {
-      console.warn(featuresList.validationError);
-    }
+    const newFeature: Feature = {
+      id: `feat-${Date.now()}`,
+      icon: 'mdi:star',
+      title: '',
+      description: '',
+      enabled: true,
+      order: features.length,
+      color: 'blue-500'
+    };
+    setFeatures([...features, newFeature]);
   };
 
+  const handleUpdateFeature = (index: number, updates: Partial<Feature>) => {
+    const updatedFeatures = [...features];
+    updatedFeatures[index] = { ...updatedFeatures[index], ...updates };
+    setFeatures(updatedFeatures);
+  };
+
+  const handleRemoveFeature = (index: number) => {
+    const updatedFeatures = features.filter((_, i) => i !== index);
+    setFeatures(updatedFeatures);
+  };
+
+  // Funções para gerenciar gallery
+  const handleAddGalleryItem = () => {
+    const newItem: GalleryItem = {
+      id: `gallery-${Date.now()}`,
+      type: 'image',
+      url: '',
+      title: '',
+      description: '',
+      order: gallery.length,
+      enabled: true
+    };
+    setGallery([...gallery, newItem]);
+  };
+
+  const handleUpdateGalleryItem = (index: number, updates: Partial<GalleryItem>) => {
+    const updatedGallery = [...gallery];
+    updatedGallery[index] = { ...updatedGallery[index], ...updates };
+    setGallery(updatedGallery);
+  };
+
+  const handleRemoveGalleryItem = (index: number) => {
+    const updatedGallery = gallery.filter((_, i) => i !== index);
+    setGallery(updatedGallery);
+  };
+
+  // Funções para gerenciar tags
   const handleAddTag = () => {
-    const success = tagsList.addItem();
-    if (!success) {
-      console.warn(tagsList.validationError);
-    }
+    const newTag: TagItem = {
+      id: `tag-${Date.now()}`,
+      text: ''
+    };
+    setTags([...tags, newTag]);
+  };
+
+  const handleUpdateTag = (index: number, text: string) => {
+    const updatedTags = [...tags];
+    updatedTags[index] = { ...updatedTags[index], text };
+    setTags(updatedTags);
+  };
+
+  const handleRemoveTag = (index: number) => {
+    const updatedTags = tags.filter((_, i) => i !== index);
+    setTags(updatedTags);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
-    // Atualiza os arrays no pageData antes de salvar
-    updateNested('content.features', featuresList.items);
-    updateNested('metadata.tags', tagsList.items);
-    updateNested('metadata.lastModified', new Date().toISOString());
-    
     try {
+      // Atualizar os arrays no pageData antes de salvar
+      updateNested('content.features', features);
+      updateNested('content.gallery', gallery);
+      updateNested('metadata.tags', tags);
+      updateNested('metadata.lastModified', new Date().toISOString());
+      
+      // Configurar arquivos das features para upload
+      Object.entries(featureImageFiles).forEach(([featureId, file]) => {
+        if (file) {
+          const featureIndex = features.findIndex(f => f.id === featureId);
+          if (featureIndex !== -1) {
+            setFileState(`content.features.${featureIndex}.imageUrl`, file);
+          }
+        }
+      });
+      
+      Object.entries(featureVideoFiles).forEach(([featureId, file]) => {
+        if (file) {
+          const featureIndex = features.findIndex(f => f.id === featureId);
+          if (featureIndex !== -1) {
+            setFileState(`content.features.${featureIndex}.videoUrl`, file);
+          }
+        }
+      });
+      
+      // Configurar arquivos da galeria para upload
+      Object.entries(galleryFiles).forEach(([galleryItemId, file]) => {
+        if (file) {
+          const galleryIndex = gallery.findIndex(g => g.id === galleryItemId);
+          if (galleryIndex !== -1) {
+            setFileState(`content.gallery.${galleryIndex}.url`, file);
+          }
+        }
+      });
+      
       await save();
+      
+      // Limpar estados de arquivos após envio bem-sucedido
+      setFeatureImageFiles({});
+      setFeatureVideoFiles({});
+      setGalleryFiles({});
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
-  };
-
-  // Funções de drag & drop
-  const handleFeatureDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('text/plain', index.toString());
-    e.currentTarget.classList.add('dragging');
-    featuresList.startDrag(index);
-  };
-
-  const handleFeatureDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    featuresList.handleDragOver(index);
-  };
-
-  const handleFeatureDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('dragging');
-    featuresList.endDrag();
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
   };
 
   // Funções para atualizar cores
   const handleFeatureColorChange = (index: number, hexColor: string) => {
     const tailwindClass = hexToTailwindBgClass(hexColor);
     const colorValue = tailwindClass.replace('bg-', '');
-    featuresList.updateItem(index, { color: colorValue });
+    handleUpdateFeature(index, { color: colorValue });
   };
 
   const handleComponentColorChange = (componentKey: string, hexColor: string) => {
@@ -348,6 +453,74 @@ export default function Page() {
     const tailwindClass = hexToTailwindBgClass(hexColor);
     const colorValue = tailwindClass.replace('bg-', '');
     updateNested(`theme.${property}`, colorValue);
+  };
+
+  // Funções para lidar com uploads de arquivos nas features
+  const handleFeatureImageUpload = (featureId: string, file: File | null) => {
+    setFeatureImageFiles(prev => ({
+      ...prev,
+      [featureId]: file
+    }));
+    
+    // Atualizar URL temporária para preview
+    if (file) {
+      const featureIndex = features.findIndex(f => f.id === featureId);
+      if (featureIndex !== -1) {
+        const updatedFeatures = [...features];
+        updatedFeatures[featureIndex] = { 
+          ...updatedFeatures[featureIndex], 
+          imageUrl: URL.createObjectURL(file) 
+        };
+        setFeatures(updatedFeatures);
+      }
+    }
+  };
+
+  const handleFeatureVideoUpload = (featureId: string, file: File | null) => {
+    setFeatureVideoFiles(prev => ({
+      ...prev,
+      [featureId]: file
+    }));
+    
+    // Atualizar URL temporária para preview
+    if (file) {
+      const featureIndex = features.findIndex(f => f.id === featureId);
+      if (featureIndex !== -1) {
+        const updatedFeatures = [...features];
+        updatedFeatures[featureIndex] = { 
+          ...updatedFeatures[featureIndex], 
+          videoUrl: URL.createObjectURL(file) 
+        };
+        setFeatures(updatedFeatures);
+      }
+    }
+  };
+
+  // Função para lidar com uploads de arquivos na galeria
+  const handleGalleryFileUpload = (galleryItemId: string, file: File | null) => {
+    setGalleryFiles(prev => ({
+      ...prev,
+      [galleryItemId]: file
+    }));
+    
+    // Atualizar URL temporária para preview
+    if (file) {
+      const galleryIndex = gallery.findIndex(g => g.id === galleryItemId);
+      if (galleryIndex !== -1) {
+        const updatedGallery = [...gallery];
+        updatedGallery[galleryIndex] = { 
+          ...updatedGallery[galleryIndex], 
+          url: URL.createObjectURL(file) 
+        };
+        setGallery(updatedGallery);
+      }
+    }
+  };
+
+  // Função auxiliar para obter File do fileStates
+  const getFileFromState = (key: string): File | null => {
+    const value = fileStates[key];
+    return value instanceof File ? value : null;
   };
 
   const calculateCompletion = () => {
@@ -377,12 +550,20 @@ export default function Page() {
     if (pageData.content.ctaButtonLink.trim()) completed++;
 
     // Features
-    total += featuresList.items.length * 4;
-    featuresList.items.forEach(feature => {
+    total += features.length * 4;
+    features.forEach(feature => {
       if (feature.title.trim()) completed++;
       if (feature.description.trim()) completed++;
       if (feature.icon.trim()) completed++;
       if (feature.color?.trim()) completed++;
+    });
+
+    // Gallery
+    total += gallery.length * 3;
+    gallery.forEach(item => {
+      if (item.title.trim()) completed++;
+      if (item.url.trim()) completed++;
+      if (item.type) completed++;
     });
 
     // Theme
@@ -398,7 +579,7 @@ export default function Page() {
     if (pageData.metadata.author.trim()) completed++;
     if (pageData.metadata.version.trim()) completed++;
     if (pageData.metadata.category?.trim()) completed++;
-    completed += tagsList.items.filter(tag => tag.text.trim()).length;
+    completed += tags.filter(tag => tag.text.trim()).length;
 
     return { completed, total };
   };
@@ -613,17 +794,37 @@ export default function Page() {
                     />
                   </div>
 
-                  <Input
-                    label="URL da Imagem do Hero (opcional)"
-                    value={pageData.content.heroImage || ''}
-                    onChange={(e) => updateNested('content.heroImage', e.target.value)}
-                    placeholder="https://exemplo.com/imagem.jpg"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] md:col-span-2"
-                  />
+                  {/* Upload de Imagem do Hero */}
+                  <div className="md:col-span-2">
+                    <ImageUpload
+                      label="Imagem do Hero"
+                      currentImage={pageData.content.heroImage || ''}
+                      selectedFile={getFileFromState('content.heroImage')}
+                      onFileChange={(file) => setFileState('content.heroImage', file)}
+                      aspectRatio="aspect-video"
+                      previewWidth={800}
+                      previewHeight={450}
+                      description="Imagem de destaque da seção hero"
+                    />
+                  </div>
+
+                  {/* Upload de Vídeo do Hero */}
+                  <div className="md:col-span-2">
+                    <VideoUpload
+                      label="Vídeo do Hero"
+                      currentVideo={pageData.content.heroVideo || ''}
+                      selectedFile={getFileFromState('content.heroVideo')}
+                      onFileChange={(file) => setFileState('content.heroVideo', file)}
+                      aspectRatio="aspect-video"
+                      previewWidth={800}
+                      previewHeight={450}
+                      description="Vídeo de destaque da seção hero (opcional)"
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Features usando hook com drag & drop */}
+              {/* Features */}
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
@@ -635,13 +836,9 @@ export default function Page() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {featuresList.completeCount} de {featuresList.totalCount} completos
+                          {features.filter(f => f.title && f.description && f.icon).length} de {features.length} completos
                         </span>
                       </div>
-                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
-                      <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {featuresList.currentPlanType === 'pro' ? '10' : '5'} itens
-                      </span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -650,64 +847,20 @@ export default function Page() {
                       onClick={handleAddFeature}
                       variant="primary"
                       className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!featuresList.canAddNewItem}
                     >
                       + Adicionar Recurso
                     </Button>
-                    {featuresList.isLimitReached && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Limite do plano atingido
-                      </p>
-                    )}
                   </div>
                 </div>
 
-                {/* Mensagem de erro */}
-                {featuresList.validationError && (
-                  <div className={`p-3 rounded-lg ${featuresList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
-                    <div className="flex items-start gap-2">
-                      {featuresList.isLimitReached ? (
-                        <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                      )}
-                      <p className={`text-sm ${featuresList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                        {featuresList.validationError}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="space-y-4">
-                  {featuresList.filteredItems.map((feature, index) => (
+                  {features.map((feature, index) => (
                     <div 
                       key={feature.id}
-                      ref={index === featuresList.filteredItems.length - 1 ? featuresList.newItemRef : undefined}
-                      draggable
-                      onDragStart={(e) => handleFeatureDragStart(e, index)}
-                      onDragOver={(e) => handleFeatureDragOver(e, index)}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDragEnd={handleFeatureDragEnd}
-                      onDrop={handleDrop}
-                      className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                        featuresList.draggingItem === index 
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
-                          : 'hover:border-[var(--color-primary)]/50'
-                      }`}
+                      className="p-6 border border-[var(--color-border)] rounded-lg space-y-6 hover:border-[var(--color-primary)]/50 transition-all duration-200"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3 flex-1">
-                          {/* Handle para drag & drop */}
-                          <div 
-                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
-                            draggable
-                            onDragStart={(e) => handleFeatureDragStart(e, index)}
-                          >
-                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
-                          </div>
-                          
                           {/* Indicador de posição */}
                           <div className="flex flex-col items-center">
                             <span className="text-xs font-medium text-[var(--color-secondary)]/70">
@@ -732,7 +885,7 @@ export default function Page() {
                               )}
                             </div>
                             
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                               <div className="space-y-4">
                                 <div className="space-y-2">
                                   <label className="block text-sm font-medium text-[var(--color-secondary)]">
@@ -740,7 +893,7 @@ export default function Page() {
                                   </label>
                                   <IconSelector
                                     value={feature.icon}
-                                    onChange={(value) => featuresList.updateItem(index, { icon: value })}
+                                    onChange={(value) => handleUpdateFeature(index, { icon: value })}
                                     placeholder="mdi:star"
                                   />
                                 </div>
@@ -751,7 +904,7 @@ export default function Page() {
                                   </label>
                                   <Input
                                     value={feature.title}
-                                    onChange={(e) => featuresList.updateItem(index, { title: e.target.value })}
+                                    onChange={(e) => handleUpdateFeature(index, { title: e.target.value })}
                                     placeholder="Título do recurso"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
@@ -765,7 +918,7 @@ export default function Page() {
                                   </label>
                                   <TextArea
                                     value={feature.description}
-                                    onChange={(e) => featuresList.updateItem(index, { description: e.target.value })}
+                                    onChange={(e) => handleUpdateFeature(index, { description: e.target.value })}
                                     placeholder="Descrição detalhada do recurso"
                                     rows={3}
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -786,6 +939,38 @@ export default function Page() {
                                   />
                                 </div>
                               </div>
+                              
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    Imagem do Recurso
+                                  </label>
+                                  <ImageUpload
+                                    label=""
+                                    currentImage={feature.imageUrl || ''}
+                                    selectedFile={featureImageFiles[feature.id]}
+                                    onFileChange={(file) => handleFeatureImageUpload(feature.id, file)}
+                                    aspectRatio="aspect-square"
+                                    previewWidth={200}
+                                    previewHeight={200}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    Vídeo do Recurso
+                                  </label>
+                                  <VideoUpload
+                                    label=""
+                                    currentVideo={feature.videoUrl || ''}
+                                    selectedFile={featureVideoFiles[feature.id]}
+                                    onFileChange={(file) => handleFeatureVideoUpload(feature.id, file)}
+                                    aspectRatio="aspect-square"
+                                    previewWidth={200}
+                                    previewHeight={200}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -797,17 +982,182 @@ export default function Page() {
                             </div>
                             <Switch
                               checked={feature.enabled}
-                              onCheckedChange={(checked) => featuresList.updateItem(index, { enabled: checked })}
+                              onCheckedChange={(checked) => handleUpdateFeature(index, { enabled: checked })}
                             />
                           </div>
                           <Button
                             type="button"
-                            onClick={() => featuresList.removeItem(index)}
+                            onClick={() => handleRemoveFeature(index)}
                             variant="danger"
                             className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
                           >
                             Remover
                           </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Galeria de Imagens e Vídeos */}
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5" />
+                      Galeria de Mídia
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {gallery.filter(item => item.title && item.url).length} de {gallery.length} completos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleAddGalleryItem}
+                      variant="primary"
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                    >
+                      + Adicionar Item
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {gallery.map((item, index) => (
+                    <div 
+                      key={item.id}
+                      className="p-6 border border-[var(--color-border)] rounded-lg space-y-6 hover:border-[var(--color-primary)]/50 transition-all duration-200"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          {/* Indicador de posição e tipo */}
+                          <div className="flex flex-col items-center">
+                            <div className={`p-1 rounded ${item.type === 'image' ? 'bg-blue-500/20' : 'bg-purple-500/20'}`}>
+                              {item.type === 'image' ? (
+                                <ImageIcon className="w-4 h-4 text-blue-500" />
+                              ) : (
+                                <VideoIcon className="w-4 h-4 text-purple-500" />
+                              )}
+                            </div>
+                            <span className="text-xs font-medium text-[var(--color-secondary)]/70 mt-1">
+                              {index + 1}
+                            </span>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    Tipo de Mídia
+                                  </label>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="button"
+                                      variant={item.type === 'image' ? 'primary' : 'secondary'}
+                                      onClick={() => handleUpdateGalleryItem(index, { type: 'image' })}
+                                      className={`${item.type === 'image' ? 'bg-blue-600' : 'bg-[var(--color-background-body)]'} border-none`}
+                                    >
+                                      <ImageIcon className="w-4 h-4 mr-2" />
+                                      Imagem
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant={item.type === 'video' ? 'primary' : 'secondary'}
+                                      onClick={() => handleUpdateGalleryItem(index, { type: 'video' })}
+                                      className={`${item.type === 'video' ? 'bg-purple-600' : 'bg-[var(--color-background-body)]'} border-none`}
+                                    >
+                                      <VideoIcon className="w-4 h-4 mr-2" />
+                                      Vídeo
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    Título
+                                  </label>
+                                  <Input
+                                    value={item.title}
+                                    onChange={(e) => handleUpdateGalleryItem(index, { title: e.target.value })}
+                                    placeholder="Título do item"
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    {item.type === 'image' ? 'Imagem' : 'Vídeo'}
+                                  </label>
+                                  {item.type === 'image' ? (
+                                    <ImageUpload
+                                      label=""
+                                      currentImage={item.url || ''}
+                                      selectedFile={galleryFiles[item.id]}
+                                      onFileChange={(file) => handleGalleryFileUpload(item.id, file)}
+                                      aspectRatio="aspect-video"
+                                      previewWidth={300}
+                                      previewHeight={200}
+                                    />
+                                  ) : (
+                                    <VideoUpload
+                                      label=""
+                                      currentVideo={item.url || ''}
+                                      selectedFile={galleryFiles[item.id]}
+                                      onFileChange={(file) => handleGalleryFileUpload(item.id, file)}
+                                      aspectRatio="aspect-video"
+                                      previewWidth={300}
+                                      previewHeight={200}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    Descrição
+                                  </label>
+                                  <TextArea
+                                    value={item.description || ''}
+                                    onChange={(e) => handleUpdateGalleryItem(index, { description: e.target.value })}
+                                    placeholder="Descrição do item"
+                                    rows={3}
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  />
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 border border-[var(--color-border)] rounded-lg">
+                                  <div>
+                                    <h4 className="font-medium text-[var(--color-secondary)]">Status</h4>
+                                    <p className="text-sm text-[var(--color-secondary)]/70">
+                                      {item.enabled ? "Visível" : "Oculto"}
+                                    </p>
+                                  </div>
+                                  <Switch
+                                    checked={item.enabled}
+                                    onCheckedChange={(checked) => handleUpdateGalleryItem(index, { enabled: checked })}
+                                  />
+                                </div>
+                                
+                                <Button
+                                  type="button"
+                                  onClick={() => handleRemoveGalleryItem(index)}
+                                  variant="danger"
+                                  className="w-full bg-red-600 hover:bg-red-700 border-none"
+                                >
+                                  Remover Item
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1000,24 +1350,23 @@ export default function Page() {
                       onClick={handleAddTag}
                       variant="primary"
                       className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!tagsList.canAddNewItem}
                     >
                       + Adicionar Tag
                     </Button>
                   </div>
 
                   <div className="space-y-2">
-                    {tagsList.filteredItems.map((tag, index) => (
+                    {tags.map((tag, index) => (
                       <div key={tag.id} className="flex items-center gap-2 p-2 border border-[var(--color-border)] rounded-lg">
                         <Input
                           value={tag.text}
-                          onChange={(e) => tagsList.updateItem(index, { ...tag, text: e.target.value })}
+                          onChange={(e) => handleUpdateTag(index, e.target.value)}
                           placeholder="Ex: template, ia, base"
                           className="bg-transparent border-none text-[var(--color-secondary)]"
                         />
                         <Button
                           type="button"
-                          onClick={() => tagsList.removeItem(index)}
+                          onClick={() => handleRemoveTag(index)}
                           variant="danger"
                           className="px-2 py-1 bg-red-600 hover:bg-red-700 border-none"
                         >

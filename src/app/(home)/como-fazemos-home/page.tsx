@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -16,7 +16,8 @@ import {
   XCircle,
   Cpu,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  Plus
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -24,7 +25,6 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { useListState } from "@/hooks/useListState";
 import { Button } from "@/components/Button";
 
 interface Step {
@@ -89,20 +89,6 @@ const mergeWithDefaults = (apiData: any, defaultData: MethodologyData): Methodol
   };
 };
 
-const generateSequentialId = (items: Step[]): string => {
-  const numericIds = items
-    .map(step => {
-      const num = parseInt(step.id);
-      return isNaN(num) ? 0 : num;
-    })
-    .filter(num => num > 0);
-  
-  // Encontra o maior ID
-  const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
-  
-  return (maxId + 1).toString().padStart(2, '0');
-};
-
 export default function MethodologyPage() {
   const {
     data: pageData,
@@ -122,24 +108,37 @@ export default function MethodologyPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  const stepsList = useListState<Step>({
-    initialItems: pageData.methodology.steps,
-    defaultItem: {
-      id: '',
-      label: '',
-      title: '',
-      icon: 'solar:question-circle-bold-duotone',
-      desc: ''
-    },
-    validationFields: ['label', 'title', 'desc', 'icon'],
-    enableDragDrop: true
-  });
+  // Estado local para gerenciar os steps
+  const [localSteps, setLocalSteps] = useState<Step[]>([]);
+  const [draggingItem, setDraggingItem] = useState<number | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
     header: true,
-    steps: true,
+    steps: false,
     cta: false,
   });
+
+  // Referência para novo item
+  const newStepRef = useRef<HTMLDivElement>(null);
+
+  // Controle de planos
+  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+
+  // Sincroniza os dados quando carregam do banco
+  useEffect(() => {
+    if (pageData.methodology.steps && pageData.methodology.steps.length > 0) {
+      // Garante que todos os steps tenham IDs válidos
+      const stepsWithIds = pageData.methodology.steps.map((step, index) => ({
+        ...step,
+        id: step.id || (index + 1).toString().padStart(2, '0')
+      }));
+      setLocalSteps(stepsWithIds);
+    } else {
+      // Se não houver steps, inicializa com o default
+      setLocalSteps(defaultMethodologyData.methodology.steps);
+    }
+  }, [pageData.methodology.steps]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -148,46 +147,86 @@ export default function MethodologyPage() {
     }));
   };
 
-  // Função para adicionar passo com ID automático
+  // Função para atualizar o estado do hook useJsonManagement
+  const updateStepsInPageData = (steps: Step[]) => {
+    updateNested('methodology.steps', steps);
+  };
+
+  // Função para adicionar passo
   const handleAddStep = () => {
-    // Primeiro adiciona o item com ID vazio
-    const success = stepsList.addItem();
+    if (localSteps.length >= currentPlanLimit) {
+      return false;
+    }
     
-    if (success) {
-      // Após adicionar, gera ID sequencial para o novo item
-      const newId = generateSequentialId(stepsList.items);
-      
-      // Encontra o índice do último item (o recém-adicionado)
-      const lastIndex = stepsList.items.length - 1;
-      
-      // Atualiza o item com o ID gerado
-      stepsList.updateItem(lastIndex, { id: newId });
-    } else {
-      console.warn(stepsList.validationError);
+    // Gera ID sequencial
+    const numericIds = localSteps
+      .map(step => {
+        const num = parseInt(step.id);
+        return isNaN(num) ? 0 : num;
+      })
+      .filter(num => num > 0);
+    
+    const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
+    const newId = (maxId + 1).toString().padStart(2, '0');
+    
+    const newItem: Step = {
+      id: newId,
+      label: '',
+      title: '',
+      icon: 'solar:question-circle-bold-duotone',
+      desc: ''
+    };
+    
+    const updated = [...localSteps, newItem];
+    setLocalSteps(updated);
+    updateStepsInPageData(updated);
+    
+    setTimeout(() => {
+      newStepRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  // Função para atualizar passo
+  const updateStep = (index: number, updates: Partial<Step>) => {
+    const updated = [...localSteps];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalSteps(updated);
+      updateStepsInPageData(updated);
     }
   };
 
-  // Função para garantir IDs sequenciais após reordenação ou remoção
-  const revalidateSequentialIds = (items: Step[]): Step[] => {
-    return items.map((item, index) => ({
-      ...item,
-      id: (index + 1).toString().padStart(2, '0')
-    }));
-  };
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  // Função para remover passo
+  const removeStep = (index: number) => {
+    const updated = [...localSteps];
     
-    // Garante IDs sequenciais antes de salvar
-    const stepsWithSequentialIds = revalidateSequentialIds(stepsList.items);
-    
-    // Atualiza os steps no pageData antes de salvar
-    updateNested('methodology.steps', stepsWithSequentialIds);
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
+    if (updated.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyItem: Step = {
+        id: '01',
+        label: '',
+        title: '',
+        icon: 'solar:question-circle-bold-duotone',
+        desc: ''
+      };
+      setLocalSteps([emptyItem]);
+      updateStepsInPageData([emptyItem]);
+    } else {
+      updated.splice(index, 1);
+      
+      // Reajusta IDs após remoção
+      const revalidated = updated.map((item, idx) => ({
+        ...item,
+        id: (idx + 1).toString().padStart(2, '0')
+      }));
+      
+      setLocalSteps(revalidated);
+      updateStepsInPageData(revalidated);
     }
   };
 
@@ -195,25 +234,38 @@ export default function MethodologyPage() {
   const handleStepDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    stepsList.startDrag(index);
+    setDraggingItem(index);
   };
 
   const handleStepDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    stepsList.handleDragOver(index);
+    
+    if (draggingItem === null || draggingItem === index) return;
+    
+    const updated = [...localSteps];
+    const draggedItem = updated[draggingItem];
+    
+    // Remove o item arrastado
+    updated.splice(draggingItem, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingItem ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    // Reajusta IDs após reordenação
+    const reorderedItems = updated.map((item, idx) => ({
+      ...item,
+      id: (idx + 1).toString().padStart(2, '0')
+    }));
+    
+    setLocalSteps(reorderedItems);
+    updateStepsInPageData(reorderedItems);
+    setDraggingItem(index);
   };
 
   const handleStepDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    stepsList.endDrag();
-    
-    // Após reordenação, garante IDs sequenciais
-    const reorderedItems = revalidateSequentialIds(stepsList.items);
-    
-    // Atualiza todos os itens com novos IDs
-    reorderedItems.forEach((item, index) => {
-      stepsList.updateItem(index, { id: item.id });
-    });
+    setDraggingItem(null);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -229,19 +281,40 @@ export default function MethodologyPage() {
     e.currentTarget.classList.remove('drag-over');
   };
 
-  // Função para remover item e reajustar IDs
-  const handleRemoveStep = (index: number) => {
-    stepsList.removeItem(index);
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
-    // Após remover, revalida IDs sequenciais
-    const remainingItems = stepsList.items;
-    const revalidatedItems = revalidateSequentialIds(remainingItems);
+    console.log('Salvando dados:', pageData);
     
-    // Atualiza todos os itens com novos IDs
-    revalidatedItems.forEach((item, idx) => {
-      stepsList.updateItem(idx, { id: item.id });
-    });
+    try {
+      // Primeiro, garante que os dados locais estejam sincronizados
+      updateStepsInPageData(localSteps);
+      
+      // Aguarda um momento para garantir a atualização
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Salva no banco
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
   };
+
+  // Validações
+  const isStepValid = (item: Step): boolean => {
+    return item.label.trim() !== '' && 
+           item.title.trim() !== '' && 
+           item.desc.trim() !== '';
+  };
+
+  const isStepsLimitReached = localSteps.length >= currentPlanLimit;
+  const canAddNewStep = !isStepsLimitReached;
+  const stepsCompleteCount = localSteps.filter(isStepValid).length;
+  const stepsTotalCount = localSteps.length;
+
+  const stepsValidationError = isStepsLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
 
   const calculateCompletion = () => {
     let completed = 0;
@@ -253,13 +326,12 @@ export default function MethodologyPage() {
     if (pageData.methodology.section_header.title_highlight.trim()) completed++;
     if (pageData.methodology.section_header.manifesto.trim()) completed++;
 
-    // Steps (lista dinâmica - cada passo tem 3 campos)
-    total += stepsList.items.length * 3; // label, title, desc (icon é opcional)
-    stepsList.items.forEach(step => {
+    // Steps
+    total += localSteps.length * 3; // label, title, desc
+    localSteps.forEach(step => {
       if (step.label.trim()) completed++;
       if (step.title.trim()) completed++;
       if (step.desc.trim()) completed++;
-      // icon não é obrigatório para completude
     });
 
     // CTA (2 campos)
@@ -345,7 +417,7 @@ export default function MethodologyPage() {
           </motion.div>
         </div>
 
-        {/* Seção Steps - COM LISTA DINÂMICA */}
+        {/* Seção Steps */}
         <div className="space-y-4">
           <SectionHeader
             title="Passos da Metodologia"
@@ -371,12 +443,12 @@ export default function MethodologyPage() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {stepsList.completeCount} de {stepsList.totalCount} completos
+                          {stepsCompleteCount} de {stepsTotalCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {stepsList.currentPlanType === 'pro' ? '10' : '5'} itens
+                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
                       </span>
                     </div>
                   </div>
@@ -385,12 +457,13 @@ export default function MethodologyPage() {
                       type="button"
                       onClick={handleAddStep}
                       variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!stepsList.canAddNewItem}
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewStep}
                     >
-                      + Adicionar Passo
+                      <Plus className="w-4 h-4" />
+                      Adicionar Passo
                     </Button>
-                    {stepsList.isLimitReached && (
+                    {isStepsLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -399,31 +472,31 @@ export default function MethodologyPage() {
                   </div>
                 </div>
                 <p className="text-sm text-[var(--color-secondary)]/70">
-                  Cada passo representa uma etapa da sua metodologia. <strong>Os IDs são gerados automaticamente e mantidos sequenciais.</strong>
+                  Cada passo representa uma etapa da sua metodologia.
                 </p>
               </div>
 
               {/* Mensagem de erro */}
-              {stepsList.validationError && (
-                <div className={`p-3 rounded-lg ${stepsList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+              {stepsValidationError && (
+                <div className={`p-3 rounded-lg ${isStepsLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
                   <div className="flex items-start gap-2">
-                    {stepsList.isLimitReached ? (
+                    {isStepsLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${stepsList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {stepsList.validationError}
+                    <p className={`text-sm ${isStepsLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {stepsValidationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-4">
-                {stepsList.filteredItems.map((step, index) => (
+                {localSteps.map((step, index) => (
                   <div 
                     key={`step-${step.id || index}`}
-                    ref={index === stepsList.filteredItems.length - 1 ? stepsList.newItemRef : undefined}
+                    ref={index === localSteps.length - 1 ? newStepRef : undefined}
                     draggable
                     onDragStart={(e) => handleStepDragStart(e, index)}
                     onDragOver={(e) => handleStepDragOver(e, index)}
@@ -432,7 +505,7 @@ export default function MethodologyPage() {
                     onDragEnd={handleStepDragEnd}
                     onDrop={handleDrop}
                     className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      stepsList.draggingItem === index 
+                      draggingItem === index 
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                         : 'hover:border-[var(--color-primary)]/50'
                     }`}
@@ -448,11 +521,11 @@ export default function MethodologyPage() {
                           <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
                         </div>
                         
-                        {/* Número do passo (apenas visual) */}
+                        {/* Número do passo */}
                         <div className="flex flex-col items-center">
                           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
                             <span className="text-sm font-bold text-[var(--color-primary)]">
-                              {index + 1}
+                              {step.id}
                             </span>
                           </div>
                           <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
@@ -463,7 +536,7 @@ export default function MethodologyPage() {
                             <h4 className="font-medium text-[var(--color-secondary)]">
                               {step.title || "Sem título"}
                             </h4>
-                            {step.label && step.title && step.icon && step.desc ? (
+                            {step.label && step.title && step.desc ? (
                               <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
                                 Completo
                               </span>
@@ -480,7 +553,7 @@ export default function MethodologyPage() {
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">Label</label>
                                 <Input
                                   value={step.label}
-                                  onChange={(e) => stepsList.updateItem(index, { label: e.target.value })}
+                                  onChange={(e) => updateStep(index, { label: e.target.value })}
                                   placeholder="Ex: Fundação"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -492,7 +565,7 @@ export default function MethodologyPage() {
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">Título</label>
                                 <Input
                                   value={step.title}
-                                  onChange={(e) => stepsList.updateItem(index, { title: e.target.value })}
+                                  onChange={(e) => updateStep(index, { title: e.target.value })}
                                   placeholder="Ex: Auditoria de Margem"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -504,7 +577,7 @@ export default function MethodologyPage() {
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone</label>
                                 <IconSelector
                                   value={step.icon}
-                                  onChange={(value) => stepsList.updateItem(index, { icon: value })}
+                                  onChange={(value) => updateStep(index, { icon: value })}
                                   placeholder="solar:bill-check-bold-duotone"
                                 />
                               </div>
@@ -515,7 +588,7 @@ export default function MethodologyPage() {
                             <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
                             <TextArea
                               value={step.desc}
-                              onChange={(e) => stepsList.updateItem(index, { desc: e.target.value })}
+                              onChange={(e) => updateStep(index, { desc: e.target.value })}
                               placeholder="Descrição detalhada do passo"
                               rows={3}
                               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -527,11 +600,12 @@ export default function MethodologyPage() {
                       <div className="flex flex-col gap-2">
                         <Button
                           type="button"
-                          onClick={() => handleRemoveStep(index)}
+                          onClick={() => removeStep(index)}
                           variant="danger"
-                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
+                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                         >
                           <Trash2 className="w-4 h-4" />
+                          Remover
                         </Button>
                       </div>
                     </div>

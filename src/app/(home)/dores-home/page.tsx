@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -17,7 +17,8 @@ import {
   XCircle,
   TrendingDown,
   AlertTriangle,
-  Trash2
+  Trash2,
+  Plus
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -25,7 +26,6 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { useListState } from "@/hooks/useListState";
 import { Button } from "@/components/Button";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
 import { extractHexFromTailwind, hexToTailwindBgClass, hexToTailwindTextClass } from "@/lib/colors";
@@ -126,36 +126,38 @@ export default function Page() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Hook para gerenciar pain_points.left como lista dinâmica
-  const painPointsLeftList = useListState<PainPoint>({
-    initialItems: pageData.pain_points.left,
-    defaultItem: {
-      id: '',
-      icon: 'solar:question-circle-bold-duotone',
-      title: '',
-      stat: '',
-      description: ''
-    },
-    validationFields: ['title', 'description', 'icon', 'stat'],
-    enableDragDrop: true
-  });
-
-  // Hook para gerenciar warning_words como lista dinâmica
-  const warningWordsList = useListState<WarningWord>({
-    initialItems: pageData.warning_words,
-    defaultItem: {
-      text: '',
-      color: 'text-gray-500'
-    },
-    validationFields: ['text', 'color'],
-    enableDragDrop: true
-  });
+  // Estado local para gerenciar as listas
+  const [localPainPointsLeft, setLocalPainPointsLeft] = useState<PainPoint[]>([]);
+  const [localWarningWords, setLocalWarningWords] = useState<WarningWord[]>([]);
+  const [draggingItem, setDraggingItem] = useState<number | null>(null);
+  const [draggingWarningWord, setDraggingWarningWord] = useState<number | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
     painPoints: true,
     warningWords: false,
     config: false,
   });
+
+  // Referências para novos itens
+  const newPainPointRef = useRef<HTMLDivElement>(null);
+  const newWarningWordRef = useRef<HTMLDivElement>(null);
+
+  // Controle de planos
+  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+
+  // Sincroniza os dados quando carregam do banco
+  useEffect(() => {
+    if (pageData.pain_points.left) {
+      setLocalPainPointsLeft(pageData.pain_points.left);
+    }
+  }, [pageData.pain_points.left]);
+
+  useEffect(() => {
+    if (pageData.warning_words) {
+      setLocalWarningWords(pageData.warning_words);
+    }
+  }, [pageData.warning_words]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -164,32 +166,113 @@ export default function Page() {
     }));
   };
 
-  // Funções para adicionar itens
+  // Funções para pain points left
   const handleAddPainPoint = () => {
-    const success = painPointsLeftList.addItem();
-    if (!success) {
-      console.warn(painPointsLeftList.validationError);
+    if (localPainPointsLeft.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newItem: PainPoint = {
+      id: `item-${Date.now()}`,
+      icon: 'solar:question-circle-bold-duotone',
+      title: '',
+      stat: '',
+      description: ''
+    };
+    
+    const updated = [...localPainPointsLeft, newItem];
+    setLocalPainPointsLeft(updated);
+    updateNested('pain_points.left', updated);
+    
+    setTimeout(() => {
+      newPainPointRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updatePainPoint = (index: number, updates: Partial<PainPoint>) => {
+    const updated = [...localPainPointsLeft];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalPainPointsLeft(updated);
+      updateNested('pain_points.left', updated);
     }
   };
 
+  const removePainPoint = (index: number) => {
+    const updated = [...localPainPointsLeft];
+    
+    if (updated.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyItem: PainPoint = {
+        id: `item-${Date.now()}`,
+        icon: 'solar:question-circle-bold-duotone',
+        title: '',
+        stat: '',
+        description: ''
+      };
+      setLocalPainPointsLeft([emptyItem]);
+      updateNested('pain_points.left', [emptyItem]);
+    } else {
+      updated.splice(index, 1);
+      setLocalPainPointsLeft(updated);
+      updateNested('pain_points.left', updated);
+    }
+  };
+
+  // Funções para warning words
   const handleAddWarningWord = () => {
-    const success = warningWordsList.addItem();
-    if (!success) {
-      console.warn(warningWordsList.validationError);
+    if (localWarningWords.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newItem: WarningWord = {
+      text: '',
+      color: 'text-gray-500'
+    };
+    
+    const updated = [...localWarningWords, newItem];
+    setLocalWarningWords(updated);
+    updateNested('warning_words', updated);
+    
+    setTimeout(() => {
+      newWarningWordRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updateWarningWord = (index: number, updates: Partial<WarningWord>) => {
+    const updated = [...localWarningWords];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalWarningWords(updated);
+      updateNested('warning_words', updated);
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const removeWarningWord = (index: number) => {
+    const updated = [...localWarningWords];
     
-    // Atualiza os arrays no pageData antes de salvar
-    updateNested('pain_points.left', painPointsLeftList.items);
-    updateNested('warning_words', warningWordsList.items);
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
+    if (updated.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyItem: WarningWord = {
+        text: '',
+        color: 'text-gray-500'
+      };
+      setLocalWarningWords([emptyItem]);
+      updateNested('warning_words', [emptyItem]);
+    } else {
+      updated.splice(index, 1);
+      setLocalWarningWords(updated);
+      updateNested('warning_words', updated);
     }
   };
 
@@ -197,34 +280,64 @@ export default function Page() {
   const handlePainPointDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    painPointsLeftList.startDrag(index);
+    setDraggingItem(index);
   };
 
   const handlePainPointDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    painPointsLeftList.handleDragOver(index);
+    
+    if (draggingItem === null || draggingItem === index) return;
+    
+    const updated = [...localPainPointsLeft];
+    const draggedItem = updated[draggingItem];
+    
+    // Remove o item arrastado
+    updated.splice(draggingItem, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingItem ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    setLocalPainPointsLeft(updated);
+    updateNested('pain_points.left', updated);
+    setDraggingItem(index);
   };
 
   const handlePainPointDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    painPointsLeftList.endDrag();
+    setDraggingItem(null);
   };
 
   // Funções de drag & drop para warningWords
   const handleWarningWordDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    warningWordsList.startDrag(index);
+    setDraggingWarningWord(index);
   };
 
   const handleWarningWordDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    warningWordsList.handleDragOver(index);
+    
+    if (draggingWarningWord === null || draggingWarningWord === index) return;
+    
+    const updated = [...localWarningWords];
+    const draggedItem = updated[draggingWarningWord];
+    
+    // Remove o item arrastado
+    updated.splice(draggingWarningWord, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingWarningWord ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    setLocalWarningWords(updated);
+    updateNested('warning_words', updated);
+    setDraggingWarningWord(index);
   };
 
   const handleWarningWordDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    warningWordsList.endDrag();
+    setDraggingWarningWord(null);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -235,7 +348,7 @@ export default function Page() {
     e.currentTarget.classList.remove('drag-over');
   };
 
-  const handleDrop = (e: React.DragEvent, index: number) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
   };
@@ -243,7 +356,7 @@ export default function Page() {
   // Função para atualizar cor de warning word
   const handleWarningWordColorChange = (index: number, hexColor: string) => {
     const tailwindClass = hexToTailwindTextClass(hexColor);
-    warningWordsList.updateItem(index, { color: tailwindClass });
+    updateWarningWord(index, { color: tailwindClass });
   };
 
   // Função para atualizar cor primária
@@ -254,13 +367,51 @@ export default function Page() {
     updateNested('config.primary_color', colorValue);
   };
 
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
+  // Validações
+  const isPainPointValid = (item: PainPoint): boolean => {
+    return item.icon.trim() !== '' && item.title.trim() !== '' && 
+           item.stat.trim() !== '' && item.description.trim() !== '';
+  };
+
+  const isWarningWordValid = (item: WarningWord): boolean => {
+    return item.text.trim() !== '' && item.color.trim() !== '';
+  };
+
+  const isPainPointsLimitReached = localPainPointsLeft.length >= currentPlanLimit;
+  const canAddNewPainPoint = !isPainPointsLimitReached;
+  const painPointsCompleteCount = localPainPointsLeft.filter(isPainPointValid).length;
+  const painPointsTotalCount = localPainPointsLeft.length;
+
+  const isWarningWordsLimitReached = localWarningWords.length >= currentPlanLimit;
+  const canAddNewWarningWord = !isWarningWordsLimitReached;
+  const warningWordsCompleteCount = localWarningWords.filter(isWarningWordValid).length;
+  const warningWordsTotalCount = localWarningWords.length;
+
+  const painPointsValidationError = isPainPointsLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const warningWordsValidationError = isWarningWordsLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Pain Points Left (do hook de lista)
-    total += painPointsLeftList.items.length * 4;
-    painPointsLeftList.items.forEach(item => {
+    // Pain Points Left
+    total += localPainPointsLeft.length * 4;
+    localPainPointsLeft.forEach(item => {
       if (item.icon.trim()) completed++;
       if (item.title.trim()) completed++;
       if (item.stat.trim()) completed++;
@@ -274,9 +425,9 @@ export default function Page() {
     if (pageData.pain_points.right.stat.trim()) completed++;
     if (pageData.pain_points.right.description.trim()) completed++;
 
-    // Warning Words (do hook de lista)
-    total += warningWordsList.items.length * 2;
-    warningWordsList.items.forEach(word => {
+    // Warning Words
+    total += localWarningWords.length * 2;
+    localWarningWords.forEach(word => {
       if (word.text.trim()) completed++;
       if (word.color.trim()) completed++;
     });
@@ -305,7 +456,7 @@ export default function Page() {
       itemName="Pontos de Dor"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Pain Points - COM LISTA DINÂMICA */}
+        {/* Seção Pain Points */}
         <div className="space-y-4">
           <SectionHeader
             title="Pontos de Dor"
@@ -322,7 +473,7 @@ export default function Page() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="space-y-8">
-                {/* Pain Points Left - Lista Dinâmica */}
+                {/* Pain Points Left */}
                 <div>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <div>
@@ -331,12 +482,12 @@ export default function Page() {
                         <div className="flex items-center gap-1">
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                           <span className="text-sm text-[var(--color-secondary)]/70">
-                            {painPointsLeftList.completeCount} de {painPointsLeftList.totalCount} completos
+                            {painPointsCompleteCount} de {painPointsTotalCount} completos
                           </span>
                         </div>
                         <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          Limite: {painPointsLeftList.currentPlanType === 'pro' ? '10' : '5'} itens
+                          Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
                         </span>
                       </div>
                     </div>
@@ -345,12 +496,13 @@ export default function Page() {
                         type="button"
                         onClick={handleAddPainPoint}
                         variant="primary"
-                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                        disabled={!painPointsLeftList.canAddNewItem}
+                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                        disabled={!canAddNewPainPoint}
                       >
-                        + Adicionar Ponto de Dor
+                        <Plus className="w-4 h-4" />
+                        Adicionar Ponto de Dor
                       </Button>
-                      {painPointsLeftList.isLimitReached && (
+                      {isPainPointsLimitReached && (
                         <p className="text-xs text-red-500 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" />
                           Limite do plano atingido
@@ -360,35 +512,35 @@ export default function Page() {
                   </div>
 
                   {/* Mensagem de erro */}
-                  {painPointsLeftList.validationError && (
-                    <div className={`p-3 rounded-lg ${painPointsLeftList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                  {painPointsValidationError && (
+                    <div className={`p-3 rounded-lg ${isPainPointsLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
                       <div className="flex items-start gap-2">
-                        {painPointsLeftList.isLimitReached ? (
+                        {isPainPointsLimitReached ? (
                           <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                         ) : (
                           <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                         )}
-                        <p className={`text-sm ${painPointsLeftList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                          {painPointsLeftList.validationError}
+                        <p className={`text-sm ${isPainPointsLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                          {painPointsValidationError}
                         </p>
                       </div>
                     </div>
                   )}
 
                   <div className="space-y-4">
-                    {painPointsLeftList.filteredItems.map((item, index) => (
+                    {localPainPointsLeft.map((item, index) => (
                       <div 
                         key={`pain-point-left-${index}`}
-                        ref={index === painPointsLeftList.filteredItems.length - 1 ? painPointsLeftList.newItemRef : undefined}
+                        ref={index === localPainPointsLeft.length - 1 ? newPainPointRef : undefined}
                         draggable
                         onDragStart={(e) => handlePainPointDragStart(e, index)}
                         onDragOver={(e) => handlePainPointDragOver(e, index)}
                         onDragEnter={handleDragEnter}
                         onDragLeave={handleDragLeave}
                         onDragEnd={handlePainPointDragEnd}
-                        onDrop={(e) => handleDrop(e, index)}
+                        onDrop={handleDrop}
                         className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                          painPointsLeftList.draggingItem === index 
+                          draggingItem === index 
                             ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                             : 'hover:border-[var(--color-primary)]/50'
                         }`}
@@ -434,7 +586,7 @@ export default function Page() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone</label>
                                     <IconSelector
                                       value={item.icon}
-                                      onChange={(value) => painPointsLeftList.updateItem(index, { icon: value })}
+                                      onChange={(value) => updatePainPoint(index, { icon: value })}
                                       placeholder="solar:wallet-money-bold-duotone"
                                     />
                                   </div>
@@ -443,7 +595,7 @@ export default function Page() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Título</label>
                                     <Input
                                       value={item.title}
-                                      onChange={(e) => painPointsLeftList.updateItem(index, { title: e.target.value })}
+                                      onChange={(e) => updatePainPoint(index, { title: e.target.value })}
                                       placeholder="Título do ponto de dor"
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                     />
@@ -455,7 +607,7 @@ export default function Page() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Estatística</label>
                                     <Input
                                       value={item.stat}
-                                      onChange={(e) => painPointsLeftList.updateItem(index, { stat: e.target.value })}
+                                      onChange={(e) => updatePainPoint(index, { stat: e.target.value })}
                                       placeholder="Ex: -40% de Verba"
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                     />
@@ -465,7 +617,7 @@ export default function Page() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
                                     <TextArea
                                       value={item.description}
-                                      onChange={(e) => painPointsLeftList.updateItem(index, { description: e.target.value })}
+                                      onChange={(e) => updatePainPoint(index, { description: e.target.value })}
                                       placeholder="Descrição impactante"
                                       rows={3}
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -479,11 +631,12 @@ export default function Page() {
                           <div className="flex flex-col gap-2">
                             <Button
                               type="button"
-                              onClick={() => painPointsLeftList.removeItem(index)}
+                              onClick={() => removePainPoint(index)}
                               variant="danger"
-                              className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
+                              className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                             >
                               <Trash2 className="w-4 h-4" />
+                              Remover
                             </Button>
                           </div>
                         </div>
@@ -553,7 +706,7 @@ export default function Page() {
           </motion.div>
         </div>
 
-        {/* Seção Warning Words - COM LISTA DINÂMICA */}
+        {/* Seção Warning Words */}
         <div className="space-y-4">
           <SectionHeader
             title="Palavras de Alerta"
@@ -579,12 +732,12 @@ export default function Page() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {warningWordsList.completeCount} de {warningWordsList.totalCount} completos
+                          {warningWordsCompleteCount} de {warningWordsTotalCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {warningWordsList.currentPlanType === 'pro' ? '10' : '5'} itens
+                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
                       </span>
                     </div>
                   </div>
@@ -593,12 +746,13 @@ export default function Page() {
                       type="button"
                       onClick={handleAddWarningWord}
                       variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!warningWordsList.canAddNewItem}
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewWarningWord}
                     >
-                      + Adicionar Palavra
+                      <Plus className="w-4 h-4" />
+                      Adicionar Palavra
                     </Button>
-                    {warningWordsList.isLimitReached && (
+                    {isWarningWordsLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -612,35 +766,35 @@ export default function Page() {
               </div>
 
               {/* Mensagem de erro */}
-              {warningWordsList.validationError && (
-                <div className={`p-3 rounded-lg ${warningWordsList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+              {warningWordsValidationError && (
+                <div className={`p-3 rounded-lg ${isWarningWordsLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
                   <div className="flex items-start gap-2">
-                    {warningWordsList.isLimitReached ? (
+                    {isWarningWordsLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${warningWordsList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {warningWordsList.validationError}
+                    <p className={`text-sm ${isWarningWordsLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {warningWordsValidationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-4">
-                {warningWordsList.filteredItems.map((word, index) => (
+                {localWarningWords.map((word, index) => (
                   <div 
                     key={`warning-word-${index}`}
-                    ref={index === warningWordsList.filteredItems.length - 1 ? warningWordsList.newItemRef : undefined}
+                    ref={index === localWarningWords.length - 1 ? newWarningWordRef : undefined}
                     draggable
                     onDragStart={(e) => handleWarningWordDragStart(e, index)}
                     onDragOver={(e) => handleWarningWordDragOver(e, index)}
                     onDragEnter={handleDragEnter}
                     onDragLeave={handleDragLeave}
                     onDragEnd={handleWarningWordDragEnd}
-                    onDrop={(e) => handleDrop(e, index)}
+                    onDrop={handleDrop}
                     className={`p-4 border border-[var(--color-border)] rounded-lg space-y-4 transition-all duration-200 ${
-                      warningWordsList.draggingItem === index 
+                      draggingWarningWord === index 
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                         : 'hover:border-[var(--color-primary)]/50'
                     }`}
@@ -686,7 +840,7 @@ export default function Page() {
                               </label>
                               <Input
                                 value={word.text}
-                                onChange={(e) => warningWordsList.updateItem(index, { text: e.target.value })}
+                                onChange={(e) => updateWarningWord(index, { text: e.target.value })}
                                 placeholder="Ex: MARGEM BAIXA"
                                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                               />
@@ -712,11 +866,12 @@ export default function Page() {
                       <div className="flex flex-col gap-2">
                         <Button
                           type="button"
-                          onClick={() => warningWordsList.removeItem(index)}
+                          onClick={() => removeWarningWord(index)}
                           variant="danger"
-                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
+                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                         >
                           <Trash2 className="w-4 h-4" />
+                          Remover
                         </Button>
                       </div>
                     </div>

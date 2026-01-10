@@ -126,7 +126,6 @@ export default function AuthoritySectionPage() {
     errorMsg,
     deleteModal,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -137,6 +136,10 @@ export default function AuthoritySectionPage() {
     mergeFunction: mergeWithDefaults,
   });
 
+  // Estados locais para as listas
+  const [localStats, setLocalStats] = useState<StatBento[]>([]);
+  const [localPartners, setLocalPartners] = useState<Partner[]>([]);
+  
   // Estados para drag & drop
   const [draggingStat, setDraggingStat] = useState<number | null>(null);
   const [draggingPartner, setDraggingPartner] = useState<number | null>(null);
@@ -151,6 +154,30 @@ export default function AuthoritySectionPage() {
     partners: false,
   });
 
+  // Sincroniza os dados quando carregam do banco
+  useEffect(() => {
+    if (pageData.authority_section.stats_bento && pageData.authority_section.stats_bento.length > 0) {
+      setLocalStats(pageData.authority_section.stats_bento);
+    } else {
+      setLocalStats(defaultAuthoritySectionData.authority_section.stats_bento);
+    }
+    
+    if (pageData.authority_section.infrastructure.partners && pageData.authority_section.infrastructure.partners.length > 0) {
+      setLocalPartners(pageData.authority_section.infrastructure.partners);
+    } else {
+      setLocalPartners(defaultAuthoritySectionData.authority_section.infrastructure.partners);
+    }
+  }, [pageData]);
+
+  // Funções para atualizar os dados no hook useJsonManagement
+  const updateStatsInPageData = (stats: StatBento[]) => {
+    updateNested('authority_section.stats_bento', stats);
+  };
+
+  const updatePartnersInPageData = (partners: Partner[]) => {
+    updateNested('authority_section.infrastructure.partners', partners);
+  };
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -160,9 +187,7 @@ export default function AuthoritySectionPage() {
 
   // Funções para manipular a lista de stats
   const addStat = () => {
-    const currentStats = [...pageData.authority_section.stats_bento];
-    
-    if (currentStats.length >= currentStatPlanLimit) {
+    if (localStats.length >= currentStatPlanLimit) {
       return false;
     }
     
@@ -176,7 +201,9 @@ export default function AuthoritySectionPage() {
       theme: 'light'
     };
     
-    updateNested('authority_section.stats_bento', [...currentStats, newStat]);
+    const updated = [...localStats, newStat];
+    setLocalStats(updated);
+    updateStatsInPageData(updated);
     
     // Scroll para o novo item
     setTimeout(() => {
@@ -190,20 +217,21 @@ export default function AuthoritySectionPage() {
   };
 
   const updateStat = (index: number, updates: Partial<StatBento>) => {
-    const currentStats = [...pageData.authority_section.stats_bento];
+    const updated = [...localStats];
     
-    if (index >= 0 && index < currentStats.length) {
-      currentStats[index] = { ...currentStats[index], ...updates };
-      updateNested('authority_section.stats_bento', currentStats);
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalStats(updated);
+      updateStatsInPageData(updated);
     }
   };
 
   const removeStat = (index: number) => {
-    const currentStats = [...pageData.authority_section.stats_bento];
+    const updated = [...localStats];
     
-    if (currentStats.length <= 1) {
+    if (updated.length <= 1) {
       // Mantém pelo menos um stat vazio
-      updateNested('authority_section.stats_bento', [{
+      const emptyStat: StatBento = {
         id: `stat_${Date.now()}`,
         type: 'standard',
         value: 0,
@@ -211,18 +239,19 @@ export default function AuthoritySectionPage() {
         suffix: '',
         label: '',
         theme: 'light'
-      }]);
+      };
+      setLocalStats([emptyStat]);
+      updateStatsInPageData([emptyStat]);
     } else {
-      currentStats.splice(index, 1);
-      updateNested('authority_section.stats_bento', currentStats);
+      updated.splice(index, 1);
+      setLocalStats(updated);
+      updateStatsInPageData(updated);
     }
   };
 
   // Funções para manipular a lista de partners
   const addPartner = () => {
-    const currentPartners = [...pageData.authority_section.infrastructure.partners];
-    
-    if (currentPartners.length >= currentPartnerPlanLimit) {
+    if (localPartners.length >= currentPartnerPlanLimit) {
       return false;
     }
     
@@ -232,7 +261,9 @@ export default function AuthoritySectionPage() {
       src: ""
     };
     
-    updateNested('authority_section.infrastructure.partners', [...currentPartners, newPartner]);
+    const updated = [...localPartners, newPartner];
+    setLocalPartners(updated);
+    updatePartnersInPageData(updated);
     
     // Scroll para o novo item
     setTimeout(() => {
@@ -246,27 +277,31 @@ export default function AuthoritySectionPage() {
   };
 
   const updatePartner = (index: number, updates: Partial<Partner>) => {
-    const currentPartners = [...pageData.authority_section.infrastructure.partners];
+    const updated = [...localPartners];
     
-    if (index >= 0 && index < currentPartners.length) {
-      currentPartners[index] = { ...currentPartners[index], ...updates };
-      updateNested('authority_section.infrastructure.partners', currentPartners);
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalPartners(updated);
+      updatePartnersInPageData(updated);
     }
   };
 
   const removePartner = (index: number) => {
-    const currentPartners = [...pageData.authority_section.infrastructure.partners];
+    const updated = [...localPartners];
     
-    if (currentPartners.length <= 1) {
+    if (updated.length <= 1) {
       // Mantém pelo menos um partner vazio
-      updateNested('authority_section.infrastructure.partners', [{
+      const emptyPartner: Partner = {
         id: `partner_${Date.now()}`,
         alt: "",
         src: ""
-      }]);
+      };
+      setLocalPartners([emptyPartner]);
+      updatePartnersInPageData([emptyPartner]);
     } else {
-      currentPartners.splice(index, 1);
-      updateNested('authority_section.infrastructure.partners', currentPartners);
+      updated.splice(index, 1);
+      setLocalPartners(updated);
+      updatePartnersInPageData(updated);
     }
   };
 
@@ -282,17 +317,18 @@ export default function AuthoritySectionPage() {
     
     if (draggingStat === null || draggingStat === index) return;
     
-    const currentStats = [...pageData.authority_section.stats_bento];
-    const draggedStat = currentStats[draggingStat];
+    const updated = [...localStats];
+    const draggedStat = updated[draggingStat];
     
     // Remove o item arrastado
-    currentStats.splice(draggingStat, 1);
+    updated.splice(draggingStat, 1);
     
     // Insere na nova posição
     const newIndex = index > draggingStat ? index : index;
-    currentStats.splice(newIndex, 0, draggedStat);
+    updated.splice(newIndex, 0, draggedStat);
     
-    updateNested('authority_section.stats_bento', currentStats);
+    setLocalStats(updated);
+    updateStatsInPageData(updated);
     setDraggingStat(index);
   };
 
@@ -313,17 +349,18 @@ export default function AuthoritySectionPage() {
     
     if (draggingPartner === null || draggingPartner === index) return;
     
-    const currentPartners = [...pageData.authority_section.infrastructure.partners];
-    const draggedPartner = currentPartners[draggingPartner];
+    const updated = [...localPartners];
+    const draggedPartner = updated[draggingPartner];
     
     // Remove o item arrastado
-    currentPartners.splice(draggingPartner, 1);
+    updated.splice(draggingPartner, 1);
     
     // Insere na nova posição
     const newIndex = index > draggingPartner ? index : index;
-    currentPartners.splice(newIndex, 0, draggedPartner);
+    updated.splice(newIndex, 0, draggedPartner);
     
-    updateNested('authority_section.infrastructure.partners', currentPartners);
+    setLocalPartners(updated);
+    updatePartnersInPageData(updated);
     setDraggingPartner(index);
   };
 
@@ -348,11 +385,9 @@ export default function AuthoritySectionPage() {
 
   // Função para lidar com upload de imagem do parceiro
   const handlePartnerImageUpload = (index: number, file: File | null) => {
-    const path = `authority_section.infrastructure.partners.${index}.src`;
-    
-    setFileState(path, file);
-    
     if (file) {
+      // Em uma implementação real, aqui você faria upload para um CDN/S3
+      // Por enquanto, vamos apenas simular com um objeto URL
       const objectUrl = URL.createObjectURL(file);
       updatePartner(index, { src: objectUrl });
     } else {
@@ -364,6 +399,14 @@ export default function AuthoritySectionPage() {
     if (e) e.preventDefault();
     
     try {
+      // Primeiro, garante que os dados locais estejam sincronizados
+      updateStatsInPageData(localStats);
+      updatePartnersInPageData(localPartners);
+      
+      // Aguarda um momento para garantir a atualização
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Salva no banco
       await save();
     } catch (err) {
       console.error("Erro ao salvar:", err);
@@ -398,21 +441,18 @@ export default function AuthoritySectionPage() {
   const isPartnerValid = (partner: Partner): boolean => {
     return partner.alt.trim() !== '' && partner.src.trim() !== '';
   };
-
-  const stats = pageData.authority_section.stats_bento;
-  const partners = pageData.authority_section.infrastructure.partners;
   
-  const isStatLimitReached = stats.length >= currentStatPlanLimit;
-  const isPartnerLimitReached = partners.length >= currentPartnerPlanLimit;
+  const isStatLimitReached = localStats.length >= currentStatPlanLimit;
+  const isPartnerLimitReached = localPartners.length >= currentPartnerPlanLimit;
   
   const canAddNewStat = !isStatLimitReached;
   const canAddNewPartner = !isPartnerLimitReached;
   
-  const completeStatCount = stats.filter(isStatValid).length;
-  const completePartnerCount = partners.filter(isPartnerValid).length;
+  const completeStatCount = localStats.filter(isStatValid).length;
+  const completePartnerCount = localPartners.filter(isPartnerValid).length;
   
-  const totalStatCount = stats.length;
-  const totalPartnerCount = partners.length;
+  const totalStatCount = localStats.length;
+  const totalPartnerCount = localPartners.length;
   
   const statValidationError = isStatLimitReached 
     ? `Você chegou ao limite do plano ${currentPlanType} (${currentStatPlanLimit} estatísticas).`
@@ -434,8 +474,8 @@ export default function AuthoritySectionPage() {
     if (pageData.authority_section.header.live_data_label.trim()) completed++;
 
     // Stats Bento
-    total += stats.length * 7;
-    stats.forEach(stat => {
+    total += localStats.length * 7;
+    localStats.forEach(stat => {
       if (stat.label.trim()) completed++;
       if (stat.value !== undefined && stat.value !== null) completed++;
       if (stat.type.trim()) completed++;
@@ -450,8 +490,8 @@ export default function AuthoritySectionPage() {
     if (pageData.authority_section.infrastructure.label.trim()) completed++;
 
     // Partners
-    total += partners.length * 2; // alt e src
-    partners.forEach(partner => {
+    total += localPartners.length * 2; // alt e src
+    localPartners.forEach(partner => {
       if (partner.alt.trim()) completed++;
       if (partner.src.trim()) completed++;
     });
@@ -619,12 +659,12 @@ export default function AuthoritySectionPage() {
               )}
 
               <div className="space-y-4">
-                {stats.map((stat, index) => {
+                {localStats.map((stat, index) => {
                   const StatIcon = getStatTypeIcon(stat.type);
                   return (
                     <div 
                       key={stat.id}
-                      ref={index === stats.length - 1 ? newStatRef : undefined}
+                      ref={index === localStats.length - 1 ? newStatRef : undefined}
                       draggable
                       onDragStart={(e) => handleStatDragStart(e, index)}
                       onDragOver={(e) => handleStatDragOver(e, index)}
@@ -904,10 +944,10 @@ export default function AuthoritySectionPage() {
                 )}
 
                 <div className="space-y-4">
-                  {partners.map((partner, index) => (
+                  {localPartners.map((partner, index) => (
                     <div 
                       key={partner.id}
-                      ref={index === partners.length - 1 ? newPartnerRef : undefined}
+                      ref={index === localPartners.length - 1 ? newPartnerRef : undefined}
                       draggable
                       onDragStart={(e) => handlePartnerDragStart(e, index)}
                       onDragOver={(e) => handlePartnerDragOver(e, index)}

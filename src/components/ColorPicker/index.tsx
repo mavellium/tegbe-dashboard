@@ -21,13 +21,23 @@ export default function ColorPicker({ color, onChange }: ColorPickerProps) {
 
   const [showPicker, setShowPicker] = useState(false);
 
-  const normalizedColor = useMemo(
-    () => (color?.startsWith("#") ? color : `#${color}`) || "#000000",
-    [color]
-  );
+  // Sincroniza o estado interno com a prop color sempre que ela mudar
+  const normalizedColor = useMemo(() => {
+    if (!color) return "#000000";
+    const normalized = color.startsWith("#") ? color : `#${color}`;
+    return normalized;
+  }, [color]);
 
   const [selectedColor, setSelectedColor] = useState(normalizedColor);
   const [inputColor, setInputColor] = useState(normalizedColor);
+
+  // Atualiza o estado interno quando a prop muda
+  useEffect(() => {
+    const normalized = color?.startsWith("#") ? color : `#${color}` || "#000000";
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedColor(normalized);
+    setInputColor(normalized);
+  }, [color]);
 
   /* Fecha ao clicar fora */
   useEffect(() => {
@@ -133,10 +143,10 @@ export default function ColorPicker({ color, onChange }: ColorPickerProps) {
         <div className="flex flex-col items-start">
           <div
             className="w-8 h-4 rounded border"
-            style={{ backgroundColor: selectedColor }}
+            style={{ backgroundColor: normalizedColor }}
           />
           <span className="text-xs font-mono text-zinc-500 mt-1">
-            {selectedColor}
+            {normalizedColor}
           </span>
         </div>
       </button>
