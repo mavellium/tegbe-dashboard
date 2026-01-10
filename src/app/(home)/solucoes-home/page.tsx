@@ -225,7 +225,7 @@ export default function ServiceRouterPage() {
 
   const [expandedSections, setExpandedSections] = useState({
     header: true,
-    services: true,
+    services: false,
     animation: false,
   });
 

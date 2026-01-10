@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -23,11 +23,18 @@ import {
   Megaphone,
   Info,
   GraduationCap,
-  LucideIcon
+  LucideIcon,
+  GripVertical,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Trash2,
+  Plus
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
 import ColorPicker from "@/components/ColorPicker";
 import IconSelector from "@/components/IconSelector";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
@@ -100,10 +107,6 @@ interface HeadlineData {
   defaultTheme?: "home" | "ecommerce" | "marketing" | "sobre" | "cursos";
 }
 
-interface HeadlinePageComponentProps {
-  activeTab?: "home" | "ecommerce" | "marketing" | "sobre" | "cursos";
-}
-
 const defaultHeadlinePageData: HeadlinePageData = {
   badge: {
     icone: "",
@@ -156,47 +159,12 @@ const defaultHeadlineData: HeadlineData = {
 
 const expandedSectionsDefault = {
   badge: true,
-  titulo: true,
-  subtitulo: true,
-  botao: true,
-  agenda: true,
+  titulo: false,
+  subtitulo: false,
+  botao: false,
+  agenda: false,
   configuracoes: false
 };
-
-// Componente SectionHeader
-interface SectionHeaderProps {
-  title: string;
-  section: keyof typeof expandedSectionsDefault;
-  icon: LucideIcon;
-  isExpanded: boolean;
-  onToggle: (section: keyof typeof expandedSectionsDefault) => void;
-}
-
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <button
-    type="button"
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </button>
-);
 
 // Componente ThemeTab
 interface ThemeTabProps {
@@ -208,18 +176,19 @@ interface ThemeTabProps {
 }
 
 const ThemeTab = ({ themeKey, label, isActive, onClick, icon }: ThemeTabProps) => (
-  <button
+  <Button
     type="button"
     onClick={() => onClick(themeKey)}
+    variant={isActive ? "primary" : "secondary"}
     className={`px-4 py-2 font-medium rounded-lg transition-all flex items-center gap-2 ${
       isActive
-        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md"
-        : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        ? "bg-[var(--color-primary)] text-white shadow-md"
+        : "bg-[var(--color-background)] text-[var(--color-secondary)] hover:bg-[var(--color-background)]/80 border border-[var(--color-border)]"
     }`}
   >
     {icon}
     <span>{label}</span>
-  </button>
+  </Button>
 );
 
 // Helper function para obter dados seguros com valores padrão
@@ -228,32 +197,42 @@ const getSafeData = <T,>(data: T | undefined | null, defaultValue: T): T => {
   return data;
 };
 
-export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({ 
-  activeTab = "home" 
-}) => {
+export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommerce" | "marketing" | "sobre" | "cursos"}) {
   const [activeTheme, setActiveTheme] = useState<"home" | "ecommerce" | "marketing" | "sobre" | "cursos">(activeTab);
   const [expandedSections, setExpandedSections] = useState(expandedSectionsDefault);
+  const [localPalavrasAnimadas, setLocalPalavrasAnimadas] = useState<PalavraAnimada[]>([]);
+  const [draggingPalavra, setDraggingPalavra] = useState<number | null>(null);
   
   const {
     data: headlineData,
-    setData: setHeadlineData,
     loading,
     success,
     errorMsg,
+    deleteModal,
     save,
     exists,
-    reload,
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
     updateNested
   } = useJsonManagement<HeadlineData>({
     apiPath: "/api/tegbe-institucional/json/headline",
     defaultData: defaultHeadlineData,
   });
 
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
+  // Referência para nova palavra animada
+  const newPalavraRef = useRef<HTMLDivElement>(null);
+
+  // Controle de planos
+  const currentPlanType = 'pro';
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+
+  // Sincroniza palavras animadas quando carregam do banco
+  useEffect(() => {
+    const currentThemeData = getCurrentThemeData();
+    const palavras = currentThemeData.titulo?.palavrasAnimadas || [];
+    setLocalPalavrasAnimadas(palavras);
+  }, [headlineData, activeTheme]);
 
   // Helper para obter dados do tema atual de forma segura
   const getCurrentThemeData = useCallback((): HeadlinePageData => {
@@ -279,8 +258,6 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
 
   const completeCount = calculateCompleteCount();
   const totalCount = 6;
-  const canAddNewItem = false;
-  const isLimitReached = false;
 
   const toggleSection = (section: keyof typeof expandedSectionsDefault) => {
     setExpandedSections((prev) => ({
@@ -298,87 +275,196 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
     handleThemeChange(path, cleanColor);
   };
 
-  // Funções para palavras animadas
-  const handlePalavraAnimadaChange = (index: number, field: keyof PalavraAnimada, value: string) => {
-    const currentThemeData = getCurrentThemeData();
-    const palavras = currentThemeData.titulo?.palavrasAnimadas || [];
-    const newPalavras = [...palavras];
-    
-    if (!newPalavras[index]) {
-      newPalavras[index] = { texto: "", cor: "#FFCC00", ordem: index + 1 };
+  // Funções para palavras animadas com drag & drop
+  const handleAddPalavraAnimada = () => {
+    if (localPalavrasAnimadas.length >= currentPlanLimit) {
+      return false;
     }
     
-    newPalavras[index] = { ...newPalavras[index], [field]: value };
-    handleThemeChange('titulo.palavrasAnimadas', newPalavras);
-  };
-
-  const addPalavraAnimada = () => {
-    const currentThemeData = getCurrentThemeData();
-    const palavras = currentThemeData.titulo?.palavrasAnimadas || [];
-    const newPalavras = [...palavras, {
+    const newPalavra: PalavraAnimada = {
       texto: "NOVA PALAVRA",
       cor: "#FFCC00",
-      ordem: palavras.length + 1
-    }];
-    handleThemeChange('titulo.palavrasAnimadas', newPalavras);
+      ordem: localPalavrasAnimadas.length + 1
+    };
+    
+    const updated = [...localPalavrasAnimadas, newPalavra];
+    setLocalPalavrasAnimadas(updated);
+    handleThemeChange('titulo.palavrasAnimadas', updated);
+    
+    setTimeout(() => {
+      newPalavraRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updatePalavraAnimada = (index: number, updates: Partial<PalavraAnimada>) => {
+    const updated = [...localPalavrasAnimadas];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalPalavrasAnimadas(updated);
+      handleThemeChange('titulo.palavrasAnimadas', updated);
+    }
   };
 
   const removePalavraAnimada = (index: number) => {
-    const currentThemeData = getCurrentThemeData();
-    const palavras = currentThemeData.titulo?.palavrasAnimadas || [];
-    const newPalavras = palavras.filter((_, i) => i !== index);
-    handleThemeChange('titulo.palavrasAnimadas', newPalavras);
-  };
-
-  const movePalavraAnimada = (index: number, direction: 'up' | 'down') => {
-    const currentThemeData = getCurrentThemeData();
-    const palavras = currentThemeData.titulo?.palavrasAnimadas || [];
-    const newPalavras = [...palavras];
+    const updated = [...localPalavrasAnimadas];
     
-    if (direction === 'up' && index > 0) {
-      [newPalavras[index], newPalavras[index - 1]] = [newPalavras[index - 1], newPalavras[index]];
-    } else if (direction === 'down' && index < newPalavras.length - 1) {
-      [newPalavras[index], newPalavras[index + 1]] = [newPalavras[index + 1], newPalavras[index]];
-    }
-    
-    handleThemeChange('titulo.palavrasAnimadas', newPalavras);
-  };
-
-  const handleSubmitWrapper = () => {
-    const fd = new FormData();
-    fd.append("values", JSON.stringify(headlineData));
-    save();
-  };
-
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS HEADLINES"
-    });
-  };
-
-  const confirmDelete = async () => {
-    try {
-      await fetch("/api/tegbe-institucional/json/headline", {
-        method: "DELETE",
+    if (updated.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyPalavra: PalavraAnimada = {
+        texto: "",
+        cor: "#FFCC00",
+        ordem: 1
+      };
+      setLocalPalavrasAnimadas([emptyPalavra]);
+      handleThemeChange('titulo.palavrasAnimadas', [emptyPalavra]);
+    } else {
+      updated.splice(index, 1);
+      // Atualiza ordens
+      updated.forEach((palavra, idx) => {
+        palavra.ordem = idx + 1;
       });
-      
-      setHeadlineData(defaultHeadlineData);
-      closeDeleteModal();
-      await reload();
-    } catch (err: any) {
-      console.error("Erro ao deletar:", err);
+      setLocalPalavrasAnimadas(updated);
+      handleThemeChange('titulo.palavrasAnimadas', updated);
     }
   };
 
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
+  // Funções de drag & drop para palavras animadas
+  const handlePalavraDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingPalavra(index);
   };
+
+  const handlePalavraDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingPalavra === null || draggingPalavra === index) return;
+    
+    const updated = [...localPalavrasAnimadas];
+    const draggedItem = updated[draggingPalavra];
+    
+    // Remove o item arrastado
+    updated.splice(draggingPalavra, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingPalavra ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    // Atualiza ordens
+    updated.forEach((palavra, idx) => {
+      palavra.ordem = idx + 1;
+    });
+    
+    setLocalPalavrasAnimadas(updated);
+    handleThemeChange('titulo.palavrasAnimadas', updated);
+    setDraggingPalavra(index);
+  };
+
+  const handlePalavraDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingPalavra(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
+  // Validações
+  const isPalavraAnimadaValid = (palavra: PalavraAnimada): boolean => {
+    return palavra.texto?.trim() !== '' && palavra.cor?.trim() !== '';
+  };
+
+  const isPalavrasLimitReached = localPalavrasAnimadas.length >= currentPlanLimit;
+  const canAddNewPalavra = !isPalavrasLimitReached;
+  const palavrasCompleteCount = localPalavrasAnimadas.filter(isPalavraAnimadaValid).length;
+  const palavrasTotalCount = localPalavrasAnimadas.length;
+
+  const palavrasValidationError = isPalavrasLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+    const currentThemeData = getCurrentThemeData();
+
+    // Badge (4 campos)
+    total += 4;
+    if (currentThemeData.badge?.icone?.trim()) completed++;
+    if (currentThemeData.badge?.texto?.trim()) completed++;
+    if (currentThemeData.badge?.cor?.trim()) completed++;
+    if (currentThemeData.badge?.visivel !== undefined) completed++;
+
+    // Título (3 campos + palavras animadas)
+    total += 3;
+    if (currentThemeData.titulo?.chamada?.trim()) completed++;
+    if (currentThemeData.titulo?.tituloPrincipal?.trim()) completed++;
+    if (currentThemeData.titulo?.separador?.trim()) completed++;
+
+    // Palavras Animadas (2 campos cada)
+    total += localPalavrasAnimadas.length * 2;
+    localPalavrasAnimadas.forEach(palavra => {
+      if (palavra.texto?.trim()) completed++;
+      if (palavra.cor?.trim()) completed++;
+    });
+
+    // Subtítulo (1 campo)
+    total += 1;
+    if (currentThemeData.subtitulo?.trim()) completed++;
+
+    // Botão (5 campos)
+    total += 5;
+    if (currentThemeData.botao?.texto?.trim()) completed++;
+    if (currentThemeData.botao?.link?.trim()) completed++;
+    if (currentThemeData.botao?.icone?.trim()) completed++;
+    if (currentThemeData.botao?.estilo?.trim()) completed++;
+    if (currentThemeData.botao?.visivel !== undefined) completed++;
+
+    // Agenda (5 campos)
+    total += 5;
+    if (currentThemeData.agenda?.status?.trim()) completed++;
+    if (currentThemeData.agenda?.mes?.trim()) completed++;
+    if (currentThemeData.agenda?.corStatus?.trim()) completed++;
+    if (currentThemeData.agenda?.texto?.trim()) completed++;
+    if (currentThemeData.agenda?.visivel !== undefined) completed++;
+
+    // Configurações (6 campos)
+    total += 6;
+    if (currentThemeData.configuracoes?.intervaloAnimacao) completed++;
+    if (currentThemeData.configuracoes?.corFundo?.trim()) completed++;
+    if (currentThemeData.configuracoes?.corDestaque?.trim()) completed++;
+    if (currentThemeData.configuracoes?.efeitos?.brilhoTitulo?.trim() !== undefined) completed++;
+    if (currentThemeData.configuracoes?.efeitos?.spotlight !== undefined) completed++;
+    if (currentThemeData.configuracoes?.efeitos?.grid !== undefined) completed++;
+
+    return { completed, total };
+  };
+
+  const completion = calculateCompletion();
 
   const renderBadgeSection = () => {
     const currentThemeData = getCurrentThemeData();
@@ -391,7 +477,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           section="badge" 
           icon={Tag}
           isExpanded={expandedSections.badge}
-          onToggle={toggleSection}
+          onToggle={() => toggleSection("badge")}
         />
         
         <motion.div
@@ -399,64 +485,83 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           animate={{ height: expandedSections.badge ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <IconSelector
-                  value={badgeData.icone || ""}
-                  onChange={(value) => handleThemeChange('badge.icone', value)}
-                  label="Ícone do Badge"
-                />
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+                  Configurações do Badge
+                </h4>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-[var(--color-secondary)]/70">
+                    {[
+                      badgeData.icone?.trim() !== '',
+                      badgeData.texto?.trim() !== '',
+                      badgeData.cor?.trim() !== ''
+                    ].filter(Boolean).length} de 3 campos preenchidos
+                  </span>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Texto do Badge
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Consultoria Oficial Mercado Livre"
-                  value={badgeData.texto || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                    handleThemeChange('badge.texto', e.target.value)
-                  }
-                />
-              </div>
+              <div className="space-y-6">
+                <div>
+                  <IconSelector
+                    value={badgeData.icone || ""}
+                    onChange={(value) => handleThemeChange('badge.icone', value)}
+                    label="Ícone do Badge"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Cor do Texto (Hexadecimal)
-                </label>
-                <div className="flex gap-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Texto do Badge
+                  </label>
                   <Input
                     type="text"
-                    placeholder="#FFCC00"
-                    value={badgeData.cor || "#FFCC00"}
+                    placeholder="Consultoria Oficial Mercado Livre"
+                    value={badgeData.texto || ""}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                      handleThemeChange('badge.cor', e.target.value)
+                      handleThemeChange('badge.texto', e.target.value)
                     }
-                    className="font-mono"
-                  />
-                  <ColorPicker
-                    color={badgeData.cor || "#FFCC00"}
-                    onChange={(color: string) => handleColorChange('badge.cor', color)}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                 </div>
-              </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Visibilidade
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Cor do Texto
                   </label>
-                  <p className="text-sm text-zinc-500">Mostrar ou esconder o badge</p>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="#FFCC00"
+                      value={badgeData.cor || "#FFCC00"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleThemeChange('badge.cor', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                    />
+                    <ColorPicker
+                      color={badgeData.cor || "#FFCC00"}
+                      onChange={(color: string) => handleColorChange('badge.cor', color)}
+                    />
+                  </div>
                 </div>
-                <Switch
-                  checked={badgeData.visivel !== false}
-                  onCheckedChange={(checked: boolean) => 
-                    handleThemeChange('badge.visivel', checked)
-                  }
-                />
+
+                <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border)]">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Visibilidade
+                    </label>
+                    <p className="text-sm text-[var(--color-secondary)]/70">Mostrar ou esconder o badge</p>
+                  </div>
+                  <Switch
+                    checked={badgeData.visivel !== false}
+                    onCheckedChange={(checked: boolean) => 
+                      handleThemeChange('badge.visivel', checked)
+                    }
+                  />
+                </div>
               </div>
             </div>
           </Card>
@@ -468,7 +573,6 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
   const renderTituloSection = () => {
     const currentThemeData = getCurrentThemeData();
     const tituloData = currentThemeData.titulo || {};
-    const palavrasAnimadas = tituloData.palavrasAnimadas || [];
     
     return (
       <div className="space-y-4">
@@ -477,7 +581,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           section="titulo" 
           icon={Type}
           isExpanded={expandedSections.titulo}
-          onToggle={toggleSection}
+          onToggle={() => toggleSection("titulo")}
         />
         
         <motion.div
@@ -485,124 +589,211 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           animate={{ height: expandedSections.titulo ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Chamada Inicial
-              </label>
-              <Input
-                type="text"
-                placeholder="O seu negócio não precisa de mais"
-                value={tituloData.chamada || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleThemeChange('titulo.chamada', e.target.value)
-                }
-              />
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Palavras Animadas
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-8">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Chamada Inicial
                 </label>
-                <Button
-                  type="button"
-                  onClick={addPalavraAnimada}
-                >
-                  + Adicionar Palavra
-                </Button>
+                <Input
+                  type="text"
+                  placeholder="O seu negócio não precisa de mais"
+                  value={tituloData.chamada || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleThemeChange('titulo.chamada', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
               </div>
 
-              <div className="space-y-3">
-                {palavrasAnimadas.map((palavra, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800/50">
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                      Palavras Animadas
+                    </h4>
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => movePalavraAnimada(index, 'up')}
-                        disabled={index === 0}
-                        className="p-1 disabled:opacity-30 text-zinc-600 dark:text-zinc-400"
-                      >
-                        <ChevronUp className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => movePalavraAnimada(index, 'down')}
-                        disabled={index === palavrasAnimadas.length - 1}
-                        className="p-1 disabled:opacity-30 text-zinc-600 dark:text-zinc-400"
-                      >
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {palavrasCompleteCount} de {palavrasTotalCount} completas
+                      </span>
+                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                      </span>
                     </div>
-                    
-                    <Input
-                      type="text"
-                      value={palavra.texto || ""}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                        handlePalavraAnimadaChange(index, 'texto', e.target.value)
-                      }
-                      placeholder="Palavra animada"
-                      className="flex-1"
-                    />
-                    
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        value={palavra.cor || "#FFCC00"}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                          handlePalavraAnimadaChange(index, 'cor', e.target.value)
-                        }
-                        placeholder="#FFCC00"
-                        className="w-32 font-mono"
-                      />
-                      <ColorPicker
-                        color={palavra.cor || "#FFCC00"}
-                        onChange={(color: string) => {
-                          handlePalavraAnimadaChange(index, 'cor', color);
-                        }}
-                      />
-                    </div>
-                    
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
                     <Button
                       type="button"
-                      onClick={() => removePalavraAnimada(index)}
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      onClick={handleAddPalavraAnimada}
+                      variant="primary"
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewPalavra}
                     >
-                      Remover
+                      <Plus className="w-4 h-4" />
+                      Adicionar Palavra
                     </Button>
+                    {isPalavrasLimitReached && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Limite do plano atingido
+                      </p>
+                    )}
                   </div>
-                ))}
+                </div>
+
+                {/* Mensagem de erro */}
+                {palavrasValidationError && (
+                  <div className={`p-3 rounded-lg ${isPalavrasLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                    <div className="flex items-start gap-2">
+                      {isPalavrasLimitReached ? (
+                        <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      )}
+                      <p className={`text-sm ${isPalavrasLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {palavrasValidationError}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {localPalavrasAnimadas.map((palavra, index) => (
+                    <div 
+                      key={`palavra-${index}`}
+                      ref={index === localPalavrasAnimadas.length - 1 ? newPalavraRef : undefined}
+                      draggable
+                      onDragStart={(e) => handlePalavraDragStart(e, index)}
+                      onDragOver={(e) => handlePalavraDragOver(e, index)}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDragEnd={handlePalavraDragEnd}
+                      onDrop={handleDrop}
+                      className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+                        draggingPalavra === index 
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                          : 'hover:border-[var(--color-primary)]/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          {/* Handle para drag & drop */}
+                          <div 
+                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                            draggable
+                            onDragStart={(e) => handlePalavraDragStart(e, index)}
+                          >
+                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                          </div>
+                          
+                          {/* Indicador de posição */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+                              {palavra.ordem || index + 1}
+                            </span>
+                            <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-4">
+                              <h4 className="font-medium text-[var(--color-secondary)]">
+                                {palavra.texto || "Palavra sem texto"}
+                              </h4>
+                              {palavra.texto && palavra.cor ? (
+                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                  Completa
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                  Incompleta
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Texto
+                                </label>
+                                <Input
+                                  value={palavra.texto || ""}
+                                  onChange={(e) => updatePalavraAnimada(index, { texto: e.target.value })}
+                                  placeholder="Palavra animada"
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Cor
+                                </label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="text"
+                                    value={palavra.cor || "#FFCC00"}
+                                    onChange={(e) => updatePalavraAnimada(index, { cor: e.target.value })}
+                                    placeholder="#FFCC00"
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                                  />
+                                  <ColorPicker
+                                    color={palavra.cor || "#FFCC00"}
+                                    onChange={(color: string) => updatePalavraAnimada(index, { cor: color })}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => removePalavraAnimada(index)}
+                            variant="danger"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Título Principal (HTML permitido)
-              </label>
-              <textarea
-                placeholder="PRECISA<br/>VENDER MAIS"
-                value={tituloData.tituloPrincipal || ""}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
-                  handleThemeChange('titulo.tituloPrincipal', e.target.value)
-                }
-                rows={3}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono"
-              />
-              <p className="text-xs text-zinc-500 mt-1">Use &lt;br/&gt; para quebras de linha</p>
-            </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Título Principal (HTML permitido)
+                </label>
+                <textarea
+                  placeholder="PRECISA<br/>VENDER MAIS"
+                  value={tituloData.tituloPrincipal || ""}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                    handleThemeChange('titulo.tituloPrincipal', e.target.value)
+                  }
+                  rows={3}
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)] font-mono"
+                />
+                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">Use &lt;br/&gt; para quebras de linha</p>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Separador Responsivo (HTML)
-              </label>
-              <Input
-                type="text"
-                placeholder="<br className='hidden sm:block'/>"
-                value={tituloData.separador || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleThemeChange('titulo.separador', e.target.value)
-                }
-              />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Separador Responsivo (HTML)
+                </label>
+                <Input
+                  type="text"
+                  placeholder="<br className='hidden sm:block'/>"
+                  value={tituloData.separador || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleThemeChange('titulo.separador', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
             </div>
           </Card>
         </motion.div>
@@ -620,7 +811,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           section="subtitulo" 
           icon={Type}
           isExpanded={expandedSections.subtitulo}
-          onToggle={toggleSection}
+          onToggle={() => toggleSection("subtitulo")}
         />
         
         <motion.div
@@ -628,9 +819,9 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           animate={{ height: expandedSections.subtitulo ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
+          <Card className="p-6 bg-[var(--color-background)]">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Texto do Subtítulo (HTML permitido)
               </label>
               <textarea
@@ -640,9 +831,9 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                   handleThemeChange('subtitulo', e.target.value)
                 }
                 rows={4}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
               />
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
                 Use tags HTML como &lt;strong&gt; para destaque
               </p>
             </div>
@@ -663,7 +854,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           section="botao" 
           icon={Zap}
           isExpanded={expandedSections.botao}
-          onToggle={toggleSection}
+          onToggle={() => toggleSection("botao")}
         />
         
         <motion.div
@@ -671,10 +862,10 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           animate={{ height: expandedSections.botao ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Texto do Botão
                 </label>
                 <Input
@@ -684,11 +875,12 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('botao.texto', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Link
                 </label>
                 <Input
@@ -698,10 +890,11 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('botao.link', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
 
-              <div className="md:col-span-2">
+              <div>
                 <IconSelector
                   value={botaoData.icone || ""}
                   onChange={(value) => handleThemeChange('botao.icone', value)}
@@ -709,8 +902,8 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Estilo do Botão
                 </label>
                 <Input
@@ -720,15 +913,16 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('botao.estilo', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border)]">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                     Visibilidade
                   </label>
-                  <p className="text-sm text-zinc-500">Mostrar ou esconder o botão</p>
+                  <p className="text-sm text-[var(--color-secondary)]/70">Mostrar ou esconder o botão</p>
                 </div>
                 <Switch
                   checked={botaoData.visivel !== false}
@@ -755,7 +949,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           section="agenda" 
           icon={Eye}
           isExpanded={expandedSections.agenda}
-          onToggle={toggleSection}
+          onToggle={() => toggleSection("agenda")}
         />
         
         <motion.div
@@ -763,10 +957,10 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           animate={{ height: expandedSections.agenda ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
+          <Card className="p-6 bg-[var(--color-background)]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Status
                 </label>
                 <select
@@ -774,7 +968,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => 
                     handleThemeChange('agenda.status', e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
                 >
                   <option value="aberta">Aberta</option>
                   <option value="fechada">Fechada</option>
@@ -782,8 +976,8 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Mês
                 </label>
                 <Input
@@ -793,12 +987,13 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('agenda.mes', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Cor do Status (Hexadecimal)
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor do Status
                 </label>
                 <div className="flex gap-2">
                   <Input
@@ -808,7 +1003,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                       handleThemeChange('agenda.corStatus', e.target.value)
                     }
-                    className="font-mono"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
                   />
                   <ColorPicker
                     color={agendaData.corStatus || "#22C55E"}
@@ -817,8 +1012,8 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Texto da Agenda
                 </label>
                 <Input
@@ -828,15 +1023,16 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('agenda.texto', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border)] md:col-span-2">
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                     Visibilidade
                   </label>
-                  <p className="text-sm text-zinc-500">Mostrar ou esconder a agenda</p>
+                  <p className="text-sm text-[var(--color-secondary)]/70">Mostrar ou esconder a agenda</p>
                 </div>
                 <Switch
                   checked={agendaData.visivel !== false}
@@ -864,7 +1060,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           section="configuracoes" 
           icon={Palette}
           isExpanded={expandedSections.configuracoes}
-          onToggle={toggleSection}
+          onToggle={() => toggleSection("configuracoes")}
         />
         
         <motion.div
@@ -872,10 +1068,10 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           animate={{ height: expandedSections.configuracoes ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Intervalo da Animação (ms)
                 </label>
                 <Input
@@ -889,13 +1085,14 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                       handleThemeChange('configuracoes.intervaloAnimacao', value);
                     }
                   }}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
-                <p className="text-xs text-zinc-500 mt-1">Tempo entre animações das palavras (em milissegundos)</p>
+                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">Tempo entre animações das palavras (em milissegundos)</p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Cor de Fundo (Hexadecimal)
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor de Fundo
                 </label>
                 <div className="flex gap-2">
                   <Input
@@ -905,7 +1102,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                       handleThemeChange('configuracoes.corFundo', e.target.value)
                     }
-                    className="font-mono"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
                   />
                   <ColorPicker
                     color={configuracoesData.corFundo || "#020202"}
@@ -914,9 +1111,9 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Cor de Destaque (Hexadecimal)
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor de Destaque
                 </label>
                 <div className="flex gap-2">
                   <Input
@@ -926,7 +1123,7 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                       handleThemeChange('configuracoes.corDestaque', e.target.value)
                     }
-                    className="font-mono"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
                   />
                   <ColorPicker
                     color={configuracoesData.corDestaque || "#FFCC00"}
@@ -935,16 +1132,16 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Efeitos Visuais
                 </label>
                 
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="text-sm text-zinc-700 dark:text-zinc-300">Brilho no Título</label>
-                      <p className="text-xs text-zinc-500">Drop shadow no texto principal</p>
+                      <label className="text-sm text-[var(--color-secondary)]">Brilho no Título</label>
+                      <p className="text-xs text-[var(--color-secondary)]/70">Drop shadow no texto principal</p>
                     </div>
                     <Switch
                       checked={efeitosData.brilhoTitulo !== ''}
@@ -958,8 +1155,8 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="text-sm text-zinc-700 dark:text-zinc-300">Spotlight</label>
-                      <p className="text-xs text-zinc-500">Efeito de foco no conteúdo</p>
+                      <label className="text-sm text-[var(--color-secondary)]">Spotlight</label>
+                      <p className="text-xs text-[var(--color-secondary)]/70">Efeito de foco no conteúdo</p>
                     </div>
                     <Switch
                       checked={efeitosData.spotlight || false}
@@ -971,8 +1168,8 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="text-sm text-zinc-700 dark:text-zinc-300">Grid Background</label>
-                      <p className="text-xs text-zinc-500">Fundo com padrão de grid</p>
+                      <label className="text-sm text-[var(--color-secondary)]">Grid Background</label>
+                      <p className="text-xs text-[var(--color-secondary)]/70">Fundo com padrão de grid</p>
                     </div>
                     <Switch
                       checked={efeitosData.grid || false}
@@ -984,8 +1181,8 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
 
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="text-sm text-zinc-700 dark:text-zinc-300">Sombra Inferior</label>
-                      <p className="text-xs text-zinc-500">Degradê na parte inferior</p>
+                      <label className="text-sm text-[var(--color-secondary)]">Sombra Inferior</label>
+                      <p className="text-xs text-[var(--color-secondary)]/70">Degradê na parte inferior</p>
                     </div>
                     <Switch
                       checked={efeitosData.sombraInferior || false}
@@ -1011,9 +1208,9 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
       exists={!!exists}
       itemName="Headline"
     >
-      <div className="space-y-6 pb-32">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Tabs de Temas */}
-        <Card className="p-6">
+        <Card className="p-6 bg-[var(--color-background)]">
           <div className="flex flex-wrap gap-2">
             <ThemeTab 
               themeKey="home" 
@@ -1065,12 +1262,11 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           {/* Fixed Action Bar */}
           <FixedActionBar
             onDeleteAll={openDeleteAllModal}
-            onSubmit={handleSubmitWrapper}
-            isAddDisabled={!canAddNewItem || isLimitReached}
+            onSubmit={handleSubmit}
+            isAddDisabled={false}
             isSaving={loading}
             exists={!!exists}
-            completeCount={completeCount}
-            totalCount={totalCount}
+            totalCount={completion.total}
             itemName="Headline"
             icon={Layers}
           />
@@ -1083,11 +1279,11 @@ export const HeadlinePageComponent: React.FC<HeadlinePageComponentProps> = ({
           type={deleteModal.type}
           itemTitle={deleteModal.title}
           totalItems={5}
-          itemName="Headline"
+          itemName="Configuração do Headline"
         />
 
         <FeedbackMessages success={success} errorMsg={errorMsg} />
-      </div>
+      </form>
     </ManageLayout>
   );
-};
+}

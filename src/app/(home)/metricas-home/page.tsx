@@ -150,7 +150,7 @@ export default function AuthoritySectionPage() {
 
   const [expandedSections, setExpandedSections] = useState({
     header: true,
-    stats: true,
+    stats: false,
     partners: false,
   });
 

@@ -156,10 +156,10 @@ export default function MarketingSectionPage() {
 
   const [expandedSections, setExpandedSections] = useState({
     theme: true,
-    header: true,
-    mainTower: true,
-    creativeStack: true,
-    crmStack: true,
+    header: false,
+    mainTower: false,
+    creativeStack: false,
+    crmStack: false,
   });
 
   const [tagInput, setTagInput] = useState("");

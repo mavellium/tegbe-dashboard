@@ -148,7 +148,7 @@ export default function FaqManagePage() {
   const [draggingItem, setDraggingItem] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     header: true,
-    questions: true,
+    questions: false,
     config: false,
   });
 

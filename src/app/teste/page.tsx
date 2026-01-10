@@ -131,7 +131,7 @@ const defaultTestPageData: TestPageData = {
   content: {
     heroTitle: "Bem-vindo à Página de Teste",
     heroSubtitle: "Este é um template base para IAs criarem novas páginas com componentes reutilizáveis",
-    heroImage: "",
+    heroImage: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80",
     heroVideo: "",
     features: [
       {
@@ -142,7 +142,7 @@ const defaultTestPageData: TestPageData = {
         enabled: true,
         order: 0,
         color: "blue-500",
-        imageUrl: ""
+        imageUrl: "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
       },
       {
         id: "feat-002",
@@ -168,7 +168,7 @@ const defaultTestPageData: TestPageData = {
       {
         id: "gallery-001",
         type: "image" as const,
-        url: "",
+        url: "https://images.unsplash.com/photo-1551650975-87deedd944c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
         title: "Interface Moderna",
         description: "Design limpo e intuitivo",
         order: 0,
@@ -276,29 +276,28 @@ export default function Page() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estados para listas
-  const [features, setFeatures] = useState<Feature[]>(pageData.content.features);
-  const [gallery, setGallery] = useState<GalleryItem[]>(pageData.content.gallery);
-  const [tags, setTags] = useState<TagItem[]>(pageData.metadata.tags);
-
-  // Estados para arquivos das features
-  const [featureImageFiles, setFeatureImageFiles] = useState<Record<string, File | null>>({});
-  const [featureVideoFiles, setFeatureVideoFiles] = useState<Record<string, File | null>>({});
-  
-  // Estado para arquivos da galeria
-  const [galleryFiles, setGalleryFiles] = useState<Record<string, File | null>>({});
+  // Estados para listas locais
+  const [localFeatures, setLocalFeatures] = useState<Feature[]>([]);
+  const [localGallery, setLocalGallery] = useState<GalleryItem[]>([]);
+  const [localTags, setLocalTags] = useState<TagItem[]>([]);
 
   // Sincronizar com pageData quando ele mudar
   useEffect(() => {
-    setFeatures(pageData.content.features);
+    if (pageData.content.features) {
+      setLocalFeatures(pageData.content.features);
+    }
   }, [pageData.content.features]);
 
   useEffect(() => {
-    setGallery(pageData.content.gallery);
+    if (pageData.content.gallery) {
+      setLocalGallery(pageData.content.gallery);
+    }
   }, [pageData.content.gallery]);
 
   useEffect(() => {
-    setTags(pageData.metadata.tags);
+    if (pageData.metadata.tags) {
+      setLocalTags(pageData.metadata.tags);
+    }
   }, [pageData.metadata.tags]);
 
   const [expandedSections, setExpandedSections] = useState({
@@ -324,21 +323,21 @@ export default function Page() {
       title: '',
       description: '',
       enabled: true,
-      order: features.length,
+      order: localFeatures.length,
       color: 'blue-500'
     };
-    setFeatures([...features, newFeature]);
+    setLocalFeatures([...localFeatures, newFeature]);
   };
 
   const handleUpdateFeature = (index: number, updates: Partial<Feature>) => {
-    const updatedFeatures = [...features];
+    const updatedFeatures = [...localFeatures];
     updatedFeatures[index] = { ...updatedFeatures[index], ...updates };
-    setFeatures(updatedFeatures);
+    setLocalFeatures(updatedFeatures);
   };
 
   const handleRemoveFeature = (index: number) => {
-    const updatedFeatures = features.filter((_, i) => i !== index);
-    setFeatures(updatedFeatures);
+    const updatedFeatures = localFeatures.filter((_, i) => i !== index);
+    setLocalFeatures(updatedFeatures);
   };
 
   // Funções para gerenciar gallery
@@ -349,21 +348,21 @@ export default function Page() {
       url: '',
       title: '',
       description: '',
-      order: gallery.length,
+      order: localGallery.length,
       enabled: true
     };
-    setGallery([...gallery, newItem]);
+    setLocalGallery([...localGallery, newItem]);
   };
 
   const handleUpdateGalleryItem = (index: number, updates: Partial<GalleryItem>) => {
-    const updatedGallery = [...gallery];
+    const updatedGallery = [...localGallery];
     updatedGallery[index] = { ...updatedGallery[index], ...updates };
-    setGallery(updatedGallery);
+    setLocalGallery(updatedGallery);
   };
 
   const handleRemoveGalleryItem = (index: number) => {
-    const updatedGallery = gallery.filter((_, i) => i !== index);
-    setGallery(updatedGallery);
+    const updatedGallery = localGallery.filter((_, i) => i !== index);
+    setLocalGallery(updatedGallery);
   };
 
   // Funções para gerenciar tags
@@ -372,18 +371,18 @@ export default function Page() {
       id: `tag-${Date.now()}`,
       text: ''
     };
-    setTags([...tags, newTag]);
+    setLocalTags([...localTags, newTag]);
   };
 
   const handleUpdateTag = (index: number, text: string) => {
-    const updatedTags = [...tags];
+    const updatedTags = [...localTags];
     updatedTags[index] = { ...updatedTags[index], text };
-    setTags(updatedTags);
+    setLocalTags(updatedTags);
   };
 
   const handleRemoveTag = (index: number) => {
-    const updatedTags = tags.filter((_, i) => i !== index);
-    setTags(updatedTags);
+    const updatedTags = localTags.filter((_, i) => i !== index);
+    setLocalTags(updatedTags);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -391,46 +390,12 @@ export default function Page() {
     
     try {
       // Atualizar os arrays no pageData antes de salvar
-      updateNested('content.features', features);
-      updateNested('content.gallery', gallery);
-      updateNested('metadata.tags', tags);
+      updateNested('content.features', localFeatures);
+      updateNested('content.gallery', localGallery);
+      updateNested('metadata.tags', localTags);
       updateNested('metadata.lastModified', new Date().toISOString());
       
-      // Configurar arquivos das features para upload
-      Object.entries(featureImageFiles).forEach(([featureId, file]) => {
-        if (file) {
-          const featureIndex = features.findIndex(f => f.id === featureId);
-          if (featureIndex !== -1) {
-            setFileState(`content.features.${featureIndex}.imageUrl`, file);
-          }
-        }
-      });
-      
-      Object.entries(featureVideoFiles).forEach(([featureId, file]) => {
-        if (file) {
-          const featureIndex = features.findIndex(f => f.id === featureId);
-          if (featureIndex !== -1) {
-            setFileState(`content.features.${featureIndex}.videoUrl`, file);
-          }
-        }
-      });
-      
-      // Configurar arquivos da galeria para upload
-      Object.entries(galleryFiles).forEach(([galleryItemId, file]) => {
-        if (file) {
-          const galleryIndex = gallery.findIndex(g => g.id === galleryItemId);
-          if (galleryIndex !== -1) {
-            setFileState(`content.gallery.${galleryIndex}.url`, file);
-          }
-        }
-      });
-      
       await save();
-      
-      // Limpar estados de arquivos após envio bem-sucedido
-      setFeatureImageFiles({});
-      setFeatureVideoFiles({});
-      setGalleryFiles({});
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
@@ -453,68 +418,6 @@ export default function Page() {
     const tailwindClass = hexToTailwindBgClass(hexColor);
     const colorValue = tailwindClass.replace('bg-', '');
     updateNested(`theme.${property}`, colorValue);
-  };
-
-  // Funções para lidar com uploads de arquivos nas features
-  const handleFeatureImageUpload = (featureId: string, file: File | null) => {
-    setFeatureImageFiles(prev => ({
-      ...prev,
-      [featureId]: file
-    }));
-    
-    // Atualizar URL temporária para preview
-    if (file) {
-      const featureIndex = features.findIndex(f => f.id === featureId);
-      if (featureIndex !== -1) {
-        const updatedFeatures = [...features];
-        updatedFeatures[featureIndex] = { 
-          ...updatedFeatures[featureIndex], 
-          imageUrl: URL.createObjectURL(file) 
-        };
-        setFeatures(updatedFeatures);
-      }
-    }
-  };
-
-  const handleFeatureVideoUpload = (featureId: string, file: File | null) => {
-    setFeatureVideoFiles(prev => ({
-      ...prev,
-      [featureId]: file
-    }));
-    
-    // Atualizar URL temporária para preview
-    if (file) {
-      const featureIndex = features.findIndex(f => f.id === featureId);
-      if (featureIndex !== -1) {
-        const updatedFeatures = [...features];
-        updatedFeatures[featureIndex] = { 
-          ...updatedFeatures[featureIndex], 
-          videoUrl: URL.createObjectURL(file) 
-        };
-        setFeatures(updatedFeatures);
-      }
-    }
-  };
-
-  // Função para lidar com uploads de arquivos na galeria
-  const handleGalleryFileUpload = (galleryItemId: string, file: File | null) => {
-    setGalleryFiles(prev => ({
-      ...prev,
-      [galleryItemId]: file
-    }));
-    
-    // Atualizar URL temporária para preview
-    if (file) {
-      const galleryIndex = gallery.findIndex(g => g.id === galleryItemId);
-      if (galleryIndex !== -1) {
-        const updatedGallery = [...gallery];
-        updatedGallery[galleryIndex] = { 
-          ...updatedGallery[galleryIndex], 
-          url: URL.createObjectURL(file) 
-        };
-        setGallery(updatedGallery);
-      }
-    }
   };
 
   // Função auxiliar para obter File do fileStates
@@ -550,8 +453,8 @@ export default function Page() {
     if (pageData.content.ctaButtonLink.trim()) completed++;
 
     // Features
-    total += features.length * 4;
-    features.forEach(feature => {
+    total += localFeatures.length * 4;
+    localFeatures.forEach(feature => {
       if (feature.title.trim()) completed++;
       if (feature.description.trim()) completed++;
       if (feature.icon.trim()) completed++;
@@ -559,8 +462,8 @@ export default function Page() {
     });
 
     // Gallery
-    total += gallery.length * 3;
-    gallery.forEach(item => {
+    total += localGallery.length * 3;
+    localGallery.forEach(item => {
       if (item.title.trim()) completed++;
       if (item.url.trim()) completed++;
       if (item.type) completed++;
@@ -579,7 +482,7 @@ export default function Page() {
     if (pageData.metadata.author.trim()) completed++;
     if (pageData.metadata.version.trim()) completed++;
     if (pageData.metadata.category?.trim()) completed++;
-    completed += tags.filter(tag => tag.text.trim()).length;
+    completed += localTags.filter(tag => tag.text.trim()).length;
 
     return { completed, total };
   };
@@ -836,7 +739,7 @@ export default function Page() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {features.filter(f => f.title && f.description && f.icon).length} de {features.length} completos
+                          {localFeatures.filter(f => f.title && f.description && f.icon).length} de {localFeatures.length} completos
                         </span>
                       </div>
                     </div>
@@ -854,7 +757,7 @@ export default function Page() {
                 </div>
 
                 <div className="space-y-4">
-                  {features.map((feature, index) => (
+                  {localFeatures.map((feature, index) => (
                     <div 
                       key={feature.id}
                       className="p-6 border border-[var(--color-border)] rounded-lg space-y-6 hover:border-[var(--color-primary)]/50 transition-all duration-200"
@@ -948,8 +851,8 @@ export default function Page() {
                                   <ImageUpload
                                     label=""
                                     currentImage={feature.imageUrl || ''}
-                                    selectedFile={featureImageFiles[feature.id]}
-                                    onFileChange={(file) => handleFeatureImageUpload(feature.id, file)}
+                                    selectedFile={getFileFromState(`content.features.${index}.imageUrl`)}
+                                    onFileChange={(file) => setFileState(`content.features.${index}.imageUrl`, file)}
                                     aspectRatio="aspect-square"
                                     previewWidth={200}
                                     previewHeight={200}
@@ -963,8 +866,8 @@ export default function Page() {
                                   <VideoUpload
                                     label=""
                                     currentVideo={feature.videoUrl || ''}
-                                    selectedFile={featureVideoFiles[feature.id]}
-                                    onFileChange={(file) => handleFeatureVideoUpload(feature.id, file)}
+                                    selectedFile={getFileFromState(`content.features.${index}.videoUrl`)}
+                                    onFileChange={(file) => setFileState(`content.features.${index}.videoUrl`, file)}
                                     aspectRatio="aspect-square"
                                     previewWidth={200}
                                     previewHeight={200}
@@ -1012,7 +915,7 @@ export default function Page() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {gallery.filter(item => item.title && item.url).length} de {gallery.length} completos
+                          {localGallery.filter(item => item.title && item.url).length} de {localGallery.length} completos
                         </span>
                       </div>
                     </div>
@@ -1030,7 +933,7 @@ export default function Page() {
                 </div>
 
                 <div className="space-y-4">
-                  {gallery.map((item, index) => (
+                  {localGallery.map((item, index) => (
                     <div 
                       key={item.id}
                       className="p-6 border border-[var(--color-border)] rounded-lg space-y-6 hover:border-[var(--color-primary)]/50 transition-all duration-200"
@@ -1100,8 +1003,8 @@ export default function Page() {
                                     <ImageUpload
                                       label=""
                                       currentImage={item.url || ''}
-                                      selectedFile={galleryFiles[item.id]}
-                                      onFileChange={(file) => handleGalleryFileUpload(item.id, file)}
+                                      selectedFile={getFileFromState(`content.gallery.${index}.url`)}
+                                      onFileChange={(file) => setFileState(`content.gallery.${index}.url`, file)}
                                       aspectRatio="aspect-video"
                                       previewWidth={300}
                                       previewHeight={200}
@@ -1110,8 +1013,8 @@ export default function Page() {
                                     <VideoUpload
                                       label=""
                                       currentVideo={item.url || ''}
-                                      selectedFile={galleryFiles[item.id]}
-                                      onFileChange={(file) => handleGalleryFileUpload(item.id, file)}
+                                      selectedFile={getFileFromState(`content.gallery.${index}.url`)}
+                                      onFileChange={(file) => setFileState(`content.gallery.${index}.url`, file)}
                                       aspectRatio="aspect-video"
                                       previewWidth={300}
                                       previewHeight={200}
@@ -1356,7 +1259,7 @@ export default function Page() {
                   </div>
 
                   <div className="space-y-2">
-                    {tags.map((tag, index) => (
+                    {localTags.map((tag, index) => (
                       <div key={tag.id} className="flex items-center gap-2 p-2 border border-[var(--color-border)] rounded-lg">
                         <Input
                           value={tag.text}
