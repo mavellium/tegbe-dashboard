@@ -76,62 +76,28 @@ interface ServiceRouterData {
 const defaultServiceRouterData: ServiceRouterData = {
   service_router: {
     header: {
-      label: "Nossos Pilares",
-      title: "Escolha sua Escala.",
-      desc: "Não somos generalistas. Somos especialistas em três verticais de alto impacto financeiro."
+      label: "",
+      title: "",
+      desc: ""
     },
     services: [
       {
-        id: "ecommerce",
+        id: "",
         number: "01",
-        title: "E-commerce",
-        verticalTitle: "ESTRUTURA",
+        title: "",
+        verticalTitle: "",
         icon: "solar:shop-2-bold-duotone",
         image: "",
-        description: "Sua loja validada com a segurança de uma Consultoria Oficial. Não entregamos apenas um site bonito, entregamos uma operação de vendas blindada contra falhas.",
-        buttonText: "Construir Máquina",
-        href: "/ecommerce",
+        description: "",
+        buttonText: "",
+        href: "",
         theme: {
-          color: "text-amber-600",
-          bg: "bg-amber-50",
-          border: "border-amber-200",
-          btn: "hover:bg-amber-500"
+          color: "",
+          bg: "",
+          border: "",
+          btn: ""
         }
       },
-      {
-        id: "marketing",
-        number: "02",
-        title: "Growth & Ads",
-        verticalTitle: "TRAÇÃO",
-        icon: "solar:chart-2-bold-duotone",
-        image: "",
-        description: "Engenharia de tráfego e CRM avançado. Transformamos cliques anônimos em receita recorrente usando inteligência de dados proprietária.",
-        buttonText: "Acelerar Vendas",
-        href: "/marketing",
-        theme: {
-          color: "text-red-600",
-          bg: "bg-red-50",
-          border: "border-red-200",
-          btn: "hover:bg-red-600"
-        }
-      },
-      {
-        id: "cursos",
-        number: "03",
-        title: "Academy",
-        verticalTitle: "LEGADO",
-        icon: "solar:diploma-verified-bold-duotone",
-        image: "",
-        description: "O campo de batalha transformado em protocolo. Treine sua equipe interna com os processos exatos que usamos para gerar múltiplos 8 dígitos.",
-        buttonText: "Dominar o Jogo",
-        href: "/cursos",
-        theme: {
-          color: "text-blue-600",
-          bg: "bg-blue-50",
-          border: "border-blue-200",
-          btn: "hover:bg-blue-600"
-        }
-      }
     ],
     animation_config: {
       transition_type: "spring",

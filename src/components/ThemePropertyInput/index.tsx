@@ -16,7 +16,7 @@ export interface ThemeColors {
 interface ThemePropertyInputProps {
   property: any;
   label: string;
-  description: string;
+  description?: string;
   currentHex: string;
   tailwindClass: string;
   onThemeChange: (property: keyof ThemeColors, hexColor: string) => void;

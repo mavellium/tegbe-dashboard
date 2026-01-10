@@ -43,14 +43,14 @@
             { "name": "Dores", "icon": "HelpCircle", "href": "/dores-home" },
             { "name": "Como Fazemos", "icon": "HelpCircle", "href": "/como-fazemos-home" },
             { "name": "Soluções", "icon": "HelpCircle", "href": "/solucoes-home" },
-            { "name": "Logos", "icon": "HelpCircle", "href": "/logos" },
-            { "name": "Passo a Passo", "icon": "HelpCircle", "href": "/steps" },
-            { "name": "Ecommerce", "icon": "HelpCircle", "href": "/ecommerce" },
-            { "name": "Setores", "icon": "HelpCircle", "href": "/setors" },
-            { "name": "ROI", "icon": "HelpCircle", "href": "/roi" },
-            { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-images" },
-            { "name": "DNA", "icon": "HelpCircle", "href": "/dna" },
-            { "name": "Notícias", "icon": "HelpCircle", "href": "/news" }
+            { "name": "Metricas", "icon": "HelpCircle", "href": "/metricas-home" },
+            { "name": "Ecommerce", "icon": "HelpCircle", "href": "/ecommerce-home" },
+            { "name": "Marketing", "icon": "HelpCircle", "href": "/marketing-home" },
+            { "name": "TegPro", "icon": "HelpCircle", "href": "/tegpro-home" },
+            { "name": "Resultados", "icon": "HelpCircle", "href": "/resultados-home" },
+            { "name": "Sobre", "icon": "HelpCircle", "href": "/sobre-home" },
+            { "name": "Faq", "icon": "HelpCircle", "href": "/faq-home" },
+            { "name": "Última Chamada", "icon": "HelpCircle", "href": "/ultima-chamada-home" }
           ]
         },
 
