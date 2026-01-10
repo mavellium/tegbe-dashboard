@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -26,7 +26,9 @@ import {
   Users,
   DollarSign,
   Package,
-  Target
+  Target,
+  Plus,
+  Trash2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -34,10 +36,10 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { useListState } from "@/hooks/useListState";
 import { Button } from "@/components/Button";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { hexToTailwindBgClass, tailwindToHex } from "@/lib/colors";
+import { hexToTailwindBgClass } from "@/lib/colors";
+import { useSite } from "@/context/site-context";
 
 interface Track {
   id: string;
@@ -140,7 +142,6 @@ const defaultTegProData: TegProRefinedData = {
 const mergeWithDefaults = (apiData: any, defaultData: TegProRefinedData): TegProRefinedData => {
   if (!apiData) return defaultData;
   
-  // Se a API retornou diretamente o objeto tegpro_refined
   const data = apiData.tegpro_refined || apiData;
   
   return {
@@ -167,7 +168,7 @@ const mergeWithDefaults = (apiData: any, defaultData: TegProRefinedData): TegPro
         enabled: data.hero_card?.enabled !== undefined ? data.hero_card.enabled : defaultData.tegpro_refined.hero_card.enabled
       },
       tracks: data.tracks?.map((track: any, index: number) => ({
-        id: track.id || `track_${index}`,
+        id: track.id || `track_${Date.now()}_${index}`,
         title: track.title || `Track ${index + 1}`,
         desc: track.desc || "",
         icon: track.icon || "solar:star-linear",
@@ -183,10 +184,11 @@ const mergeWithDefaults = (apiData: any, defaultData: TegProRefinedData): TegPro
   };
 };
 
-// Helper para acessar os dados internos
-const getInnerData = (data: TegProRefinedData) => data.tegpro_refined;
-
 export default function TegProPage() {
+  const { currentSite } = useSite();
+  const currentPlanType = currentSite.planType;
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+
   const {
     data: pageData,
     exists,
@@ -205,20 +207,10 @@ export default function TegProPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Hook para gerenciar tracks com drag & drop
-  const tracksList = useListState<Track>({
-    initialItems: getInnerData(pageData).tracks,
-    defaultItem: {
-      id: '',
-      title: '',
-      desc: '',
-      icon: 'solar:star-linear',
-      enabled: true,
-      order: 0
-    },
-    validationFields: ['title', 'desc', 'icon'],
-    enableDragDrop: true
-  });
+  // Estado para drag & drop
+  const [draggingTrack, setDraggingTrack] = useState<number | null>(null);
+  // Referência para o último track adicionado
+  const newTrackRef = useRef<HTMLDivElement>(null);
 
   const [expandedSections, setExpandedSections] = useState({
     header: true,
@@ -235,24 +227,69 @@ export default function TegProPage() {
     }));
   };
 
-  // Funções para adicionar itens
-  const handleAddTrack = () => {
-    const success = tracksList.addItem();
-    if (!success) {
-      console.warn(tracksList.validationError);
+  // Acessar os dados internos
+  const innerData = pageData.tegpro_refined;
+
+  // Funções para manipular a lista de tracks
+  const addTrack = () => {
+    const currentTracks = [...innerData.tracks];
+    
+    if (currentTracks.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newTrack: Track = {
+      id: `track_${Date.now()}`,
+      title: "",
+      desc: "",
+      icon: "solar:star-linear",
+      enabled: true,
+      order: currentTracks.length
+    };
+    
+    updateNested('tegpro_refined.tracks', [...currentTracks, newTrack]);
+    
+    // Scroll para o novo item
+    setTimeout(() => {
+      newTrackRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updateTrack = (index: number, updates: Partial<Track>) => {
+    const currentTracks = [...innerData.tracks];
+    
+    if (index >= 0 && index < currentTracks.length) {
+      currentTracks[index] = { ...currentTracks[index], ...updates };
+      updateNested('tegpro_refined.tracks', currentTracks);
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const removeTrack = (index: number) => {
+    const currentTracks = [...innerData.tracks];
     
-    // Atualiza os arrays no pageData antes de salvar
-    updateNested('tegpro_refined.tracks', tracksList.items);
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
+    if (currentTracks.length <= 1) {
+      // Mantém pelo menos um track vazio
+      updateNested('tegpro_refined.tracks', [{
+        id: `track_${Date.now()}`,
+        title: "",
+        desc: "",
+        icon: "solar:star-linear",
+        enabled: true,
+        order: 0
+      }]);
+    } else {
+      currentTracks.splice(index, 1);
+      // Reordena os tracks restantes
+      const reorderedTracks = currentTracks.map((track, idx) => ({
+        ...track,
+        order: idx
+      }));
+      updateNested('tegpro_refined.tracks', reorderedTracks);
     }
   };
 
@@ -260,17 +297,37 @@ export default function TegProPage() {
   const handleTrackDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    tracksList.startDrag(index);
+    setDraggingTrack(index);
   };
 
   const handleTrackDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    tracksList.handleDragOver(index);
+    
+    if (draggingTrack === null || draggingTrack === index) return;
+    
+    const currentTracks = [...innerData.tracks];
+    const draggedTrack = currentTracks[draggingTrack];
+    
+    // Remove o item arrastado
+    currentTracks.splice(draggingTrack, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingTrack ? index : index;
+    currentTracks.splice(newIndex, 0, draggedTrack);
+    
+    // Reordena os tracks
+    const reorderedTracks = currentTracks.map((track, idx) => ({
+      ...track,
+      order: idx
+    }));
+    
+    updateNested('tegpro_refined.tracks', reorderedTracks);
+    setDraggingTrack(index);
   };
 
   const handleTrackDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    tracksList.endDrag();
+    setDraggingTrack(null);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -286,8 +343,49 @@ export default function TegProPage() {
     e.currentTarget.classList.remove('drag-over');
   };
 
+  const handleAddTrack = () => {
+    const success = addTrack();
+    if (!success) {
+      console.warn(`Limite do plano ${currentPlanType} atingido (${currentPlanLimit} itens)`);
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
+  // Cálculos de validação
+  const isTrackValid = (track: Track): boolean => {
+    return track.title.trim() !== '' && 
+           track.desc.trim() !== '' && 
+           track.icon.trim() !== '';
+  };
+
+  const tracks = innerData.tracks;
+  const isLimitReached = tracks.length >= currentPlanLimit;
+  const canAddNewItem = !isLimitReached;
+  const completeCount = tracks.filter(isTrackValid).length;
+  const totalCount = tracks.length;
+  const validationError = isLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const getTrackIcon = (index: number) => {
+    const track = tracks[index];
+    if (track.title.includes("Operação") || track.title.includes("Setup")) return Package;
+    if (track.title.includes("Finança") || track.title.includes("Lucro")) return DollarSign;
+    if (track.title.includes("Liderança") || track.title.includes("Squads") || track.title.includes("Times")) return Users;
+    return Target;
+  };
+
+  // Cálculo de preenchimento
   const calculateCompletion = () => {
-    const innerData = getInnerData(pageData);
     let completed = 0;
     let total = 0;
 
@@ -299,21 +397,20 @@ export default function TegProPage() {
 
     // Hero card
     total += 7;
-    if (innerData.hero_card.id.trim()) completed++;
     if (innerData.hero_card.title.trim()) completed++;
     if (innerData.hero_card.subtitle.trim()) completed++;
     if (innerData.hero_card.description.trim()) completed++;
     if (innerData.hero_card.badge.trim()) completed++;
     if (innerData.hero_card.cta.trim()) completed++;
     if (innerData.hero_card.href.trim()) completed++;
+    total++; // enabled sempre tem valor
 
     // Tracks
-    total += tracksList.items.length * 4;
-    tracksList.items.forEach(track => {
+    total += tracks.length * 3; // title, desc, icon
+    tracks.forEach(track => {
       if (track.title.trim()) completed++;
       if (track.desc.trim()) completed++;
       if (track.icon.trim()) completed++;
-      if (track.id.trim()) completed++;
     });
 
     // Theme
@@ -334,24 +431,9 @@ export default function TegProPage() {
 
   const completion = calculateCompletion();
 
-  const getTrackIcon = (trackId: string) => {
-    switch (trackId) {
-      case 'track_operation':
-        return Package;
-      case 'track_finance':
-        return DollarSign;
-      case 'track_squads':
-        return Users;
-      default:
-        return Target;
-    }
-  };
-
   if (loading && !exists) {
     return <Loading layout={Layout} exists={!!exists} />;
   }
-
-  const innerData = getInnerData(pageData);
 
   return (
     <ManageLayout
@@ -429,15 +511,6 @@ export default function TegProPage() {
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <Input
-                    label="ID do Cartão"
-                    value={innerData.hero_card.id}
-                    onChange={(e) => updateNested('tegpro_refined.hero_card.id', e.target.value)}
-                    placeholder="Ex: management_method"
-                    required
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
                   <Input
                     label="Título Principal"
                     value={innerData.hero_card.title}
@@ -534,12 +607,12 @@ export default function TegProPage() {
                     <div className="flex items-center gap-1">
                       <CheckCircle2 className="w-4 h-4 text-green-500" />
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        {tracksList.completeCount} de {tracksList.totalCount} completos
+                        {completeCount} de {totalCount} completos
                       </span>
                     </div>
                     <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                     <span className="text-sm text-[var(--color-secondary)]/70">
-                      Limite: {tracksList.currentPlanType === 'pro' ? '10' : '5'} trilhas
+                      Limite: {currentPlanLimit} trilhas
                     </span>
                   </div>
                 </div>
@@ -548,12 +621,13 @@ export default function TegProPage() {
                     type="button"
                     onClick={handleAddTrack}
                     variant="primary"
-                    className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                    disabled={!tracksList.canAddNewItem}
+                    className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                    disabled={!canAddNewItem}
                   >
-                    + Nova Trilha
+                    <Plus className="w-4 h-4" />
+                    Nova Trilha
                   </Button>
-                  {tracksList.isLimitReached && (
+                  {isLimitReached && (
                     <p className="text-xs text-red-500 flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
                       Limite do plano atingido
@@ -563,28 +637,28 @@ export default function TegProPage() {
               </div>
 
               {/* Mensagem de erro */}
-              {tracksList.validationError && (
-                <div className={`p-3 rounded-lg ${tracksList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+              {validationError && (
+                <div className={`p-3 rounded-lg mb-4 ${isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                   <div className="flex items-start gap-2">
-                    {tracksList.isLimitReached ? (
+                    {isLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${tracksList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {tracksList.validationError}
+                    <p className={`text-sm ${isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {validationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-4">
-                {tracksList.filteredItems.map((track, index) => {
-                  const TrackIcon = getTrackIcon(track.id);
+                {tracks.map((track, index) => {
+                  const TrackIcon = getTrackIcon(index);
                   return (
                     <div 
                       key={track.id}
-                      ref={index === tracksList.filteredItems.length - 1 ? tracksList.newItemRef : undefined}
+                      ref={index === tracks.length - 1 ? newTrackRef : undefined}
                       draggable
                       onDragStart={(e) => handleTrackDragStart(e, index)}
                       onDragOver={(e) => handleTrackDragOver(e, index)}
@@ -593,7 +667,7 @@ export default function TegProPage() {
                       onDragEnd={handleTrackDragEnd}
                       onDrop={handleDrop}
                       className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                        tracksList.draggingItem === index 
+                        draggingTrack === index 
                           ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                           : 'hover:border-[var(--color-primary)]/50'
                       }`}
@@ -642,23 +716,11 @@ export default function TegProPage() {
                               <div className="space-y-4">
                                 <div className="space-y-2">
                                   <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                    ID da Trilha
-                                  </label>
-                                  <Input
-                                    value={track.id}
-                                    onChange={(e) => tracksList.updateItem(index, { id: e.target.value })}
-                                    placeholder="Ex: track_operation"
-                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                  />
-                                </div>
-                                
-                                <div className="space-y-2">
-                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
                                     Ícone
                                   </label>
                                   <IconSelector
                                     value={track.icon}
-                                    onChange={(value) => tracksList.updateItem(index, { icon: value })}
+                                    onChange={(value) => updateTrack(index, { icon: value })}
                                     placeholder="solar:settings-minimalistic-linear"
                                   />
                                 </div>
@@ -671,7 +733,7 @@ export default function TegProPage() {
                                   </label>
                                   <Input
                                     value={track.title}
-                                    onChange={(e) => tracksList.updateItem(index, { title: e.target.value })}
+                                    onChange={(e) => updateTrack(index, { title: e.target.value })}
                                     placeholder="Ex: Operação Implacável"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
@@ -683,7 +745,7 @@ export default function TegProPage() {
                                   </label>
                                   <Input
                                     value={track.desc}
-                                    onChange={(e) => tracksList.updateItem(index, { desc: e.target.value })}
+                                    onChange={(e) => updateTrack(index, { desc: e.target.value })}
                                     placeholder="Ex: Do setup à medalha Platinum."
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
@@ -700,15 +762,16 @@ export default function TegProPage() {
                             </div>
                             <Switch
                               checked={track.enabled}
-                              onCheckedChange={(checked) => tracksList.updateItem(index, { enabled: checked })}
+                              onCheckedChange={(checked) => updateTrack(index, { enabled: checked })}
                             />
                           </div>
                           <Button
                             type="button"
-                            onClick={() => tracksList.removeItem(index)}
+                            onClick={() => removeTrack(index)}
                             variant="danger"
-                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                           >
+                            <Trash2 className="w-4 h-4" />
                             Remover
                           </Button>
                         </div>
@@ -752,7 +815,7 @@ export default function TegProPage() {
                   label="Cor de Fundo (BG Section)"
                   description="Cor de fundo principal das seções"
                   currentHex={innerData.theme.bg_section}
-                  tailwindClass={`bg-[${innerData.theme.bg_section}]`}
+                  tailwindClass={hexToTailwindBgClass(innerData.theme.bg_section)}
                   onThemeChange={(_, hex) => updateNested('tegpro_refined.theme.bg_section', hex)}
                 />
 
@@ -761,7 +824,7 @@ export default function TegProPage() {
                   label="Cor Dourada (Accent)"
                   description="Cor dourada para destaques e elementos principais"
                   currentHex={innerData.theme.accent_gold}
-                  tailwindClass={`bg-[${innerData.theme.accent_gold}]`}
+                  tailwindClass={hexToTailwindBgClass(innerData.theme.accent_gold)}
                   onThemeChange={(_, hex) => updateNested('tegpro_refined.theme.accent_gold', hex)}
                 />
 

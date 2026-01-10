@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -124,107 +124,10 @@ const mergeWithDefaults = (apiData: any, defaultData: AboutRefinedSectionData): 
   };
 };
 
-// Hook personalizado para gerenciar stats
-function useStatsList(initialStats: StatItem[], planType: 'basic' | 'pro') {
-  const [stats, setStats] = useState<StatItem[]>(initialStats);
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const newItemRef = useRef<HTMLDivElement>(null);
-
-  const currentPlanLimit = planType === 'pro' ? 10 : 5;
-  const isLimitReached = stats.length >= currentPlanLimit;
-
-  const completeCount = useMemo(() => {
-    return stats.filter(stat => stat.label.trim() && stat.value.trim()).length;
-  }, [stats]);
-
-  const canAddNewItem = !isLimitReached;
-
-  const addStat = useCallback(() => {
-    if (!canAddNewItem) {
-      setValidationError("Limite do plano atingido");
-      return false;
-    }
-
-    const newStat: StatItem = {
-      label: "",
-      value: "",
-    };
-
-    setStats(prev => [...prev, newStat]);
-    setValidationError(null);
-
-    setTimeout(() => {
-      newItemRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-
-    return true;
-  }, [canAddNewItem]);
-
-  const updateStat = useCallback((index: number, updates: Partial<StatItem>) => {
-    setStats(prev => prev.map((item, i) => i === index ? { ...item, ...updates } : item));
-  }, []);
-
-  const removeStat = useCallback((index: number) => {
-    setStats(prev => {
-      if (prev.length === 1) {
-        return [{ label: "", value: "" }];
-      }
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
-
-  // Drag & drop
-  const startDrag = useCallback((index: number) => {
-    setDraggingIndex(index);
-  }, []);
-
-  const handleDragOver = useCallback((index: number) => {
-    if (draggingIndex === null || draggingIndex === index) return;
-
-    setStats(prev => {
-      const newStats = [...prev];
-      const draggedStat = newStats[draggingIndex];
-      newStats.splice(draggingIndex, 1);
-      newStats.splice(index, 0, draggedStat);
-      setDraggingIndex(index);
-      return newStats;
-    });
-  }, [draggingIndex]);
-
-  const endDrag = useCallback(() => {
-    setDraggingIndex(null);
-  }, []);
-
-  // Atualizar stats quando initialStats mudar
-  useEffect(() => {
-    setStats(initialStats);
-  }, [initialStats]);
-
-  return {
-    stats,
-    filteredItems: stats,
-    draggingItem: draggingIndex,
-    validationError,
-    newItemRef,
-    completeCount,
-    totalCount: stats.length,
-    currentPlanLimit,
-    isLimitReached,
-    canAddNewItem,
-    currentPlanType: planType,
-    addStat,
-    updateStat,
-    removeStat,
-    startDrag,
-    handleDragOver,
-    endDrag,
-  };
-}
-
 export default function AboutRefinedSectionPage() {
   const { currentSite } = useSite();
   const currentPlanType = currentSite.planType;
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   const {
     data: aboutData,
@@ -247,9 +150,9 @@ export default function AboutRefinedSectionPage() {
 
   // Estado local para URLs temporárias de preview
   const [tempImageUrls, setTempImageUrls] = useState<Record<string, string>>({});
-
-  // Hook personalizado para gerenciar stats
-  const statsList = useStatsList(aboutData.stats, currentPlanType);
+  
+  // Estado para drag & drop
+  const [draggingStat, setDraggingStat] = useState<number | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
     content: true,
@@ -264,6 +167,9 @@ export default function AboutRefinedSectionPage() {
       [section]: !prev[section],
     }));
   };
+
+  // Referência para o último item adicionado
+  const newStatRef = useRef<HTMLDivElement>(null);
 
   // Função para lidar com upload de imagem de fundo
   const handleBgImageChange = (file: File | null) => {
@@ -284,11 +190,88 @@ export default function AboutRefinedSectionPage() {
     }
   };
 
-  // Funções para adicionar stat
+  // Funções para manipular a lista de stats
+  const addStat = () => {
+    const currentStats = [...aboutData.stats];
+    
+    if (currentStats.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newStat: StatItem = {
+      label: "",
+      value: "",
+    };
+    
+    updateNested('stats', [...currentStats, newStat]);
+    
+    // Scroll para o novo item
+    setTimeout(() => {
+      newStatRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updateStat = (index: number, updates: Partial<StatItem>) => {
+    const currentStats = [...aboutData.stats];
+    
+    if (index >= 0 && index < currentStats.length) {
+      currentStats[index] = { ...currentStats[index], ...updates };
+      updateNested('stats', currentStats);
+    }
+  };
+
+  const removeStat = (index: number) => {
+    const currentStats = [...aboutData.stats];
+    
+    if (currentStats.length <= 1) {
+      // Mantém pelo menos um item vazio
+      updateNested('stats', [{ label: "", value: "" }]);
+    } else {
+      currentStats.splice(index, 1);
+      updateNested('stats', currentStats);
+    }
+  };
+
+  // Funções de drag & drop para stats
+  const handleStatDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingStat(index);
+  };
+
+  const handleStatDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingStat === null || draggingStat === index) return;
+    
+    const currentStats = [...aboutData.stats];
+    const draggedStat = currentStats[draggingStat];
+    
+    // Remove o item arrastado
+    currentStats.splice(draggingStat, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingStat ? index : index;
+    currentStats.splice(newIndex, 0, draggedStat);
+    
+    updateNested('stats', currentStats);
+    setDraggingStat(index);
+  };
+
+  const handleStatDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingStat(null);
+  };
+
   const handleAddStat = () => {
-    const success = statsList.addStat();
+    const success = addStat();
     if (!success) {
-      console.warn(statsList.validationError);
+      console.warn(`Limite do plano ${currentPlanType} atingido (${currentPlanLimit} itens)`);
     }
   };
 
@@ -305,9 +288,6 @@ export default function AboutRefinedSectionPage() {
     if (e) e.preventDefault();
     
     try {
-      // Atualizar os stats no aboutData
-      updateNested('stats', statsList.stats);
-      
       // Salvar no banco de dados
       await save();
       
@@ -322,27 +302,24 @@ export default function AboutRefinedSectionPage() {
     }
   };
 
-  // Funções de drag & drop para stats
-  const handleStatDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('text/plain', index.toString());
-    e.currentTarget.classList.add('dragging');
-    statsList.startDrag(index);
-  };
-
-  const handleStatDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    statsList.handleDragOver(index);
-  };
-
-  const handleStatDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('dragging');
-    statsList.endDrag();
-  };
-
   // Funções para atualizar cores
   const handleColorChange = (colorKey: keyof ThemeData, hexColor: string) => {
     updateNested(`theme.${colorKey}`, hexColor);
   };
+
+  // Cálculos de validação
+  const isStatValid = (stat: StatItem): boolean => {
+    return stat.label.trim() !== '' && stat.value.trim() !== '';
+  };
+
+  const stats = aboutData.stats;
+  const isLimitReached = stats.length >= currentPlanLimit;
+  const canAddNewItem = !isLimitReached;
+  const completeCount = stats.filter(isStatValid).length;
+  const totalCount = stats.length;
+  const validationError = isLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
 
   // Cálculo de preenchimento
   const calculateCompletion = () => {
@@ -360,8 +337,8 @@ export default function AboutRefinedSectionPage() {
     if (aboutData.content.image_bg.trim()) completed++;
 
     // Stats
-    total += statsList.stats.length * 2;
-    statsList.stats.forEach(stat => {
+    total += stats.length * 2;
+    stats.forEach(stat => {
       if (stat.label.trim()) completed++;
       if (stat.value.trim()) completed++;
     });
@@ -394,10 +371,10 @@ export default function AboutRefinedSectionPage() {
   return (
     <ManageLayout
       headerIcon={Target}
-      title="Seção About Refined"
+      title="Seção Sobre "
       description="Gerencie a seção sobre com design refinado"
       exists={!!exists}
-      itemName="Seção About"
+      itemName="Seção Sobre"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Seção de Conteúdo */}
@@ -508,12 +485,12 @@ export default function AboutRefinedSectionPage() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {statsList.completeCount} de {statsList.totalCount} completos
+                          {completeCount} de {totalCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {statsList.currentPlanLimit} stats
+                        Limite: {currentPlanLimit} stats
                       </span>
                     </div>
                   </div>
@@ -523,11 +500,12 @@ export default function AboutRefinedSectionPage() {
                       onClick={handleAddStat}
                       variant="primary"
                       className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!statsList.canAddNewItem}
+                      disabled={!canAddNewItem}
                     >
-                      + Adicionar Estatística
+                      <Plus className="w-4 h-4 mr-2" />
+                      Adicionar Estatística
                     </Button>
-                    {statsList.isLimitReached && (
+                    {isLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -538,32 +516,32 @@ export default function AboutRefinedSectionPage() {
               </div>
 
               {/* Mensagem de erro */}
-              {statsList.validationError && (
-                <div className={`p-3 rounded-lg ${statsList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+              {validationError && (
+                <div className={`p-3 rounded-lg mb-4 ${isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                   <div className="flex items-start gap-2">
-                    {statsList.isLimitReached ? (
+                    {isLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${statsList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {statsList.validationError}
+                    <p className={`text-sm ${isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {validationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-4">
-                {statsList.stats.map((stat, index) => (
+                {stats.map((stat, index) => (
                   <div 
                     key={index}
-                    ref={index === statsList.stats.length - 1 ? statsList.newItemRef : undefined}
+                    ref={index === stats.length - 1 ? newStatRef : undefined}
                     draggable
                     onDragStart={(e) => handleStatDragStart(e, index)}
                     onDragOver={(e) => handleStatDragOver(e, index)}
                     onDragEnd={handleStatDragEnd}
                     className={`flex items-center gap-4 p-4 border border-[var(--color-border)] rounded-lg transition-all duration-200 ${
-                      statsList.draggingItem === index 
+                      draggingStat === index 
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                         : 'hover:border-[var(--color-primary)]/50'
                     }`}
@@ -575,21 +553,21 @@ export default function AboutRefinedSectionPage() {
                       <Input
                         label="Label"
                         value={stat.label}
-                        onChange={(e) => statsList.updateStat(index, { label: e.target.value })}
+                        onChange={(e) => updateStat(index, { label: e.target.value })}
                         placeholder="Ex: Anos de Escala"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                       <Input
                         label="Value"
                         value={stat.value}
-                        onChange={(e) => statsList.updateStat(index, { value: e.target.value })}
+                        onChange={(e) => updateStat(index, { value: e.target.value })}
                         placeholder="Ex: 8+"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                     </div>
                     <Button
                       type="button"
-                      onClick={() => statsList.removeStat(index)}
+                      onClick={() => removeStat(index)}
                       variant="danger"
                       className="shrink-0 bg-red-600 hover:bg-red-700 border-none"
                     >

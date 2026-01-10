@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -136,38 +136,55 @@ const mergeWithDefaults = (apiData: any, defaultData: EcommerceSectionData): Eco
   };
 };
 
-// Hook personalizado para gerenciar bento cards
-function useBentoCardsList(initialCards: BentoCard[], planType: 'basic' | 'pro') {
-  const [cards, setCards] = useState<BentoCard[]>(initialCards);
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const newItemRef = useRef<HTMLDivElement>(null);
+export default function EcommerceSectionPage() {
+  const { currentSite } = useSite();
+  const currentPlanType = currentSite.planType;
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 6;
 
-  const currentPlanLimit = planType === 'pro' ? 10 : 6;
-  const isLimitReached = cards.length >= currentPlanLimit;
+  const {
+    data: ecommerceData,
+    exists,
+    loading,
+    success,
+    errorMsg,
+    deleteModal,
+    updateNested,
+    setFileState,
+    save,
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
+  } = useJsonManagement<EcommerceSectionData>({
+    apiPath: "/api/tegbe-institucional/json/ecommerce-home",
+    defaultData: defaultEcommerceSectionData,
+    mergeFunction: mergeWithDefaults,
+  });
 
-  const completeCount = useMemo(() => {
-    return cards.filter(card => {
-      const baseComplete = card.title.trim() && card.description.trim();
-      
-      switch(card.type) {
-        case 'hero':
-          return baseComplete && card.image?.trim() && card.badge?.trim();
-        case 'stat':
-          return baseComplete && card.icon?.trim() && card.stat?.trim();
-        case 'action':
-          return baseComplete && card.ctaText?.trim() && card.href?.trim();
-        default:
-          return baseComplete;
-      }
-    }).length;
-  }, [cards]);
+  // Estado local para URLs temporárias de preview
+  const [tempImageUrls, setTempImageUrls] = useState<Record<string, string>>({});
+  // Estado para drag & drop
+  const [draggingCard, setDraggingCard] = useState<number | null>(null);
+  // Referência para o último card adicionado
+  const newCardRef = useRef<HTMLDivElement>(null);
 
-  const canAddNewItem = !isLimitReached;
+  const [expandedSections, setExpandedSections] = useState({
+    header: true,
+    bento_cards: false,
+    theme: false,
+  });
 
-  const addCard = useCallback((type: BentoCard['type'] = 'stat') => {
-    if (!canAddNewItem) {
-      setValidationError("Limite do plano atingido");
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  // Funções para manipular a lista de bento cards
+  const addCard = (type: BentoCard['type'] = 'stat') => {
+    const currentCards = [...ecommerceData.bento_cards];
+    
+    if (currentCards.length >= currentPlanLimit) {
       return false;
     }
 
@@ -206,130 +223,51 @@ function useBentoCardsList(initialCards: BentoCard[], planType: 'basic' | 'pro')
       }
     };
 
-    setCards(prev => [...prev, getDefaultCard(type)]);
-    setValidationError(null);
-
+    updateNested('bento_cards', [...currentCards, getDefaultCard(type)]);
+    
+    // Scroll para o novo item
     setTimeout(() => {
-      newItemRef.current?.scrollIntoView({ behavior: 'smooth' });
+      newCardRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
     }, 100);
-
+    
     return true;
-  }, [canAddNewItem]);
-
-  const updateCard = useCallback((index: number, updates: Partial<BentoCard>) => {
-    setCards(prev => prev.map((item, i) => i === index ? { ...item, ...updates } : item));
-  }, []);
-
-  const removeCard = useCallback((index: number) => {
-    setCards(prev => {
-      if (prev.length === 1) {
-        return [{
-          id: `card_${Date.now()}`,
-          colSpan: "md:col-span-1",
-          type: "stat",
-          title: "",
-          description: "",
-          icon: "solar:rocket-bold-duotone",
-          stat: "",
-        }];
-      }
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
-
-  // Drag & drop
-  const startDrag = useCallback((index: number) => {
-    setDraggingIndex(index);
-  }, []);
-
-  const handleDragOver = useCallback((index: number) => {
-    if (draggingIndex === null || draggingIndex === index) return;
-
-    setCards(prev => {
-      const newCards = [...prev];
-      const draggedCard = newCards[draggingIndex];
-      newCards.splice(draggingIndex, 1);
-      newCards.splice(index, 0, draggedCard);
-      setDraggingIndex(index);
-      return newCards;
-    });
-  }, [draggingIndex]);
-
-  const endDrag = useCallback(() => {
-    setDraggingIndex(null);
-  }, []);
-
-  // Atualizar cards quando initialCards mudar
-  useEffect(() => {
-    setCards(initialCards);
-  }, [initialCards]);
-
-  return {
-    cards,
-    filteredItems: cards,
-    draggingItem: draggingIndex,
-    validationError,
-    newItemRef,
-    completeCount,
-    totalCount: cards.length,
-    currentPlanLimit,
-    isLimitReached,
-    canAddNewItem,
-    currentPlanType: planType,
-    addCard,
-    updateCard,
-    removeCard,
-    startDrag,
-    handleDragOver,
-    endDrag,
   };
-}
 
-export default function EcommerceSectionPage() {
-  const { currentSite } = useSite();
-  const currentPlanType = currentSite.planType;
+  const updateCard = (index: number, updates: Partial<BentoCard>) => {
+    const currentCards = [...ecommerceData.bento_cards];
+    
+    if (index >= 0 && index < currentCards.length) {
+      currentCards[index] = { ...currentCards[index], ...updates };
+      updateNested('bento_cards', currentCards);
+    }
+  };
 
-  const {
-    data: ecommerceData,
-    exists,
-    loading,
-    success,
-    errorMsg,
-    deleteModal,
-    updateNested,
-    setFileState,
-    save,
-    openDeleteAllModal,
-    closeDeleteModal,
-    confirmDelete,
-  } = useJsonManagement<EcommerceSectionData>({
-    apiPath: "/api/tegbe-institucional/json/ecommerce-home",
-    defaultData: defaultEcommerceSectionData,
-    mergeFunction: mergeWithDefaults,
-  });
-
-  // Estado local para URLs temporárias de preview
-  const [tempImageUrls, setTempImageUrls] = useState<Record<string, string>>({});
-
-  // Hook personalizado para gerenciar bento cards
-  const cardsList = useBentoCardsList(ecommerceData.bento_cards, currentPlanType);
-
-  const [expandedSections, setExpandedSections] = useState({
-    header: true,
-    bento_cards: false,
-    theme: false,
-  });
-
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+  const removeCard = (index: number) => {
+    const currentCards = [...ecommerceData.bento_cards];
+    
+    if (currentCards.length <= 1) {
+      // Mantém pelo menos um card vazio
+      updateNested('bento_cards', [{
+        id: `card_${Date.now()}`,
+        colSpan: "md:col-span-1",
+        type: "stat",
+        title: "",
+        description: "",
+        icon: "solar:rocket-bold-duotone",
+        stat: "",
+      }]);
+    } else {
+      currentCards.splice(index, 1);
+      updateNested('bento_cards', currentCards);
+    }
   };
 
   // Função para lidar com upload de imagem de cards
   const handleCardImageChange = (cardIndex: number, file: File | null) => {
-    const card = cardsList.cards[cardIndex];
+    const card = ecommerceData.bento_cards[cardIndex];
     const path = `bento_cards.${cardIndex}.image`;
     
     setFileState(path, file);
@@ -341,17 +279,47 @@ export default function EcommerceSectionPage() {
         [`card_${cardIndex}`]: objectUrl
       }));
       
-      cardsList.updateCard(cardIndex, { image: objectUrl });
+      updateCard(cardIndex, { image: objectUrl });
     } else {
-      cardsList.updateCard(cardIndex, { image: "" });
+      updateCard(cardIndex, { image: "" });
     }
   };
 
-  // Funções para adicionar cards
+  // Funções de drag & drop
+  const handleCardDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingCard(index);
+  };
+
+  const handleCardDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingCard === null || draggingCard === index) return;
+    
+    const currentCards = [...ecommerceData.bento_cards];
+    const draggedCard = currentCards[draggingCard];
+    
+    // Remove o item arrastado
+    currentCards.splice(draggingCard, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingCard ? index : index;
+    currentCards.splice(newIndex, 0, draggedCard);
+    
+    updateNested('bento_cards', currentCards);
+    setDraggingCard(index);
+  };
+
+  const handleCardDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingCard(null);
+  };
+
   const handleAddCard = (type: BentoCard['type']) => {
-    const success = cardsList.addCard(type);
+    const success = addCard(type);
     if (!success) {
-      console.warn(cardsList.validationError);
+      console.warn(`Limite do plano ${currentPlanType} atingido (${currentPlanLimit} itens)`);
     }
   };
 
@@ -368,9 +336,6 @@ export default function EcommerceSectionPage() {
     if (e) e.preventDefault();
     
     try {
-      // Atualizar os bento_cards no ecommerceData
-      updateNested('bento_cards', cardsList.cards);
-      
       // Salvar no banco de dados
       await save();
       
@@ -383,23 +348,6 @@ export default function EcommerceSectionPage() {
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
-  };
-
-  // Funções de drag & drop para cards
-  const handleCardDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('text/plain', index.toString());
-    e.currentTarget.classList.add('dragging');
-    cardsList.startDrag(index);
-  };
-
-  const handleCardDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    cardsList.handleDragOver(index);
-  };
-
-  const handleCardDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('dragging');
-    cardsList.endDrag();
   };
 
   // Funções para atualizar cores
@@ -420,6 +368,31 @@ export default function EcommerceSectionPage() {
     { value: "stat", label: "Card Estatística (com ícone)" },
     { value: "action", label: "Card de Ação (com CTA)" },
   ];
+
+  // Cálculos de validação
+  const isCardValid = (card: BentoCard): boolean => {
+    const baseComplete = card?.title?.trim() !== '' && card?.description?.trim() !== '';
+    
+    switch(card.type) {
+      case 'hero':
+        return baseComplete && (card.image?.trim() || '') !== '' && (card.badge?.trim() || '') !== '';
+      case 'stat':
+        return baseComplete && (card.icon?.trim() || '') !== '' && (card.stat?.trim() || '') !== '';
+      case 'action':
+        return baseComplete && (card.ctaText?.trim() || '') !== '' && (card.href?.trim() || '') !== '';
+      default:
+        return baseComplete;
+    }
+  };
+
+  const cards = ecommerceData.bento_cards;
+  const isLimitReached = cards.length >= currentPlanLimit;
+  const canAddNewItem = !isLimitReached;
+  const completeCount = cards.filter(isCardValid).length;
+  const totalCount = cards.length;
+  const validationError = isLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
 
   // Renderizar campos específicos baseados no tipo do card
   const renderCardFields = (card: BentoCard, index: number) => {
@@ -445,7 +418,7 @@ export default function EcommerceSectionPage() {
             <Input
               label="Badge"
               value={card.badge || ""}
-              onChange={(e) => cardsList.updateCard(index, { badge: e.target.value })}
+              onChange={(e) => updateCard(index, { badge: e.target.value })}
               placeholder="Ex: Conta Platinum"
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
@@ -461,14 +434,14 @@ export default function EcommerceSectionPage() {
               </label>
               <IconSelector
                 value={card.icon || "solar:rocket-bold-duotone"}
-                onChange={(value) => cardsList.updateCard(index, { icon: value })}
+                onChange={(value) => updateCard(index, { icon: value })}
                 placeholder="solar:rocket-bold-duotone"
               />
             </div>
             <Input
               label="Estatística"
               value={card.stat || ""}
-              onChange={(e) => cardsList.updateCard(index, { stat: e.target.value })}
+              onChange={(e) => updateCard(index, { stat: e.target.value })}
               placeholder="Ex: +35% ROAS"
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
@@ -481,14 +454,14 @@ export default function EcommerceSectionPage() {
             <Input
               label="Texto do CTA"
               value={card.ctaText || ""}
-              onChange={(e) => cardsList.updateCard(index, { ctaText: e.target.value })}
+              onChange={(e) => updateCard(index, { ctaText: e.target.value })}
               placeholder="Ex: Ver Comparativo de Planos"
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
             <Input
               label="Link do CTA"
               value={card.href || ""}
-              onChange={(e) => cardsList.updateCard(index, { href: e.target.value })}
+              onChange={(e) => updateCard(index, { href: e.target.value })}
               placeholder="/ecommerce"
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
@@ -512,13 +485,12 @@ export default function EcommerceSectionPage() {
     if (ecommerceData.header.subtitle.trim()) completed++;
 
     // Bento Cards
-    total += cardsList.cards.length * 5; // Base: id, colSpan, type, title, description
-    cardsList.cards.forEach(card => {
-      if (card.id.trim()) completed++;
-      if (card.colSpan.trim()) completed++;
-      if (card.type.trim()) completed++;
-      if (card.title.trim()) completed++;
-      if (card.description.trim()) completed++;
+    total += cards.length * 4; // Base: colSpan, type, title, description
+    cards.forEach(card => {
+      if (card?.colSpan?.trim()) completed++;
+      if (card?.type?.trim()) completed++;
+      if (card?.title?.trim()) completed++;
+      if (card?.description?.trim()) completed++;
       
       // Campos específicos por tipo
       switch(card.type) {
@@ -612,7 +584,7 @@ export default function EcommerceSectionPage() {
         {/* Seção de Bento Cards */}
         <div className="space-y-4">
           <SectionHeader
-            title="Bento Cards"
+            title="Cards"
             section="bento_cards"
             icon={Grid3X3}
             isExpanded={expandedSections.bento_cards}
@@ -629,18 +601,18 @@ export default function EcommerceSectionPage() {
                   <div>
                     <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
                       <Grid3X3 className="w-5 h-5" />
-                      Cards do Layout Bento
+                      Cards do Layout
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {cardsList.completeCount} de {cardsList.totalCount} completos
+                          {completeCount} de {totalCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {cardsList.currentPlanLimit} cards
+                        Limite: {currentPlanLimit} cards
                       </span>
                     </div>
                   </div>
@@ -650,34 +622,34 @@ export default function EcommerceSectionPage() {
                         type="button"
                         onClick={() => handleAddCard('hero')}
                         variant="primary"
-                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                        disabled={!cardsList.canAddNewItem}
+                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-1"
+                        disabled={!canAddNewItem}
                       >
-                        <Plus className="w-4 h-4 mr-1" />
+                        <ImageIcon className="w-4 h-4" />
                         Card Hero
                       </Button>
                       <Button
                         type="button"
                         onClick={() => handleAddCard('stat')}
                         variant="primary"
-                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                        disabled={!cardsList.canAddNewItem}
+                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-1"
+                        disabled={!canAddNewItem}
                       >
-                        <Rocket className="w-4 h-4 mr-1" />
+                        <Rocket className="w-4 h-4" />
                         Card Estatística
                       </Button>
                       <Button
                         type="button"
                         onClick={() => handleAddCard('action')}
                         variant="primary"
-                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                        disabled={!cardsList.canAddNewItem}
+                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-1"
+                        disabled={!canAddNewItem}
                       >
-                        <Zap className="w-4 h-4 mr-1" />
+                        <Zap className="w-4 h-4" />
                         Card de Ação
                       </Button>
                     </div>
-                    {cardsList.isLimitReached && (
+                    {isLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -688,32 +660,32 @@ export default function EcommerceSectionPage() {
               </div>
 
               {/* Mensagem de erro */}
-              {cardsList.validationError && (
-                <div className={`p-3 rounded-lg ${cardsList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+              {validationError && (
+                <div className={`p-3 rounded-lg mb-4 ${isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                   <div className="flex items-start gap-2">
-                    {cardsList.isLimitReached ? (
+                    {isLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${cardsList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {cardsList.validationError}
+                    <p className={`text-sm ${isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {validationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-6">
-                {cardsList.cards.map((card, index) => (
+                {cards.map((card, index) => (
                   <div 
-                    key={card.id}
-                    ref={index === cardsList.cards.length - 1 ? cardsList.newItemRef : undefined}
+                    key={index}
+                    ref={index === cards.length - 1 ? newCardRef : undefined}
                     draggable
                     onDragStart={(e) => handleCardDragStart(e, index)}
                     onDragOver={(e) => handleCardDragOver(e, index)}
                     onDragEnd={handleCardDragEnd}
                     className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      cardsList.draggingItem === index 
+                      draggingCard === index 
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                         : 'hover:border-[var(--color-primary)]/50'
                     }`}
@@ -754,6 +726,15 @@ export default function EcommerceSectionPage() {
                             }`}>
                               {card.type}
                             </span>
+                            {card.title && card.description && isCardValid(card) ? (
+                              <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                Completo
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                Incompleto
+                              </span>
+                            )}
                           </div>
                           
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -765,7 +746,7 @@ export default function EcommerceSectionPage() {
                                   </label>
                                   <select
                                     value={card.type}
-                                    onChange={(e) => cardsList.updateCard(index, { type: e.target.value as BentoCard['type'] })}
+                                    onChange={(e) => updateCard(index, { type: e.target.value as BentoCard['type'] })}
                                     className="w-full bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                                   >
                                     {cardTypeOptions.map((option) => (
@@ -781,7 +762,7 @@ export default function EcommerceSectionPage() {
                                   </label>
                                   <select
                                     value={card.colSpan}
-                                    onChange={(e) => cardsList.updateCard(index, { colSpan: e.target.value })}
+                                    onChange={(e) => updateCard(index, { colSpan: e.target.value })}
                                     className="w-full bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
                                   >
                                     {colSpanOptions.map((option) => (
@@ -796,7 +777,7 @@ export default function EcommerceSectionPage() {
                               <Input
                                 label="Título"
                                 value={card.title}
-                                onChange={(e) => cardsList.updateCard(index, { title: e.target.value })}
+                                onChange={(e) => updateCard(index, { title: e.target.value })}
                                 placeholder="Título do card"
                                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                               />
@@ -804,7 +785,7 @@ export default function EcommerceSectionPage() {
                               <TextArea
                                 label="Descrição"
                                 value={card.description}
-                                onChange={(e) => cardsList.updateCard(index, { description: e.target.value })}
+                                onChange={(e) => updateCard(index, { description: e.target.value })}
                                 placeholder="Descrição do card"
                                 rows={3}
                                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -818,12 +799,6 @@ export default function EcommerceSectionPage() {
                                 </h5>
                                 {renderCardFields(card, index)}
                               </div>
-                              
-                              <div className="text-sm text-[var(--color-secondary)]/70 space-y-1">
-                                <p><strong>ID:</strong> {card.id}</p>
-                                <p><strong>Classes:</strong> {card.colSpan}</p>
-                                <p><strong>Tipo:</strong> {card.type}</p>
-                              </div>
                             </div>
                           </div>
                         </div>
@@ -832,11 +807,12 @@ export default function EcommerceSectionPage() {
                       <div className="flex flex-col gap-2">
                         <Button
                           type="button"
-                          onClick={() => cardsList.removeCard(index)}
+                          onClick={() => removeCard(index)}
                           variant="danger"
-                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
+                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                         >
                           <Trash2 className="w-4 h-4" />
+                          Remover
                         </Button>
                       </div>
                     </div>

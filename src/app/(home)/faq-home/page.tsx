@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -27,7 +27,6 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { useListState } from "@/hooks/useListState";
 import { Button } from "@/components/Button";
 
 interface FaqItem {
@@ -145,49 +144,71 @@ export default function FaqManagePage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Hook para gerenciar FAQs com drag & drop
-  const faqList = useListState<FaqItem>({
-    initialItems: faqData.faq_section.questions_and_answers,
-    defaultItem: {
-      id: Date.now(),
-      question: '',
-      answer: ''
-    },
-    validationFields: ['question', 'answer'],
-    enableDragDrop: true
-  });
-
+  // Estado local para gerenciar o arrastar e soltar
+  const [draggingItem, setDraggingItem] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     header: true,
     questions: true,
     config: false,
   });
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+  // Referência para o último item adicionado
+  const newItemRef = useRef<HTMLDivElement>(null);
+
+  // Controle de planos (simplificado - você pode ajustar conforme seu sistema)
+  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanLimit = currentPlanType === 'pro' ? 20 : 10;
+
+  // Funções para manipular a lista de FAQs
+  const addFaqItem = () => {
+    const currentItems = [...faqData.faq_section.questions_and_answers];
+    
+    // Verificar limite do plano
+    if (currentItems.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newItem: FaqItem = {
+      id: Date.now(),
+      question: "",
+      answer: ""
+    };
+    
+    updateNested('faq_section.questions_and_answers', [...currentItems, newItem]);
+    
+    // Scroll para o novo item
+    setTimeout(() => {
+      newItemRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
   };
 
-  // Função para adicionar novo FAQ
-  const handleAddFaq = () => {
-    const success = faqList.addItem();
-    if (!success) {
-      console.warn(faqList.validationError);
+  const updateFaqItem = (index: number, updates: Partial<FaqItem>) => {
+    const currentItems = [...faqData.faq_section.questions_and_answers];
+    
+    if (index >= 0 && index < currentItems.length) {
+      currentItems[index] = { ...currentItems[index], ...updates };
+      updateNested('faq_section.questions_and_answers', currentItems);
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const removeFaqItem = (index: number) => {
+    const currentItems = [...faqData.faq_section.questions_and_answers];
     
-    // Atualiza os FAQs no faqData antes de salvar
-    updateNested('faq_section.questions_and_answers', faqList.items);
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
+    if (currentItems.length <= 1) {
+      // Mantém pelo menos um item vazio
+      updateNested('faq_section.questions_and_answers', [{
+        id: Date.now(),
+        question: "",
+        answer: ""
+      }]);
+    } else {
+      currentItems.splice(index, 1);
+      updateNested('faq_section.questions_and_answers', currentItems);
     }
   };
 
@@ -195,17 +216,31 @@ export default function FaqManagePage() {
   const handleFaqDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    faqList.startDrag(index);
+    setDraggingItem(index);
   };
 
   const handleFaqDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    faqList.handleDragOver(index);
+    
+    if (draggingItem === null || draggingItem === index) return;
+    
+    const currentItems = [...faqData.faq_section.questions_and_answers];
+    const draggedItem = currentItems[draggingItem];
+    
+    // Remove o item arrastado
+    currentItems.splice(draggingItem, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingItem ? index : index;
+    currentItems.splice(newIndex, 0, draggedItem);
+    
+    updateNested('faq_section.questions_and_answers', currentItems);
+    setDraggingItem(index);
   };
 
   const handleFaqDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    faqList.endDrag();
+    setDraggingItem(null);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -221,6 +256,44 @@ export default function FaqManagePage() {
     e.currentTarget.classList.remove('drag-over');
   };
 
+  // Validações
+  const isItemValid = (item: FaqItem): boolean => {
+    return item.question.trim() !== '' && item.answer.trim() !== '';
+  };
+
+  const isLimitReached = faqData.faq_section.questions_and_answers.length >= currentPlanLimit;
+  const canAddNewItem = !isLimitReached;
+  const completeCount = faqData.faq_section.questions_and_answers.filter(isItemValid).length;
+  const totalCount = faqData.faq_section.questions_and_answers.length;
+
+  const validationError = isLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const handleAddFaq = () => {
+    const success = addFaqItem();
+    if (!success) {
+      console.warn(validationError);
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
@@ -233,8 +306,8 @@ export default function FaqManagePage() {
     if (faqData.faq_section.header.subtitle.trim()) completed++;
 
     // FAQs
-    total += faqList.items.length * 2;
-    faqList.items.forEach(faq => {
+    total += faqData.faq_section.questions_and_answers.length * 2;
+    faqData.faq_section.questions_and_answers.forEach(faq => {
       if (faq.question.trim()) completed++;
       if (faq.answer.trim()) completed++;
     });
@@ -361,12 +434,12 @@ export default function FaqManagePage() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {faqList.completeCount} de {faqList.totalCount} completos
+                          {completeCount} de {totalCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {faqList.currentPlanType === 'pro' ? '20' : '10'} itens
+                        Limite: {currentPlanType === 'pro' ? '20' : '10'} itens
                       </span>
                     </div>
                   </div>
@@ -376,12 +449,12 @@ export default function FaqManagePage() {
                       onClick={handleAddFaq}
                       variant="primary"
                       className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
-                      disabled={!faqList.canAddNewItem}
+                      disabled={!canAddNewItem}
                     >
                       <Plus className="w-4 h-4" />
                       Adicionar FAQ
                     </Button>
-                    {faqList.isLimitReached && (
+                    {isLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -395,26 +468,26 @@ export default function FaqManagePage() {
               </div>
 
               {/* Mensagem de erro */}
-              {faqList.validationError && (
-                <div className={`p-3 rounded-lg mb-4 ${faqList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+              {validationError && (
+                <div className={`p-3 rounded-lg mb-4 ${isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                   <div className="flex items-start gap-2">
-                    {faqList.isLimitReached ? (
+                    {isLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${faqList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {faqList.validationError}
+                    <p className={`text-sm ${isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {validationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-4">
-                {faqList.filteredItems.map((faq, index) => (
+                {faqData.faq_section.questions_and_answers.map((faq, index) => (
                   <div 
                     key={faq.id}
-                    ref={index === faqList.filteredItems.length - 1 ? faqList.newItemRef : undefined}
+                    ref={index === faqData.faq_section.questions_and_answers.length - 1 ? newItemRef : undefined}
                     draggable
                     onDragStart={(e) => handleFaqDragStart(e, index)}
                     onDragOver={(e) => handleFaqDragOver(e, index)}
@@ -423,7 +496,7 @@ export default function FaqManagePage() {
                     onDragEnd={handleFaqDragEnd}
                     onDrop={handleDrop}
                     className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      faqList.draggingItem === index 
+                      draggingItem === index 
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                         : 'hover:border-[var(--color-primary)]/50'
                     }`}
@@ -474,7 +547,7 @@ export default function FaqManagePage() {
                                 </label>
                                 <Input
                                   value={faq.question}
-                                  onChange={(e) => faqList.updateItem(index, { question: e.target.value })}
+                                  onChange={(e) => updateFaqItem(index, { question: e.target.value })}
                                   placeholder="Ex: Preciso ter um faturamento mínimo para contratar?"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -488,7 +561,7 @@ export default function FaqManagePage() {
                                 </label>
                                 <TextArea
                                   value={faq.answer}
-                                  onChange={(e) => faqList.updateItem(index, { answer: e.target.value })}
+                                  onChange={(e) => updateFaqItem(index, { answer: e.target.value })}
                                   placeholder="Ex: Trabalhamos com escalas diferentes. Para a Consultoria e Agência..."
                                   rows={4}
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -502,7 +575,7 @@ export default function FaqManagePage() {
                       <div className="flex flex-col gap-2">
                         <Button
                           type="button"
-                          onClick={() => faqList.removeItem(index)}
+                          onClick={() => removeFaqItem(index)}
                           variant="danger"
                           className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                         >
@@ -515,7 +588,7 @@ export default function FaqManagePage() {
                 ))}
               </div>
 
-              {faqList.filteredItems.length === 0 && (
+              {faqData.faq_section.questions_and_answers.length === 0 && (
                 <div className="text-center py-12 border-2 border-dashed border-[var(--color-border)] rounded-lg">
                   <HelpCircle className="w-12 h-12 text-[var(--color-secondary)]/30 mx-auto mb-4" />
                   <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">

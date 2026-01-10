@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -30,7 +30,6 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { useListState } from "@/hooks/useListState";
 import { Button } from "@/components/Button";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
 import { hexToTailwindBgClass } from "@/lib/colors";
@@ -88,7 +87,7 @@ interface SuccessCasesCarouselData {
 const defaultSuccessCasesCarouselData: SuccessCasesCarouselData = {
   componentName: "",
   description: "",
-  enabled: false,
+  enabled: true,
   header: {
     tag: "",
     title_main: "",
@@ -135,7 +134,7 @@ const mergeWithDefaults = (apiData: any, defaultData: SuccessCasesCarouselData):
     id: apiData.id,
     componentName: apiData.componentName || defaultData.componentName,
     description: apiData.description || defaultData.description,
-    enabled: apiData.enabled ?? defaultData.enabled,
+    enabled: apiData.enabled ? defaultData.enabled : true,
     header: apiData.header || defaultData.header,
     cases: apiData.cases || defaultData.cases,
     config: apiData.config || defaultData.config,
@@ -149,122 +148,10 @@ const mergeWithDefaults = (apiData: any, defaultData: SuccessCasesCarouselData):
   };
 };
 
-// Hook personalizado para gerenciar cases
-function useCaseList(initialCases: CaseItem[], planType: 'basic' | 'pro') {
-  const [cases, setCases] = useState<CaseItem[]>(initialCases);
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const newItemRef = useRef<HTMLDivElement>(null);
-
-  const currentPlanLimit = planType === 'pro' ? 10 : 5;
-  const isLimitReached = cases.length >= currentPlanLimit;
-
-  const completeCount = useMemo(() => {
-    return cases.filter(caseItem => 
-      caseItem.name.trim() && caseItem.description.trim() && caseItem.result.trim()
-    ).length;
-  }, [cases]);
-
-  const canAddNewItem = !isLimitReached;
-
-  const addCase = useCallback(() => {
-    if (!canAddNewItem) {
-      setValidationError("Limite do plano atingido");
-      return false;
-    }
-
-    const newCase: CaseItem = {
-      id: Date.now(),
-      logo: "",
-      name: "",
-      description: "",
-      result: "",
-      tags: [],
-      icon_decoration: "TrendingUp"
-    };
-
-    setCases(prev => [...prev, newCase]);
-    setValidationError(null);
-
-    setTimeout(() => {
-      newItemRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-
-    return true;
-  }, [canAddNewItem]);
-
-  const updateCase = useCallback((index: number, updates: Partial<CaseItem>) => {
-    setCases(prev => prev.map((item, i) => i === index ? { ...item, ...updates } : item));
-  }, []);
-
-  const removeCase = useCallback((index: number) => {
-    setCases(prev => {
-      if (prev.length === 1) {
-        return [{
-          id: Date.now(),
-          logo: "",
-          name: "",
-          description: "",
-          result: "",
-          tags: [],
-          icon_decoration: "TrendingUp"
-        }];
-      }
-      return prev.filter((_, i) => i !== index);
-    });
-  }, []);
-
-  // Drag & drop
-  const startDrag = useCallback((index: number) => {
-    setDraggingIndex(index);
-  }, []);
-
-  const handleDragOver = useCallback((index: number) => {
-    if (draggingIndex === null || draggingIndex === index) return;
-
-    setCases(prev => {
-      const newCases = [...prev];
-      const draggedCase = newCases[draggingIndex];
-      newCases.splice(draggingIndex, 1);
-      newCases.splice(index, 0, draggedCase);
-      setDraggingIndex(index);
-      return newCases;
-    });
-  }, [draggingIndex]);
-
-  const endDrag = useCallback(() => {
-    setDraggingIndex(null);
-  }, []);
-
-  // Atualizar casos quando initialCases mudar (ex: quando dados são carregados da API)
-  useEffect(() => {
-    setCases(initialCases);
-  }, [initialCases]);
-
-  return {
-    cases,
-    filteredItems: cases,
-    draggingItem: draggingIndex,
-    validationError,
-    newItemRef,
-    completeCount,
-    totalCount: cases.length,
-    currentPlanLimit,
-    isLimitReached,
-    canAddNewItem,
-    currentPlanType: planType,
-    addCase,
-    updateCase,
-    removeCase,
-    startDrag,
-    handleDragOver,
-    endDrag,
-  };
-}
-
 export default function SuccessCasesCarouselPage() {
   const { currentSite } = useSite();
   const currentPlanType = currentSite.planType;
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   const {
     data: carouselData,
@@ -287,11 +174,11 @@ export default function SuccessCasesCarouselPage() {
 
   // Estado local para URLs temporárias de preview
   const [tempImageUrls, setTempImageUrls] = useState<Record<number, string>>({});
-
-  // Hook personalizado para gerenciar cases
-  const casesList = useCaseList(carouselData.cases, currentPlanType);
-
-  // Hook para gerenciar tags dos cases
+  
+  // Estado para drag & drop
+  const [draggingCase, setDraggingCase] = useState<number | null>(null);
+  
+  // Estado para tags em edição
   const [editingCaseTags, setEditingCaseTags] = useState<{ [key: number]: string }>({});
 
   const [expandedSections, setExpandedSections] = useState({
@@ -309,20 +196,106 @@ export default function SuccessCasesCarouselPage() {
     }));
   };
 
-  // Funções para adicionar itens
-  const handleAddCase = () => {
-    const success = casesList.addCase();
-    if (!success) {
-      console.warn(casesList.validationError);
+  // Referência para o último case adicionado
+  const newCaseRef = useRef<HTMLDivElement>(null);
+
+  // Funções para manipular a lista de cases
+  const addCase = () => {
+    const currentCases = [...carouselData.cases];
+    
+    if (currentCases.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newCase: CaseItem = {
+      id: Date.now(),
+      logo: "",
+      name: "",
+      description: "",
+      result: "",
+      tags: [],
+      icon_decoration: "TrendingUp"
+    };
+    
+    updateNested('cases', [...currentCases, newCase]);
+    
+    // Scroll para o novo item
+    setTimeout(() => {
+      newCaseRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updateCase = (index: number, updates: Partial<CaseItem>) => {
+    const currentCases = [...carouselData.cases];
+    
+    if (index >= 0 && index < currentCases.length) {
+      currentCases[index] = { ...currentCases[index], ...updates };
+      updateNested('cases', currentCases);
     }
   };
 
+  const removeCase = (index: number) => {
+    const currentCases = [...carouselData.cases];
+    
+    if (currentCases.length <= 1) {
+      // Mantém pelo menos um case vazio
+      updateNested('cases', [{
+        id: Date.now(),
+        logo: "",
+        name: "",
+        description: "",
+        result: "",
+        tags: [],
+        icon_decoration: "TrendingUp"
+      }]);
+    } else {
+      currentCases.splice(index, 1);
+      updateNested('cases', currentCases);
+    }
+  };
+
+  // Função para lidar com upload de imagem do case
+  const handleCaseImageChange = (caseIndex: number, file: File | null) => {
+    const caseItem = carouselData.cases[caseIndex];
+    const path = `cases.${caseIndex}.logo`;
+    
+    setFileState(path, file);
+    
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setTempImageUrls(prev => ({
+        ...prev,
+        [caseItem?.id]: objectUrl
+      }));
+      
+      updateCase(caseIndex, { logo: objectUrl });
+    } else {
+      // Limpar URL temporária se existir
+      if (tempImageUrls[caseItem?.id]) {
+        URL.revokeObjectURL(tempImageUrls[caseItem?.id]);
+        setTempImageUrls(prev => {
+          const newUrls = { ...prev };
+          delete newUrls[caseItem?.id];
+          return newUrls;
+        });
+      }
+      
+      updateCase(caseIndex, { logo: "" });
+    }
+  };
+
+  // Funções para tags
   const handleAddTagToCase = (caseIndex: number, tag: string) => {
     if (!tag.trim()) return;
     
-    const currentCase = casesList.cases[caseIndex];
+    const currentCase = carouselData.cases[caseIndex];
     const updatedTags = [...currentCase.tags, tag.trim()];
-    casesList.updateCase(caseIndex, { tags: updatedTags });
+    updateCase(caseIndex, { tags: updatedTags });
     
     // Limpa o campo de edição
     setEditingCaseTags(prev => ({
@@ -332,42 +305,59 @@ export default function SuccessCasesCarouselPage() {
   };
 
   const handleRemoveTagFromCase = (caseIndex: number, tagIndex: number) => {
-    const currentCase = casesList.cases[caseIndex];
+    const currentCase = carouselData.cases[caseIndex];
     const updatedTags = currentCase.tags.filter((_, i) => i !== tagIndex);
-    casesList.updateCase(caseIndex, { tags: updatedTags });
+    updateCase(caseIndex, { tags: updatedTags });
   };
 
-  // Função para lidar com upload de imagem do case
-  const handleCaseImageChange = (caseIndex: number, file: File | null) => {
-    const caseItem = casesList.cases[caseIndex];
-    const path = `cases.${caseIndex}.logo`;
+  // Funções de drag & drop
+  const handleCaseDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingCase(index);
+  };
+
+  const handleCaseDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
     
-    // Usar o setFileState do hook nativo
-    setFileState(path, file);
+    if (draggingCase === null || draggingCase === index) return;
     
-    // Criar URL temporária para preview
-    if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      setTempImageUrls(prev => ({
-        ...prev,
-        [caseItem.id]: objectUrl
-      }));
-      
-      // Atualizar o preview no item da lista
-      casesList.updateCase(caseIndex, { logo: objectUrl });
-    } else {
-      // Limpar URL temporária se existir
-      if (tempImageUrls[caseItem.id]) {
-        URL.revokeObjectURL(tempImageUrls[caseItem.id]);
-        setTempImageUrls(prev => {
-          const newUrls = { ...prev };
-          delete newUrls[caseItem.id];
-          return newUrls;
-        });
-      }
-      
-      // Voltar para imagem padrão
-      casesList.updateCase(caseIndex, { logo: "/equipe.png" });
+    const currentCases = [...carouselData.cases];
+    const draggedCase = currentCases[draggingCase];
+    
+    // Remove o item arrastado
+    currentCases.splice(draggingCase, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingCase ? index : index;
+    currentCases.splice(newIndex, 0, draggedCase);
+    
+    updateNested('cases', currentCases);
+    setDraggingCase(index);
+  };
+
+  const handleCaseDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingCase(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleAddCase = () => {
+    const success = addCase();
+    if (!success) {
+      console.warn(`Limite do plano ${currentPlanType} atingido (${currentPlanLimit} itens)`);
     }
   };
 
@@ -384,8 +374,7 @@ export default function SuccessCasesCarouselPage() {
     if (e) e.preventDefault();
     
     try {
-      // Atualizar os cases no carouselData
-      updateNested('cases', casesList.cases);
+      // Atualizar data da última modificação
       updateNested('metadata.lastModified', new Date().toISOString());
       
       // Salvar no banco de dados
@@ -402,40 +391,26 @@ export default function SuccessCasesCarouselPage() {
     }
   };
 
-  // Funções de drag & drop
-  const handleCaseDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('text/plain', index.toString());
-    e.currentTarget.classList.add('dragging');
-    casesList.startDrag(index);
-  };
-
-  const handleCaseDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    casesList.handleDragOver(index);
-  };
-
-  const handleCaseDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('dragging');
-    casesList.endDrag();
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-  };
-
   // Funções para atualizar cores
   const handleColorChange = (colorKey: keyof ConfigData['colors'], hexColor: string) => {
     updateNested(`config.colors.${colorKey}`, hexColor);
   };
+
+  // Cálculos de validação
+  const isCaseValid = (caseItem?: CaseItem): boolean => {
+    return caseItem?.name?.trim() !== '' && 
+           caseItem?.description?.trim() !== '' && 
+           caseItem?.result?.trim() !== '';
+  };
+
+  const cases = carouselData.cases;
+  const isLimitReached = cases.length >= currentPlanLimit;
+  const canAddNewItem = !isLimitReached;
+  const completeCount = cases.filter(isCaseValid).length;
+  const totalCount = cases.length;
+  const validationError = isLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
 
   // Cálculo de preenchimento
   const calculateCompletion = () => {
@@ -456,14 +431,14 @@ export default function SuccessCasesCarouselPage() {
     if (carouselData.header.live_status.trim()) completed++;
 
     // Cases
-    total += casesList.cases.length * 6;
-    casesList.cases.forEach(caseItem => {
-      if (caseItem.name.trim()) completed++;
-      if (caseItem.description.trim()) completed++;
-      if (caseItem.result.trim()) completed++;
-      if (caseItem.logo.trim()) completed++;
-      if (caseItem.icon_decoration.trim()) completed++;
-      if (caseItem.tags.length > 0) completed++;
+    total += cases.length * 6;
+    cases.forEach(caseItem => {
+      if (caseItem?.name?.trim()) completed++;
+      if (caseItem?.description?.trim()) completed++;
+      if (caseItem?.result?.trim()) completed++;
+      if (caseItem?.logo.trim()) completed++;
+      if (caseItem?.icon_decoration?.trim()) completed++;
+      if (caseItem?.tags?.length > 0) completed++;
     });
 
     // Config
@@ -634,12 +609,12 @@ export default function SuccessCasesCarouselPage() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {casesList.completeCount} de {casesList.totalCount} completos
+                          {completeCount} de {totalCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {casesList.currentPlanLimit} cases
+                        Limite: {currentPlanLimit} cases
                       </span>
                     </div>
                   </div>
@@ -649,11 +624,11 @@ export default function SuccessCasesCarouselPage() {
                       onClick={handleAddCase}
                       variant="primary"
                       className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!casesList.canAddNewItem}
+                      disabled={!canAddNewItem}
                     >
                       + Adicionar Case
                     </Button>
-                    {casesList.isLimitReached && (
+                    {isLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -664,26 +639,26 @@ export default function SuccessCasesCarouselPage() {
               </div>
 
               {/* Mensagem de erro */}
-              {casesList.validationError && (
-                <div className={`p-3 rounded-lg ${casesList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+              {validationError && (
+                <div className={`p-3 rounded-lg mb-4 ${isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                   <div className="flex items-start gap-2">
-                    {casesList.isLimitReached ? (
+                    {isLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${casesList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {casesList.validationError}
+                    <p className={`text-sm ${isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {validationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-6">
-                {casesList.cases.map((caseItem, index) => (
+                {cases.map((caseItem, index) => (
                   <div 
-                    key={caseItem.id}
-                    ref={index === casesList.cases.length - 1 ? casesList.newItemRef : undefined}
+                    key={index}
+                    ref={index === cases.length - 1 ? newCaseRef : undefined}
                     draggable
                     onDragStart={(e) => handleCaseDragStart(e, index)}
                     onDragOver={(e) => handleCaseDragOver(e, index)}
@@ -692,7 +667,7 @@ export default function SuccessCasesCarouselPage() {
                     onDragEnd={handleCaseDragEnd}
                     onDrop={handleDrop}
                     className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      casesList.draggingItem === index 
+                      draggingCase === index 
                         ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                         : 'hover:border-[var(--color-primary)]/50'
                     }`}
@@ -719,9 +694,9 @@ export default function SuccessCasesCarouselPage() {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h4 className="font-medium text-[var(--color-secondary)]">
-                              {caseItem.name || "Case sem nome"}
+                              {caseItem?.name || "Case sem nome"}
                             </h4>
-                            {caseItem.name && caseItem.description && caseItem.result ? (
+                            {caseItem?.name && caseItem?.description && caseItem?.result ? (
                               <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
                                 Completo
                               </span>
@@ -739,8 +714,8 @@ export default function SuccessCasesCarouselPage() {
                                   Nome da Empresa
                                 </label>
                                 <Input
-                                  value={caseItem.name}
-                                  onChange={(e) => casesList.updateCase(index, { name: e.target.value })}
+                                  value={caseItem?.name}
+                                  onChange={(e) => updateCase(index, { name: e.target.value })}
                                   placeholder="Ex: Decora Fest"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -752,8 +727,8 @@ export default function SuccessCasesCarouselPage() {
                                 </label>
                                 <ImageUpload
                                   label="Logo"
-                                  currentImage={caseItem.logo}
-                                  selectedFile={null} // Não precisamos passar o arquivo aqui
+                                  currentImage={caseItem?.logo ?? ''}
+                                  selectedFile={null}
                                   onFileChange={(file) => handleCaseImageChange(index, file)}
                                   aspectRatio="aspect-square"
                                   previewWidth={120}
@@ -768,8 +743,8 @@ export default function SuccessCasesCarouselPage() {
                                   Descrição
                                 </label>
                                 <Input
-                                  value={caseItem.description}
-                                  onChange={(e) => casesList.updateCase(index, { description: e.target.value })}
+                                  value={caseItem?.description}
+                                  onChange={(e) => updateCase(index, { description: e.target.value })}
                                   placeholder="E-commerce • Nacional"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -783,8 +758,8 @@ export default function SuccessCasesCarouselPage() {
                                   Resultado
                                 </label>
                                 <Input
-                                  value={caseItem.result}
-                                  onChange={(e) => casesList.updateCase(index, { result: e.target.value })}
+                                  value={caseItem?.result}
+                                  onChange={(e) => updateCase(index, { result: e.target.value })}
                                   placeholder="Faturamento +215%"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -795,8 +770,8 @@ export default function SuccessCasesCarouselPage() {
                                   Ícone de Decoração
                                 </label>
                                 <IconSelector
-                                  value={caseItem.icon_decoration}
-                                  onChange={(value) => casesList.updateCase(index, { icon_decoration: value })}
+                                  value={caseItem?.icon_decoration ?? ''}
+                                  onChange={(value) => updateCase(index, { icon_decoration: value })}
                                   placeholder="TrendingUp"
                                 />
                               </div>
@@ -833,7 +808,7 @@ export default function SuccessCasesCarouselPage() {
                                   </div>
                                   
                                   <div className="flex flex-wrap gap-2">
-                                    {caseItem.tags.map((tag, tagIndex) => (
+                                    {caseItem?.tags?.map((tag, tagIndex) => (
                                       <div
                                         key={tagIndex}
                                         className="flex items-center gap-1 px-3 py-1 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full"
@@ -859,7 +834,7 @@ export default function SuccessCasesCarouselPage() {
                       <div className="flex flex-col gap-2">
                         <Button
                           type="button"
-                          onClick={() => casesList.removeCase(index)}
+                          onClick={() => removeCase(index)}
                           variant="danger"
                           className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
                         >

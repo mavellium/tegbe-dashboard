@@ -831,13 +831,6 @@ export default function ServiceRouterPage() {
                   />
                 </div>
               </div>
-              
-              <div className="mt-4 p-4 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded-lg">
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  <strong>Dica:</strong> Estes valores controlam a animação dos elementos da seção. 
-                  Ajuste conforme necessário para obter o efeito desejado.
-                </p>
-              </div>
             </Card>
           </motion.div>
         </div>

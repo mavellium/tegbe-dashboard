@@ -39,7 +39,7 @@
           "title": "Home",
           "icon": "FileText",
           "children": [
-            { "name": "Headline", "icon": "HelpCircle", "href": "/headline" },
+            { "name": "Headline", "icon": "HelpCircle", "href": "/headline-home" },
             { "name": "Dores", "icon": "HelpCircle", "href": "/dores-home" },
             { "name": "Como Fazemos", "icon": "HelpCircle", "href": "/como-fazemos-home" },
             { "name": "Soluções", "icon": "HelpCircle", "href": "/solucoes-home" },

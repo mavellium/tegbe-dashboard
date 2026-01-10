@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -20,7 +20,8 @@ import {
   TrendingUp,
   Users,
   Settings,
-  Shield
+  Shield,
+  Plus
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -28,8 +29,8 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { useListState } from "@/hooks/useListState";
 import { Button } from "@/components/Button";
+import { useSite } from "@/context/site-context";
 
 interface StatBento {
   id: string;
@@ -93,7 +94,7 @@ const defaultAuthoritySectionData: AuthoritySectionData = {
     infrastructure: {
       label: "",
       partners: [
-        { "id": "", "alt": "", "src": "" },
+        { id: "", alt: "", src: "" },
       ]
     }
   }
@@ -112,6 +113,11 @@ const mergeWithDefaults = (apiData: any, defaultData: AuthoritySectionData): Aut
 };
 
 export default function AuthoritySectionPage() {
+  const { currentSite } = useSite();
+  const currentPlanType = currentSite.planType;
+  const currentStatPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+  const currentPartnerPlanLimit = currentPlanType === 'pro' ? 20 : 10;
+
   const {
     data: pageData,
     exists,
@@ -120,6 +126,7 @@ export default function AuthoritySectionPage() {
     errorMsg,
     deleteModal,
     updateNested,
+    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -130,33 +137,13 @@ export default function AuthoritySectionPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Hook para gerenciar stats_bento como lista dinâmica
-  const statsBentoList = useListState<StatBento>({
-    initialItems: pageData.authority_section.stats_bento,
-    defaultItem: {
-      id: '',
-      type: 'standard',
-      value: 0,
-      prefix: '',
-      suffix: '',
-      label: '',
-      theme: 'light'
-    },
-    validationFields: ['label', 'value'],
-    enableDragDrop: true
-  });
-
-  // Hook para gerenciar partners como lista dinâmica
-  const partnersList = useListState<Partner>({
-    initialItems: pageData.authority_section.infrastructure.partners,
-    defaultItem: {
-      id: '',
-      alt: '',
-      src: ''
-    },
-    validationFields: ['alt', 'src'],
-    enableDragDrop: true
-  });
+  // Estados para drag & drop
+  const [draggingStat, setDraggingStat] = useState<number | null>(null);
+  const [draggingPartner, setDraggingPartner] = useState<number | null>(null);
+  
+  // Referências para novos itens
+  const newStatRef = useRef<HTMLDivElement>(null);
+  const newPartnerRef = useRef<HTMLDivElement>(null);
 
   const [expandedSections, setExpandedSections] = useState({
     header: true,
@@ -171,51 +158,115 @@ export default function AuthoritySectionPage() {
     }));
   };
 
-  // Função para adicionar estatística
-  const handleAddStat = () => {
-    const success = statsBentoList.addItem();
+  // Funções para manipular a lista de stats
+  const addStat = () => {
+    const currentStats = [...pageData.authority_section.stats_bento];
     
-    if (success) {
-      // Gera ID automático
-      const lastIndex = statsBentoList.items.length - 1;
-      const newId = `stat_${Date.now()}_${lastIndex}`;
-      
-      statsBentoList.updateItem(lastIndex, { 
-        id: newId
+    if (currentStats.length >= currentStatPlanLimit) {
+      return false;
+    }
+    
+    const newStat: StatBento = {
+      id: `stat_${Date.now()}`,
+      type: 'standard',
+      value: 0,
+      prefix: '',
+      suffix: '',
+      label: '',
+      theme: 'light'
+    };
+    
+    updateNested('authority_section.stats_bento', [...currentStats, newStat]);
+    
+    // Scroll para o novo item
+    setTimeout(() => {
+      newStatRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
       });
-    } else {
-      console.warn(statsBentoList.validationError);
+    }, 100);
+    
+    return true;
+  };
+
+  const updateStat = (index: number, updates: Partial<StatBento>) => {
+    const currentStats = [...pageData.authority_section.stats_bento];
+    
+    if (index >= 0 && index < currentStats.length) {
+      currentStats[index] = { ...currentStats[index], ...updates };
+      updateNested('authority_section.stats_bento', currentStats);
     }
   };
 
-  // Função para adicionar parceiro
-  const handleAddPartner = () => {
-    const success = partnersList.addItem();
+  const removeStat = (index: number) => {
+    const currentStats = [...pageData.authority_section.stats_bento];
     
-    if (success) {
-      // Gera ID automático
-      const lastIndex = partnersList.items.length - 1;
-      const newId = `partner_${Date.now()}_${lastIndex}`;
-      
-      partnersList.updateItem(lastIndex, { 
-        id: newId
-      });
+    if (currentStats.length <= 1) {
+      // Mantém pelo menos um stat vazio
+      updateNested('authority_section.stats_bento', [{
+        id: `stat_${Date.now()}`,
+        type: 'standard',
+        value: 0,
+        prefix: '',
+        suffix: '',
+        label: '',
+        theme: 'light'
+      }]);
     } else {
-      console.warn(partnersList.validationError);
+      currentStats.splice(index, 1);
+      updateNested('authority_section.stats_bento', currentStats);
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  // Funções para manipular a lista de partners
+  const addPartner = () => {
+    const currentPartners = [...pageData.authority_section.infrastructure.partners];
     
-    // Atualiza os arrays no pageData antes de salvar
-    updateNested('authority_section.stats_bento', statsBentoList.items);
-    updateNested('authority_section.infrastructure.partners', partnersList.items);
+    if (currentPartners.length >= currentPartnerPlanLimit) {
+      return false;
+    }
     
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
+    const newPartner: Partner = {
+      id: `partner_${Date.now()}`,
+      alt: "",
+      src: ""
+    };
+    
+    updateNested('authority_section.infrastructure.partners', [...currentPartners, newPartner]);
+    
+    // Scroll para o novo item
+    setTimeout(() => {
+      newPartnerRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updatePartner = (index: number, updates: Partial<Partner>) => {
+    const currentPartners = [...pageData.authority_section.infrastructure.partners];
+    
+    if (index >= 0 && index < currentPartners.length) {
+      currentPartners[index] = { ...currentPartners[index], ...updates };
+      updateNested('authority_section.infrastructure.partners', currentPartners);
+    }
+  };
+
+  const removePartner = (index: number) => {
+    const currentPartners = [...pageData.authority_section.infrastructure.partners];
+    
+    if (currentPartners.length <= 1) {
+      // Mantém pelo menos um partner vazio
+      updateNested('authority_section.infrastructure.partners', [{
+        id: `partner_${Date.now()}`,
+        alt: "",
+        src: ""
+      }]);
+    } else {
+      currentPartners.splice(index, 1);
+      updateNested('authority_section.infrastructure.partners', currentPartners);
     }
   };
 
@@ -223,67 +274,99 @@ export default function AuthoritySectionPage() {
   const handleStatDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    statsBentoList.startDrag(index);
+    setDraggingStat(index);
   };
 
   const handleStatDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    statsBentoList.handleDragOver(index);
+    
+    if (draggingStat === null || draggingStat === index) return;
+    
+    const currentStats = [...pageData.authority_section.stats_bento];
+    const draggedStat = currentStats[draggingStat];
+    
+    // Remove o item arrastado
+    currentStats.splice(draggingStat, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingStat ? index : index;
+    currentStats.splice(newIndex, 0, draggedStat);
+    
+    updateNested('authority_section.stats_bento', currentStats);
+    setDraggingStat(index);
   };
 
   const handleStatDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    statsBentoList.endDrag();
+    setDraggingStat(null);
   };
 
   // Funções de drag & drop para partners
   const handlePartnerDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    partnersList.startDrag(index);
+    setDraggingPartner(index);
   };
 
   const handlePartnerDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    partnersList.handleDragOver(index);
+    
+    if (draggingPartner === null || draggingPartner === index) return;
+    
+    const currentPartners = [...pageData.authority_section.infrastructure.partners];
+    const draggedPartner = currentPartners[draggingPartner];
+    
+    // Remove o item arrastado
+    currentPartners.splice(draggingPartner, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingPartner ? index : index;
+    currentPartners.splice(newIndex, 0, draggedPartner);
+    
+    updateNested('authority_section.infrastructure.partners', currentPartners);
+    setDraggingPartner(index);
   };
 
   const handlePartnerDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    partnersList.endDrag();
+    setDraggingPartner(null);
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
+  const handleAddStat = () => {
+    const success = addStat();
+    if (!success) {
+      console.warn(`Limite do plano ${currentPlanType} atingido (${currentStatPlanLimit} estatísticas)`);
+    }
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  // Função para remover estatística
-  const handleRemoveStat = (index: number) => {
-    statsBentoList.removeItem(index);
-  };
-
-  // Função para remover parceiro
-  const handleRemovePartner = (index: number) => {
-    partnersList.removeItem(index);
+  const handleAddPartner = () => {
+    const success = addPartner();
+    if (!success) {
+      console.warn(`Limite do plano ${currentPlanType} atingido (${currentPartnerPlanLimit} parceiros)`);
+    }
   };
 
   // Função para lidar com upload de imagem do parceiro
   const handlePartnerImageUpload = (index: number, file: File | null) => {
+    const path = `authority_section.infrastructure.partners.${index}.src`;
+    
+    setFileState(path, file);
+    
     if (file) {
-      // Em uma implementação real, aqui você faria upload para um CDN/S3
       const objectUrl = URL.createObjectURL(file);
-      partnersList.updateItem(index, { src: objectUrl });
+      updatePartner(index, { src: objectUrl });
     } else {
-      partnersList.updateItem(index, { src: '' });
+      updatePartner(index, { src: '' });
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
     }
   };
 
@@ -307,6 +390,38 @@ export default function AuthoritySectionPage() {
     }
   };
 
+  // Cálculos de validação
+  const isStatValid = (stat: StatBento): boolean => {
+    return stat.label.trim() !== '' && stat.value !== undefined && stat.value !== null;
+  };
+
+  const isPartnerValid = (partner: Partner): boolean => {
+    return partner.alt.trim() !== '' && partner.src.trim() !== '';
+  };
+
+  const stats = pageData.authority_section.stats_bento;
+  const partners = pageData.authority_section.infrastructure.partners;
+  
+  const isStatLimitReached = stats.length >= currentStatPlanLimit;
+  const isPartnerLimitReached = partners.length >= currentPartnerPlanLimit;
+  
+  const canAddNewStat = !isStatLimitReached;
+  const canAddNewPartner = !isPartnerLimitReached;
+  
+  const completeStatCount = stats.filter(isStatValid).length;
+  const completePartnerCount = partners.filter(isPartnerValid).length;
+  
+  const totalStatCount = stats.length;
+  const totalPartnerCount = partners.length;
+  
+  const statValidationError = isStatLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentStatPlanLimit} estatísticas).`
+    : null;
+    
+  const partnerValidationError = isPartnerLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPartnerPlanLimit} parceiros).`
+    : null;
+
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
@@ -318,9 +433,9 @@ export default function AuthoritySectionPage() {
     if (pageData.authority_section.header.title_sub.trim()) completed++;
     if (pageData.authority_section.header.live_data_label.trim()) completed++;
 
-    // Stats Bento (lista dinâmica - cada stat tem 7 campos)
-    total += statsBentoList.items.length * 7;
-    statsBentoList.items.forEach(stat => {
+    // Stats Bento
+    total += stats.length * 7;
+    stats.forEach(stat => {
       if (stat.label.trim()) completed++;
       if (stat.value !== undefined && stat.value !== null) completed++;
       if (stat.type.trim()) completed++;
@@ -334,12 +449,11 @@ export default function AuthoritySectionPage() {
     total += 1;
     if (pageData.authority_section.infrastructure.label.trim()) completed++;
 
-    // Partners (lista dinâmica - cada partner tem 3 campos)
-    total += partnersList.items.length * 3;
-    partnersList.items.forEach(partner => {
+    // Partners
+    total += partners.length * 2; // alt e src
+    partners.forEach(partner => {
       if (partner.alt.trim()) completed++;
       if (partner.src.trim()) completed++;
-      // ID é automático
     });
 
     return { completed, total };
@@ -429,7 +543,7 @@ export default function AuthoritySectionPage() {
           </motion.div>
         </div>
 
-        {/* Seção Stats Bento - COM LISTA DINÂMICA */}
+        {/* Seção Stats Bento */}
         <div className="space-y-4">
           <SectionHeader
             title="Estatísticas (Bento Grid)"
@@ -455,12 +569,12 @@ export default function AuthoritySectionPage() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {statsBentoList.completeCount} de {statsBentoList.totalCount} completos
+                          {completeStatCount} de {totalStatCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {statsBentoList.currentPlanType === 'pro' ? '10' : '5'} itens
+                        Limite: {currentStatPlanLimit} estatísticas
                       </span>
                     </div>
                   </div>
@@ -469,12 +583,13 @@ export default function AuthoritySectionPage() {
                       type="button"
                       onClick={handleAddStat}
                       variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!statsBentoList.canAddNewItem}
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewStat}
                     >
-                      + Adicionar Estatística
+                      <Plus className="w-4 h-4" />
+                      Adicionar Estatística
                     </Button>
-                    {statsBentoList.isLimitReached && (
+                    {isStatLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -488,37 +603,34 @@ export default function AuthoritySectionPage() {
               </div>
 
               {/* Mensagem de erro */}
-              {statsBentoList.validationError && (
-                <div className={`p-3 rounded-lg ${statsBentoList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+              {statValidationError && (
+                <div className={`p-3 rounded-lg mb-4 ${isStatLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                   <div className="flex items-start gap-2">
-                    {statsBentoList.isLimitReached ? (
+                    {isStatLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${statsBentoList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {statsBentoList.validationError}
+                    <p className={`text-sm ${isStatLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {statValidationError}
                     </p>
                   </div>
                 </div>
               )}
 
               <div className="space-y-4">
-                {statsBentoList.filteredItems.map((stat, index) => {
+                {stats.map((stat, index) => {
                   const StatIcon = getStatTypeIcon(stat.type);
                   return (
                     <div 
-                      key={`stat-${stat.id || index}`}
-                      ref={index === statsBentoList.filteredItems.length - 1 ? statsBentoList.newItemRef : undefined}
+                      key={stat.id}
+                      ref={index === stats.length - 1 ? newStatRef : undefined}
                       draggable
                       onDragStart={(e) => handleStatDragStart(e, index)}
                       onDragOver={(e) => handleStatDragOver(e, index)}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
                       onDragEnd={handleStatDragEnd}
-                      onDrop={handleDrop}
                       className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                        statsBentoList.draggingItem === index 
+                        draggingStat === index 
                           ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                           : 'hover:border-[var(--color-primary)]/50'
                       }`}
@@ -560,7 +672,7 @@ export default function AuthoritySectionPage() {
                                   {stat.theme}
                                 </span>
                               </div>
-                              {stat.label && stat.value ? (
+                              {isStatValid(stat) ? (
                                 <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
                                   Completo
                                 </span>
@@ -580,7 +692,7 @@ export default function AuthoritySectionPage() {
                                     </label>
                                     <select
                                       value={stat.type}
-                                      onChange={(e) => statsBentoList.updateItem(index, { type: e.target.value as 'hero' | 'standard' | 'mini' })}
+                                      onChange={(e) => updateStat(index, { type: e.target.value as 'hero' | 'standard' | 'mini' })}
                                       className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
                                     >
                                       <option value="hero">Hero (Grande)</option>
@@ -593,7 +705,7 @@ export default function AuthoritySectionPage() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Tema</label>
                                     <select
                                       value={stat.theme}
-                                      onChange={(e) => statsBentoList.updateItem(index, { theme: e.target.value as 'dark' | 'light' | 'accent' })}
+                                      onChange={(e) => updateStat(index, { theme: e.target.value as 'dark' | 'light' | 'accent' })}
                                       className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
                                     >
                                       <option value="dark">Dark (Escuro)</option>
@@ -609,7 +721,7 @@ export default function AuthoritySectionPage() {
                                     <Input
                                       type="number"
                                       value={stat.value}
-                                      onChange={(e) => statsBentoList.updateItem(index, { value: parseFloat(e.target.value) || 0 })}
+                                      onChange={(e) => updateStat(index, { value: parseFloat(e.target.value) || 0 })}
                                       placeholder="Ex: 100"
                                       step="0.1"
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -621,7 +733,7 @@ export default function AuthoritySectionPage() {
                                       <label className="block text-sm font-medium text-[var(--color-secondary)]">Prefixo</label>
                                       <Input
                                         value={stat.prefix}
-                                        onChange={(e) => statsBentoList.updateItem(index, { prefix: e.target.value })}
+                                        onChange={(e) => updateStat(index, { prefix: e.target.value })}
                                         placeholder="Ex: +"
                                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                       />
@@ -631,7 +743,7 @@ export default function AuthoritySectionPage() {
                                       <label className="block text-sm font-medium text-[var(--color-secondary)]">Sufixo</label>
                                       <Input
                                         value={stat.suffix}
-                                        onChange={(e) => statsBentoList.updateItem(index, { suffix: e.target.value })}
+                                        onChange={(e) => updateStat(index, { suffix: e.target.value })}
                                         placeholder="Ex: M, k, x"
                                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                       />
@@ -644,7 +756,7 @@ export default function AuthoritySectionPage() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Label</label>
                                     <Input
                                       value={stat.label}
-                                      onChange={(e) => statsBentoList.updateItem(index, { label: e.target.value })}
+                                      onChange={(e) => updateStat(index, { label: e.target.value })}
                                       placeholder="Ex: GMV (Faturamento) Gerenciado"
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                     />
@@ -655,7 +767,7 @@ export default function AuthoritySectionPage() {
                                       <label className="block text-sm font-medium text-[var(--color-secondary)]">Badge</label>
                                       <Input
                                         value={stat.badge || ''}
-                                        onChange={(e) => statsBentoList.updateItem(index, { badge: e.target.value })}
+                                        onChange={(e) => updateStat(index, { badge: e.target.value })}
                                         placeholder="Ex: Recorde Anual"
                                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                       />
@@ -672,14 +784,13 @@ export default function AuthoritySectionPage() {
                                   </label>
                                   <IconSelector
                                     value={stat.icon || ''}
-                                    onChange={(value) => statsBentoList.updateItem(index, { icon: value })}
+                                    onChange={(value) => updateStat(index, { icon: value })}
                                     placeholder="solar:wad-of-money-bold-duotone"
                                   />
                                   <p className="text-xs text-[var(--color-secondary)]/50">
                                     Ícones recomendados para tipos hero e mini
                                   </p>
                                 </div>
-                                x
                               </div>
                             </div>
                           </div>
@@ -688,11 +799,12 @@ export default function AuthoritySectionPage() {
                         <div className="flex flex-col gap-2">
                           <Button
                             type="button"
-                            onClick={() => handleRemoveStat(index)}
+                            onClick={() => removeStat(index)}
                             variant="danger"
-                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                           >
                             <Trash2 className="w-4 h-4" />
+                            Remover
                           </Button>
                         </div>
                       </div>
@@ -746,12 +858,12 @@ export default function AuthoritySectionPage() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {partnersList.completeCount} de {partnersList.totalCount} completos
+                          {completePartnerCount} de {totalPartnerCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {partnersList.currentPlanType === 'pro' ? '20' : '10'} itens
+                        Limite: {currentPartnerPlanLimit} parceiros
                       </span>
                     </div>
                   </div>
@@ -760,12 +872,13 @@ export default function AuthoritySectionPage() {
                       type="button"
                       onClick={handleAddPartner}
                       variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!partnersList.canAddNewItem}
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewPartner}
                     >
-                      + Adicionar Parceiro
+                      <Plus className="w-4 h-4" />
+                      Adicionar Parceiro
                     </Button>
-                    {partnersList.isLimitReached && (
+                    {isPartnerLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -775,35 +888,32 @@ export default function AuthoritySectionPage() {
                 </div>
 
                 {/* Mensagem de erro */}
-                {partnersList.validationError && (
-                  <div className={`p-3 rounded-lg ${partnersList.isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                {partnerValidationError && (
+                  <div className={`p-3 rounded-lg mb-4 ${isPartnerLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                     <div className="flex items-start gap-2">
-                      {partnersList.isLimitReached ? (
+                      {isPartnerLimitReached ? (
                         <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                       ) : (
                         <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                       )}
-                      <p className={`text-sm ${partnersList.isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                        {partnersList.validationError}
+                      <p className={`text-sm ${isPartnerLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {partnerValidationError}
                       </p>
                     </div>
                   </div>
                 )}
 
                 <div className="space-y-4">
-                  {partnersList.filteredItems.map((partner, index) => (
+                  {partners.map((partner, index) => (
                     <div 
-                      key={`partner-${partner.id || index}`}
-                      ref={index === partnersList.filteredItems.length - 1 ? partnersList.newItemRef : undefined}
+                      key={partner.id}
+                      ref={index === partners.length - 1 ? newPartnerRef : undefined}
                       draggable
                       onDragStart={(e) => handlePartnerDragStart(e, index)}
                       onDragOver={(e) => handlePartnerDragOver(e, index)}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
                       onDragEnd={handlePartnerDragEnd}
-                      onDrop={handleDrop}
                       className={`p-4 border border-[var(--color-border)] rounded-lg space-y-4 transition-all duration-200 ${
-                        partnersList.draggingItem === index 
+                        draggingPartner === index 
                           ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
                           : 'hover:border-[var(--color-primary)]/50'
                       }`}
@@ -833,7 +943,7 @@ export default function AuthoritySectionPage() {
                               <h4 className="font-medium text-[var(--color-secondary)]">
                                 {partner.alt || "Parceiro sem nome"}
                               </h4>
-                              {partner.alt && partner.src ? (
+                              {isPartnerValid(partner) ? (
                                 <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
                                   Completo
                                 </span>
@@ -852,7 +962,7 @@ export default function AuthoritySectionPage() {
                                   </label>
                                   <Input
                                     value={partner.alt}
-                                    onChange={(e) => partnersList.updateItem(index, { alt: e.target.value })}
+                                    onChange={(e) => updatePartner(index, { alt: e.target.value })}
                                     placeholder="Ex: Mercado Livre"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
@@ -864,7 +974,7 @@ export default function AuthoritySectionPage() {
                                   </label>
                                   <Input
                                     value={partner.src}
-                                    onChange={(e) => partnersList.updateItem(index, { src: e.target.value })}
+                                    onChange={(e) => updatePartner(index, { src: e.target.value })}
                                     placeholder="https://exemplo.com/logo.svg"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
@@ -890,11 +1000,12 @@ export default function AuthoritySectionPage() {
                         <div className="flex flex-col gap-2">
                           <Button
                             type="button"
-                            onClick={() => handleRemovePartner(index)}
+                            onClick={() => removePartner(index)}
                             variant="danger"
-                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                           >
                             <Trash2 className="w-4 h-4" />
+                            Remover
                           </Button>
                         </div>
                       </div>
@@ -912,8 +1023,9 @@ export default function AuthoritySectionPage() {
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
+          completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Seção de Autoridade"
+          itemName="Seção de Métricas"
           icon={Trophy}
         />
       </form>
@@ -925,7 +1037,7 @@ export default function AuthoritySectionPage() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Configuração da Seção de Autoridade"
+        itemName="Configuração da Seção de Métricas"
       />
 
       <FeedbackMessages 
