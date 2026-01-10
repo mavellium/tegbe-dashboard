@@ -19,14 +19,17 @@ import {
   Trash2,
   Star,
   Building,
-  Tag,
+  Tag as TagIcon,
   TrendingUp,
   LucideIcon,
-  BriefcaseBusiness
+  BriefcaseBusiness,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import Image from "next/image";
 
@@ -128,14 +131,14 @@ const defaultTags = [
 const LogoPreview = ({ logoUrl, name }: { logoUrl: string, name: string }) => {
   if (!logoUrl || logoUrl.trim() === "") {
     return (
-      <div className="w-20 h-20 flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-zinc-300 dark:border-zinc-600">
-        <Building className="w-8 h-8 text-zinc-400" />
+      <div className="w-20 h-20 flex items-center justify-center bg-[var(--color-background-body)] rounded-lg border-2 border-[var(--color-border)]">
+        <Building className="w-8 h-8 text-[var(--color-secondary)]/50" />
       </div>
     );
   }
 
   return (
-    <div className="relative w-20 h-20 rounded-lg border-2 border-zinc-300 dark:border-zinc-600 overflow-hidden bg-white dark:bg-zinc-900">
+    <div className="relative w-20 h-20 rounded-lg border-2 border-[var(--color-border)] overflow-hidden bg-[var(--color-background-body)]">
       <Image
         src={logoUrl}
         alt={`Logo ${name}`}
@@ -148,8 +151,8 @@ const LogoPreview = ({ logoUrl, name }: { logoUrl: string, name: string }) => {
           const parent = target.parentElement;
           if (parent) {
             parent.innerHTML = `
-              <div class="w-full h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
-                <svg class="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="w-full h-full flex items-center justify-center bg-[var(--color-background-body)]">
+                <svg class="w-8 h-8 text-[var(--color-secondary)]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
               </div>
@@ -160,44 +163,6 @@ const LogoPreview = ({ logoUrl, name }: { logoUrl: string, name: string }) => {
     </div>
   );
 };
-
-// Componente SectionHeader
-interface SectionHeaderProps {
-  title: string;
-  section: "ecommerce" | "marketing";
-  icon: LucideIcon;
-  isExpanded: boolean;
-  onToggle: (section: "ecommerce" | "marketing") => void;
-}
-
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <button
-    type="button"
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-      <span className="text-xs px-2 py-1 bg-zinc-200 dark:bg-zinc-700 rounded">
-        {section === "ecommerce" ? "E-commerce" : "Marketing"}
-      </span>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </button>
-);
 
 // Componente de Tag Input
 interface TagInputProps {
@@ -227,20 +192,20 @@ const TagInput = ({ tags, onTagsChange, availableTags = defaultTags }: TagInputP
 
   return (
     <div className="space-y-2">
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label className="block text-sm font-medium text-[var(--color-secondary)]">
         Tags
       </label>
       <div className="flex flex-wrap gap-2 mb-2">
         {tags.map(tag => (
           <span
             key={tag}
-            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+            className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-[var(--color-primary)]/20 text-[var(--color-primary)]"
           >
             {tag}
             <button
               type="button"
               onClick={() => removeTag(tag)}
-              className="hover:text-blue-600 dark:hover:text-blue-400"
+              className="hover:text-[var(--color-primary)]/80"
             >
               <X className="w-3 h-3" />
             </button>
@@ -259,12 +224,13 @@ const TagInput = ({ tags, onTagsChange, availableTags = defaultTags }: TagInputP
             }}
             onFocus={() => setIsOpen(true)}
             placeholder="Digite uma tag ou selecione..."
-            className="flex-1"
+            className="flex-1 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
           />
           <Button
             type="button"
             onClick={() => addTag(input)}
             disabled={!input.trim()}
+            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
           >
             Adicionar
           </Button>
@@ -276,7 +242,7 @@ const TagInput = ({ tags, onTagsChange, availableTags = defaultTags }: TagInputP
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="absolute z-10 w-full mt-1 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-lg shadow-lg max-h-60 overflow-auto"
+              className="absolute z-10 w-full mt-1 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg shadow-lg max-h-60 overflow-auto"
             >
               {filteredTags.map(tag => (
                 <button
@@ -286,7 +252,7 @@ const TagInput = ({ tags, onTagsChange, availableTags = defaultTags }: TagInputP
                     addTag(tag);
                     setIsOpen(false);
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                  className="w-full text-left px-4 py-2 hover:bg-[var(--color-background-body)] transition-colors text-[var(--color-secondary)]"
                 >
                   {tag}
                 </button>
@@ -314,7 +280,13 @@ export default function SuccessCasesPage() {
     errorMsg,
     save,
     exists,
-    reload
+    reload,
+    deleteModal,
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
+    fileStates,
+    setFileState,
   } = useJsonManagement<SuccessCasesData>({
     apiPath: "/api/tegbe-institucional/json/company",
     defaultData: defaultSuccessCasesData,
@@ -325,12 +297,6 @@ export default function SuccessCasesPage() {
     marketing: true
   });
 
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
   const [expandedTestimonial, setExpandedTestimonial] = useState<{
     section: "ecommerce" | "marketing";
     index: number;
@@ -339,27 +305,38 @@ export default function SuccessCasesPage() {
   // Calcular campos completos
   const calculateCompleteCount = useCallback(() => {
     let count = 0;
+    let total = 0;
     
     // Verificar se cada seção tem badge e título
     const sections = ["ecommerce", "marketing"] as const;
     
     sections.forEach(section => {
       const sectionData = successCasesData[section];
-      if (
-        sectionData.badge.text.trim() !== "" &&
-        sectionData.title.part1.trim() !== "" &&
-        sectionData.title.part2.trim() !== ""
-      ) {
-        count++;
-      }
+      
+      // Badge
+      if (sectionData.badge.text.trim() !== "") count++;
+      if (sectionData.badge.icon.trim() !== "") count++;
+      total += 2;
+      
+      // Título
+      if (sectionData.title.part1.trim() !== "") count++;
+      if (sectionData.title.part2.trim() !== "") count++;
+      total += 2;
+      
+      // Testimonials
+      sectionData.testimonials.forEach(testimonial => {
+        if (testimonial.name.trim() !== "") count++;
+        if (testimonial.description.trim() !== "") count++;
+        if (testimonial.result.trim() !== "") count++;
+        total += 3;
+      });
     });
     
-    return count;
+    return { completed: count, total };
   }, [successCasesData]);
 
-  const completeCount = calculateCompleteCount();
-  const totalCount = 2; // ecommerce, marketing
-  const canAddNewItem = false;
+  const completion = calculateCompleteCount();
+  const canAddNewItem = true;
   const isLimitReached = false;
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -407,35 +384,14 @@ export default function SuccessCasesPage() {
     updateNested(`${section}.testimonials`, currentTestimonials);
     
     // Limpar arquivo se existir
-    setFiles(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [index]: null
-      }
-    }));
+    setFileState(`${section}.testimonials.${index}.logo`, null);
   };
 
-  const handleFileChange = (
-    section: "ecommerce" | "marketing", 
-    testimonialIndex: number, 
-    file: File | null
-  ) => {
-    setFiles(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [testimonialIndex]: file
-      }
-    }));
-  };
-
-  const getLogoUrl = (section: "ecommerce" | "marketing", testimonial: Testimonial): string => {
-    const testimonialIndex = successCasesData[section].testimonials.findIndex(t => t.id === testimonial.id);
-    
+  const getLogoUrl = (section: "ecommerce" | "marketing", testimonial: Testimonial, index: number): string => {
     // Primeiro verificar se há arquivo selecionado
-    if (files[section]?.[testimonialIndex]) {
-      return URL.createObjectURL(files[section][testimonialIndex]!);
+    const file = fileStates[`${section}.testimonials.${index}.logo`];
+    if (file instanceof File) {
+      return URL.createObjectURL(file);
     }
     
     // Verificar se há URL no estado
@@ -454,31 +410,8 @@ export default function SuccessCasesPage() {
   };
 
   const handleSubmit = async () => {
-    const fd = new FormData();
-
-    // Processar arquivos de ecommerce
-    Object.entries(files.ecommerce).forEach(([index, file]) => {
-      if (file) {
-        const testimonial = successCasesData.ecommerce.testimonials[parseInt(index)];
-        if (testimonial) {
-          fd.append(`file:ecommerce.testimonials.${index}.logo`, file);
-        }
-      }
-    });
-
-    // Processar arquivos de marketing
-    Object.entries(files.marketing).forEach(([index, file]) => {
-      if (file) {
-        const testimonial = successCasesData.marketing.testimonials[parseInt(index)];
-        if (testimonial) {
-          fd.append(`file:marketing.testimonials.${index}.logo`, file);
-        }
-      }
-    });
-
     await save();
     await reload();
-    setFiles({ ecommerce: {}, marketing: {} });
   };
 
   const handleSubmitWrapper = (e: React.FormEvent) => {
@@ -486,51 +419,24 @@ export default function SuccessCasesPage() {
     handleSubmit();
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS CASES DE SUCESSO"
-    });
-  };
-
-  const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/company", {
-      method: "DELETE",
-    });
-
-    setSuccessCasesData(defaultSuccessCasesData);
-    setFiles({ ecommerce: {}, marketing: {} });
-
-    closeDeleteModal();
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
-
   const renderTestimonialCard = (
     testimonial: Testimonial, 
     index: number, 
     section: "ecommerce" | "marketing"
   ) => {
-    const logoUrl = getLogoUrl(section, testimonial);
+    const logoUrl = getLogoUrl(section, testimonial, index);
     const isExpanded = expandedTestimonial?.section === section && expandedTestimonial?.index === index;
 
     return (
-      <Card key={testimonial.id} className="p-6">
+      <Card key={testimonial.id} className="p-6 bg-[var(--color-background)] border-[var(--color-border)]">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <LogoPreview logoUrl={logoUrl} name={testimonial.name} />
             <div>
-              <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">
+              <h4 className="font-semibold text-[var(--color-secondary)]">
                 {testimonial.name || "Novo Case"}
               </h4>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              <p className="text-sm text-[var(--color-secondary)]/70">
                 {testimonial.description || "Sem descrição"}
               </p>
             </div>
@@ -542,6 +448,7 @@ export default function SuccessCasesPage() {
               onClick={() => setExpandedTestimonial(
                 isExpanded ? null : { section, index }
               )}
+              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             >
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               {isExpanded ? "Recolher" : "Expandir"}
@@ -550,6 +457,7 @@ export default function SuccessCasesPage() {
               type="button"
               variant="danger"
               onClick={() => removeTestimonial(section, index)}
+              className="bg-red-600 hover:bg-red-700 text-white border-none"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -564,13 +472,13 @@ export default function SuccessCasesPage() {
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-[var(--color-border)]">
                 {/* Upload da Logo */}
                 <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                     Logo da Empresa
                   </label>
-                  <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-4">
+                  <div className="border-2 border-dashed border-[var(--color-border)] rounded-lg p-4">
                     <div className="flex flex-col items-center justify-center">
                       {logoUrl ? (
                         <>
@@ -578,7 +486,7 @@ export default function SuccessCasesPage() {
                             <LogoPreview logoUrl={logoUrl} name={testimonial.name} />
                           </div>
                           <div className="flex gap-2">
-                            <label className="cursor-pointer px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <label className="cursor-pointer px-3 py-1.5 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors">
                               <Upload className="w-4 h-4 inline mr-1" />
                               Trocar Logo
                               <input
@@ -587,17 +495,18 @@ export default function SuccessCasesPage() {
                                 className="hidden"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0] || null;
-                                  handleFileChange(section, index, file);
+                                  setFileState(`${section}.testimonials.${index}.logo`, file);
                                 }}
                               />
                             </label>
                             <Button
                               type="button"
                               onClick={() => {
-                                handleFileChange(section, index, null);
+                                setFileState(`${section}.testimonials.${index}.logo`, null);
                                 handleTestimonialChange(section, index, "logo", "");
                               }}
                               variant="danger"
+                              className="bg-red-600 hover:bg-red-700 text-white border-none"
                             >
                               Remover
                             </Button>
@@ -605,13 +514,13 @@ export default function SuccessCasesPage() {
                         </>
                       ) : (
                         <>
-                          <div className="w-12 h-12 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-3">
-                            <Building className="w-6 h-6 text-zinc-400" />
+                          <div className="w-12 h-12 bg-[var(--color-background-body)] rounded-full flex items-center justify-center mb-3">
+                            <Building className="w-6 h-6 text-[var(--color-secondary)]/50" />
                           </div>
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
+                          <p className="text-sm text-[var(--color-secondary)]/70 mb-3">
                             Adicione o logo da empresa
                           </p>
-                          <label className="cursor-pointer px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                          <label className="cursor-pointer px-3 py-1.5 text-sm bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primary)]/90 transition-colors">
                             <Upload className="w-4 h-4 inline mr-1" />
                             Selecionar Logo
                             <input
@@ -620,7 +529,7 @@ export default function SuccessCasesPage() {
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0] || null;
-                                handleFileChange(section, index, file);
+                                setFileState(`${section}.testimonials.${index}.logo`, file);
                               }}
                             />
                           </label>
@@ -633,7 +542,7 @@ export default function SuccessCasesPage() {
                 {/* Campos do Testimonial */}
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
                       Nome da Empresa
                     </label>
                     <Input
@@ -643,11 +552,12 @@ export default function SuccessCasesPage() {
                         handleTestimonialChange(section, index, "name", e.target.value)
                       }
                       placeholder="Ex: Decora Fest"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
                       Descrição
                     </label>
                     <Input
@@ -657,11 +567,12 @@ export default function SuccessCasesPage() {
                         handleTestimonialChange(section, index, "description", e.target.value)
                       }
                       placeholder="Ex: Loja de Decorações • Garça/SP"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
                       Resultado Alcançado
                     </label>
                     <Input
@@ -671,12 +582,13 @@ export default function SuccessCasesPage() {
                         handleTestimonialChange(section, index, "result", e.target.value)
                       }
                       placeholder="Ex: Aumento de 30% nas Vendas"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
 
                   {section === "marketing" && (
                     <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
                         Métrica Adicional (opcional)
                       </label>
                       <Input
@@ -686,6 +598,7 @@ export default function SuccessCasesPage() {
                           handleTestimonialChange(section, index, "metric", e.target.value)
                         }
                         placeholder="Ex: Em 3 meses de campanha"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                     </div>
                   )}
@@ -714,7 +627,7 @@ export default function SuccessCasesPage() {
         {/* Cabeçalho e Badge */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
               Texto do Badge
             </label>
             <Input
@@ -724,11 +637,12 @@ export default function SuccessCasesPage() {
                 handleSectionChange(section, "badge.text", e.target.value)
               }
               placeholder="Ex: Track Record"
+              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
               Ícone do Badge
             </label>
             <select
@@ -736,7 +650,7 @@ export default function SuccessCasesPage() {
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 handleSectionChange(section, "badge.icon", e.target.value)
               }
-              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
             >
               <option value="">Selecione um ícone...</option>
               {availableIcons.map((icon) => (
@@ -751,7 +665,7 @@ export default function SuccessCasesPage() {
         {/* Título */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
               Primeira Parte do Título
             </label>
             <Input
@@ -761,11 +675,12 @@ export default function SuccessCasesPage() {
                 handleSectionChange(section, "title.part1", e.target.value)
               }
               placeholder="Ex: Empresas que estão"
+              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
               Segunda Parte do Título
             </label>
             <Input
@@ -775,6 +690,7 @@ export default function SuccessCasesPage() {
                 handleSectionChange(section, "title.part2", e.target.value)
               }
               placeholder="Ex: vendendo conosco."
+              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
           </div>
         </div>
@@ -782,13 +698,21 @@ export default function SuccessCasesPage() {
         {/* Lista de Testimonials */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-              Cases de Sucesso ({sectionData.testimonials.length})
-            </h4>
+            <div>
+              <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+                Cases de Sucesso ({sectionData.testimonials.length})
+              </h4>
+              <div className="flex items-center gap-2 mt-1">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  {sectionData.testimonials.filter(t => t.name && t.description && t.result).length} de {sectionData.testimonials.length} completos
+                </span>
+              </div>
+            </div>
             <Button
               type="button"
               onClick={() => addTestimonial(section)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
             >
               <Plus className="w-4 h-4" />
               Adicionar Case
@@ -796,18 +720,18 @@ export default function SuccessCasesPage() {
           </div>
 
           {sectionData.testimonials.length === 0 ? (
-            <Card className="p-8 text-center">
-              <Users className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <Card className="p-8 text-center bg-[var(--color-background)]">
+              <Users className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
+              <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
                 Nenhum case de sucesso adicionado
               </h4>
-              <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+              <p className="text-[var(--color-secondary)]/70 mb-4">
                 Comece adicionando os primeiros cases de sucesso da área de {sectionLabel.toLowerCase()}
               </p>
               <Button
                 type="button"
                 onClick={() => addTestimonial(section)}
-                className="flex items-center gap-2 mx-auto"
+                className="flex items-center gap-2 mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
               >
                 <Plus className="w-4 h-4" />
                 Adicionar Primeiro Case
@@ -841,7 +765,7 @@ export default function SuccessCasesPage() {
             section="ecommerce"
             icon={ShoppingBag}
             isExpanded={expandedSections.ecommerce}
-            onToggle={toggleSection}
+            onToggle={() => toggleSection("ecommerce")}
           />
 
           <motion.div
@@ -849,7 +773,7 @@ export default function SuccessCasesPage() {
             animate={{ height: expandedSections.ecommerce ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 space-y-6">
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
               {renderSection("ecommerce")}
             </Card>
           </motion.div>
@@ -862,7 +786,7 @@ export default function SuccessCasesPage() {
             section="marketing"
             icon={Megaphone}
             isExpanded={expandedSections.marketing}
-            onToggle={toggleSection}
+            onToggle={() => toggleSection("marketing")}
           />
 
           <motion.div
@@ -870,7 +794,7 @@ export default function SuccessCasesPage() {
             animate={{ height: expandedSections.marketing ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 space-y-6">
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
               {renderSection("marketing")}
             </Card>
           </motion.div>
@@ -883,8 +807,8 @@ export default function SuccessCasesPage() {
           isAddDisabled={!canAddNewItem || isLimitReached}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completeCount}
-          totalCount={totalCount}
+          completeCount={completion.completed}
+          totalCount={completion.total}
           itemName="Seção"
           icon={Users}
         />
