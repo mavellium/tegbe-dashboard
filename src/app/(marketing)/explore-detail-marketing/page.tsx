@@ -1,22 +1,30 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState, useCallback, useId } from "react";
+import { useMemo, useState, useCallback, useId, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
-import { Settings, X, GripVertical, ArrowUpDown } from "lucide-react";
+import { 
+  Settings, 
+  GripVertical, 
+  ArrowUpDown, 
+  AlertCircle, 
+  CheckCircle2, 
+  Trash2,
+  XCircle,
+  Search,
+  Target
+} from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
-import { SearchSortBar } from "@/components/Manage/SearchSortBar";
-import { ItemHeader } from "@/components/Manage/ItemHeader";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
-import { ImageUpload } from "@/components/Manage/ImageUpload";
-import IconSelector from "@/components/IconSelector"; // Importar o IconSelector
-import Image from "next/image";
+import { ImageUpload } from "@/components/ImageUpload";
+import IconSelector from "@/components/IconSelector";
 import {
   DndContext,
   closestCenter,
@@ -34,7 +42,6 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import ClientOnly from "@/components/ClientOnly";
 
 interface ServiceItem {
   id?: string;
@@ -43,54 +50,6 @@ interface ServiceItem {
   file?: File | null;
   image?: string;
   icon: string;
-}
-
-const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string, alt?: string }) => {
-  const isBlobUrl = imageUrl.startsWith('blob:');
-  
-  if (isBlobUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={alt}
-        className="h-32 w-32 object-cover rounded-xl border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200"
-        onError={(e) => {
-          console.error('Erro ao carregar imagem:', imageUrl);
-          e.currentTarget.style.display = 'none';
-        }}
-      />
-    );
-  } else {
-    return (
-      <Image
-        src={imageUrl}
-        alt={alt}
-        width={128}
-        height={128}
-        className="h-32 w-32 object-cover rounded-xl border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200"
-        onError={(e) => {
-          console.error('Erro ao carregar imagem:', imageUrl);
-          e.currentTarget.style.display = 'none';
-        }}
-      />
-    );
-  }
-};
-
-interface SortableServiceItemProps {
-  service: ServiceItem;
-  index: number;
-  originalIndex: number;
-  isLastInOriginalList: boolean;
-  isLastAndEmpty: boolean;
-  showValidation: boolean;
-  serviceList: ServiceItem[];
-  handleChange: (index: number, field: keyof ServiceItem, value: any) => void;
-  handleFileChange: (index: number, file: File | null) => void;
-  openDeleteSingleModal: (index: number, title: string) => void;
-  setExpandedImage: (image: string | null) => void;
-  getImageUrl: (service: ServiceItem) => string;
-  setNewItemRef?: (node: HTMLDivElement | null) => void;
 }
 
 function SortableServiceItem({
@@ -104,10 +63,22 @@ function SortableServiceItem({
   handleChange,
   handleFileChange,
   openDeleteSingleModal,
-  setExpandedImage,
   getImageUrl,
   setNewItemRef,
-}: SortableServiceItemProps) {
+}: {
+  service: ServiceItem;
+  index: number;
+  originalIndex: number;
+  isLastInOriginalList: boolean;
+  isLastAndEmpty: boolean;
+  showValidation: boolean;
+  serviceList: ServiceItem[];
+  handleChange: (index: number, field: keyof ServiceItem, value: any) => void;
+  handleFileChange: (index: number, file: File | null) => void;
+  openDeleteSingleModal: (index: number, title: string) => void;
+  getImageUrl: (service: ServiceItem) => string;
+  setNewItemRef?: (node: HTMLDivElement | null) => void;
+}) {
   const stableId = useId();
   const sortableId = service.id || `service-${index}-${stableId}`;
 
@@ -130,7 +101,6 @@ function SortableServiceItem({
   const hasDescription = service.description.trim() !== "";
   const hasIcon = service.icon.trim() !== "";
   const hasImage = Boolean(service.image?.trim() !== "" || service.file);
-  const imageUrl = getImageUrl(service);
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -150,99 +120,118 @@ function SortableServiceItem({
       className={`relative ${isDragging ? 'z-50' : ''}`}
     >
       <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-        isLastInOriginalList && showValidation && !hasTitle ? 'ring-2 ring-red-500' : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''}`}>
-        <div className="p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-          <div className="flex items-start justify-between mb-4">
+        isLastInOriginalList && showValidation && (!hasTitle || !hasDescription || !hasIcon) 
+          ? 'ring-2 ring-[var(--color-danger)]' 
+          : ''
+      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-primary)]`}>
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="cursor-move text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="cursor-grab active:cursor-grabbing text-[var(--color-secondary)]/70 hover:text-[var(--color-primary)] transition-colors p-2 rounded-lg hover:bg-[var(--color-background)]/50"
                 {...attributes}
                 {...listeners}
               >
                 <GripVertical className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                <ArrowUpDown className="w-4 h-4" />
-                <span>Posição: {index + 1}</span>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]/70">
+                  <ArrowUpDown className="w-4 h-4" />
+                  <span>Posição: {index + 1}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {hasTitle ? (
+                    <h4 className="font-medium text-[var(--color-secondary)]">
+                      {service.title}
+                    </h4>
+                  ) : (
+                    <h4 className="font-medium text-[var(--color-secondary)]/50">
+                      Serviço sem título
+                    </h4>
+                  )}
+                  {hasTitle && hasDescription && hasIcon && hasImage ? (
+                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-300 rounded-full border border-[var(--color-success)]/30">
+                      Completo
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-red rounded-full border border-[var(--color-warning)]/30">
+                      Incompleto
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <ItemHeader
-                index={originalIndex}
-                fields={[
-                  { label: 'Título', hasValue: hasTitle },
-                  { label: 'Descrição', hasValue: hasDescription },
-                  { label: 'Ícone', hasValue: hasIcon },
-                  { label: 'Imagem', hasValue: hasImage }
-                ]}
-                showValidation={showValidation}
-                isLast={isLastInOriginalList}
-                onDelete={() => openDeleteSingleModal(originalIndex, service.title)}
-                showDelete={serviceList.length > 1}
-              />
-            </div>
+            
+            <Button
+              type="button"
+              onClick={() => openDeleteSingleModal(originalIndex, service.title)}
+              variant="danger"
+              className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
+              disabled={serviceList.length <= 1}
+            >
+              <Trash2 className="w-4 h-4" />
+              Remover
+            </Button>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4" />
                   Imagem do Serviço
                 </label>
-
                 <ImageUpload
-                  imageUrl={imageUrl}
-                  hasImage={hasImage}
-                  file={service.file || null}
+                  label="Imagem de Destaque"
+                  description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x400px."
+                  currentImage={service.image || ""}
+                  selectedFile={service.file || null}
                   onFileChange={(file) => handleFileChange(originalIndex, file)}
-                  onExpand={setExpandedImage}
-                  label="Imagem do Serviço"
-                  altText="Preview do serviço"
-                  imageInfo={hasImage && !service.file
-                    ? "Imagem atual do servidor. Selecione um novo arquivo para substituir."
-                    : "Formatos suportados: JPG, PNG, WEBP. Use imagens de alta qualidade (1920x1080 recomendado)."}
-                  customPreview={imageUrl ? <ImagePreviewComponent imageUrl={imageUrl} /> : undefined}
+                  aspectRatio="aspect-video"
+                  previewWidth={300}
+                  previewHeight={150}
                 />
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Título do Serviço
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Ex: Aquisição Cirúrgica"
-                  value={service.title}
-                  onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
-                  className="font-medium"
-                />
+            <div className="lg:col-span-2 space-y-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Título do Serviço
+                  </label>
+                  <Input
+                    type="text"
+                    value={service.title}
+                    onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
+                    placeholder="Ex: Aquisição Cirúrgica"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Ícone do Serviço
+                  </label>
+                  <IconSelector
+                    value={service.icon}
+                    onChange={(value) => handleChange(originalIndex, "icon", value)}
+                    label="Selecione um ícone para o serviço"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Ícone do Serviço
-                </label>
-                <IconSelector
-                  value={service.icon}
-                  onChange={(value) => handleChange(originalIndex, "icon", value)}
-                  label="Ícone do Serviço"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Descrição do Serviço
-                </label>
-                <textarea
-                  placeholder="Tráfego pago focado em ICPs (Perfis de Cliente Ideal). Ignoramos curiosos e atraímos decisores com Google e Meta Ads de alta intenção."
+              <div className="space-y-2">
+                <TextArea
+                  label="Descrição do Serviço"
+                  placeholder="Ex: Tráfego pago focado em ICPs (Perfis de Cliente Ideal). Ignoramos curiosos e atraímos decisores com Google e Meta Ads de alta intenção."
                   value={service.description}
-                  onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                    handleChange(originalIndex, "description", e.target.value)
+                  }
+                  rows={4}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
             </div>
@@ -268,7 +257,8 @@ export default function ServicesPage({
     image: "" 
   }), []);
 
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [localServices, setLocalServices] = useState<ServiceItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const apiBase = `/api/${subtype}/form`;
 
@@ -282,39 +272,33 @@ export default function ServicesPage({
     setSuccess,
     errorMsg,
     setErrorMsg,
-    search,
-    setSearch,
-    sortOrder,
-    setSortOrder,
     showValidation,
-    filteredItems: filteredServices,
     deleteModal,
-    newItemRef,
-    canAddNewItem,
-    completeCount,
-    isLimitReached,
     currentPlanLimit,
     currentPlanType,
-    addItem,
     openDeleteSingleModal,
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    clearFilters,
   } = useListManagement<ServiceItem>({
     type,
     apiPath: `${apiBase}/${type}`,
     defaultItem: defaultService,
-    validationFields: ["title", "description", "icon"]
+    validationFields: ["title", "description", "icon", "image"]
   });
 
-  const remainingSlots = Math.max(0, currentPlanLimit - serviceList.length);
+  // Sincroniza serviços locais
+  useEffect(() => {
+    setLocalServices(serviceList);
+  }, [serviceList]);
+
+  const newServiceRef = useRef<HTMLDivElement>(null);
 
   const setNewItemRef = useCallback((node: HTMLDivElement | null) => {
-    if (newItemRef && node) {
-      (newItemRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    if (node) {
+      newServiceRef.current = node;
     }
-  }, [newItemRef]);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -333,15 +317,16 @@ export default function ServicesPage({
     if (!over) return;
 
     if (active.id !== over.id) {
-      const oldIndex = serviceList.findIndex((item) => 
+      const oldIndex = localServices.findIndex((item) => 
         item.id === active.id || item.id?.includes(active.id as string)
       );
-      const newIndex = serviceList.findIndex((item) => 
+      const newIndex = localServices.findIndex((item) => 
         item.id === over.id || item.id?.includes(over.id as string)
       );
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newList = arrayMove(serviceList, oldIndex, newIndex);
+        const newList = arrayMove(localServices, oldIndex, newIndex);
+        setLocalServices(newList);
         setServiceList(newList);
       }
     }
@@ -355,12 +340,12 @@ export default function ServicesPage({
     setErrorMsg("");
 
     try {
-      const filteredList = serviceList.filter(
-        s => s.title.trim() && s.description.trim() && s.icon.trim()
+      const filteredList = localServices.filter(
+        service => service.title.trim() && service.description.trim() && service.icon.trim() && (service.image?.trim() || service.file)
       );
 
       if (!filteredList.length) {
-        setErrorMsg("Adicione ao menos um serviço completo.");
+        setErrorMsg("Adicione ao menos um serviço completo com título, descrição, ícone e imagem.");
         return;
       }
 
@@ -375,9 +360,9 @@ export default function ServicesPage({
         )
       );
 
-      filteredList.forEach((s, i) => {
-        if (s.file) {
-          fd.append(`file${i}`, s.file);
+      filteredList.forEach((service, i) => {
+        if (service.file) {
+          fd.append(`file${i}`, service.file);
         }
       });
 
@@ -390,7 +375,7 @@ export default function ServicesPage({
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Erro ao salvar");
+        throw new Error(err.error || "Erro ao salvar serviços");
       }
 
       const saved = await res.json();
@@ -401,6 +386,7 @@ export default function ServicesPage({
         file: null,
       }));
 
+      setLocalServices(normalized);
       setServiceList(normalized);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -413,14 +399,16 @@ export default function ServicesPage({
   };
 
   const handleChange = (index: number, field: keyof ServiceItem, value: any) => {
-    const newList = [...serviceList];
+    const newList = [...localServices];
     newList[index] = { ...newList[index], [field]: value };
+    setLocalServices(newList);
     setServiceList(newList);
   };
 
   const handleFileChange = (index: number, file: File | null) => {
-    const newList = [...serviceList];
+    const newList = [...localServices];
     newList[index] = { ...newList[index], file };
+    setLocalServices(newList);
     setServiceList(newList);
   };
 
@@ -442,25 +430,25 @@ export default function ServicesPage({
     if (!exists) return;
 
     const filteredList = list.filter(
-      s => s.title.trim() || s.description.trim() || s.icon.trim() || s.file || s.image
+      service => service.title.trim() || service.description.trim() || service.icon.trim() || service.file || service.image
     );
 
     const fd = new FormData();
     
     fd.append("id", exists.id);
     
-    filteredList.forEach((s, i) => {
-      fd.append(`values[${i}][title]`, s.title);
-      fd.append(`values[${i}][description]`, s.description);
-      fd.append(`values[${i}][icon]`, s.icon);
-      fd.append(`values[${i}][image]`, s.image || "");
+    filteredList.forEach((service, i) => {
+      fd.append(`values[${i}][title]`, service.title || "");
+      fd.append(`values[${i}][description]`, service.description || "");
+      fd.append(`values[${i}][icon]`, service.icon || "");
+      fd.append(`values[${i}][image]`, service.image || "");
       
-      if (s.file) {
-        fd.append(`file${i}`, s.file);
+      if (service.file) {
+        fd.append(`file${i}`, service.file);
       }
       
-      if (s.id) {
-        fd.append(`values[${i}][id]`, s.id);
+      if (service.id) {
+        fd.append(`values[${i}][id]`, service.id);
       }
     });
 
@@ -478,13 +466,83 @@ export default function ServicesPage({
     return updated;
   };
 
-  const handleSubmitWrapper = () => {
-    handleSubmit();
+  const handleAddService = () => {
+    if (localServices.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newItem: ServiceItem = {
+      title: '',
+      description: '',
+      icon: '',
+      file: null,
+      image: ''
+    };
+    
+    const updated = [...localServices, newItem];
+    setLocalServices(updated);
+    setServiceList(updated);
+    
+    setTimeout(() => {
+      newServiceRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
   };
 
+  const filteredServices = useMemo(() => {
+    let filtered = [...localServices];
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(service => 
+        service.title.toLowerCase().includes(term) ||
+        service.description.toLowerCase().includes(term) ||
+        service.icon.toLowerCase().includes(term)
+      );
+    }
+    
+    return filtered;
+  }, [localServices, searchTerm]);
+
+  const isServicesLimitReached = localServices.length >= currentPlanLimit;
+  const canAddNewService = !isServicesLimitReached;
+  const servicesCompleteCount = localServices.filter(service => 
+    service.title.trim() !== '' && 
+    service.description.trim() !== '' && 
+    service.icon.trim() !== '' &&
+    (service.image?.trim() !== '' || service.file)
+  ).length;
+  const servicesTotalCount = localServices.length;
+
+  const servicesValidationError = isServicesLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Cada serviço tem 4 campos (título, descrição, ícone, imagem)
+    total += localServices.length * 4;
+    localServices.forEach(service => {
+      if (service.title.trim()) completed++;
+      if (service.description.trim()) completed++;
+      if (service.icon.trim()) completed++;
+      if (service.image?.trim() || service.file) completed++;
+    });
+
+    return { completed, total };
+  };
+
+  const completion = calculateCompletion();
+
   const stableIds = useMemo(
-    () => serviceList.map((item, index) => item.id ?? `service-${index}`),
-    [serviceList]
+    () => localServices.map((item, index) => item.id ?? `service-${index}`),
+    [localServices]
   );
 
   return (
@@ -493,187 +551,139 @@ export default function ServicesPage({
       title="Serviços"
       description="Gerencie os serviços oferecidos pela sua empresa"
       exists={!!exists}
-      itemName="Serviço"
+      itemName="Serviços"
     >
-      <div className="mb-6 space-y-4">
-        <SearchSortBar
-          search={search}
-          setSearch={setSearch}
-          sortOrder={sortOrder}
-          setSortOrder={setSortOrder}
-          onClearFilters={clearFilters}
-          searchPlaceholder="Buscar serviços..."
-          total={serviceList.length}
-          showing={filteredServices.length}
-          searchActiveText="ⓘ Busca ativa - não é possível adicionar novo serviço"
-          currentPlanType={currentPlanType}
-          currentPlanLimit={currentPlanLimit}
-          remainingSlots={remainingSlots}
-          isLimitReached={isLimitReached}
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Cabeçalho de Controle */}
+        <Card className="p-6 bg-[var(--color-background)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                Gerenciamento de Serviços
+              </h3>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4 text-green-300" />
+                  <span className="text-sm text-[var(--color-secondary)]/70">
+                    {servicesCompleteCount} de {servicesTotalCount} completos
+                  </span>
+                </div>
+                <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                </span>
+              </div>
+            </div>
+          </div>
 
-      <div className="space-y-4 pb-32">
-        <form onSubmit={handleSubmit}>
+          {/* Barra de busca */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--color-secondary)]">
+              Buscar Serviços
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
+              <Input
+                type="text"
+                placeholder="Buscar serviços por título, descrição ou ícone..."
+                value={searchTerm}
+                onChange={(e: any) => setSearchTerm(e.target.value)}
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Mensagem de erro */}
+        {servicesValidationError && (
+          <div className={`p-3 rounded-lg ${isServicesLimitReached 
+            ? 'bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30' 
+            : 'bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30'}`}>
+            <div className="flex items-start gap-2">
+              {isServicesLimitReached ? (
+                <XCircle className="w-5 h-5 text-[var(--color-danger)] flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
+              )}
+              <p className={`text-sm ${isServicesLimitReached 
+                ? 'text-[var(--color-danger)]' 
+                : 'text-[var(--color-warning)]'}`}>
+                {servicesValidationError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Lista de Serviços */}
+        <div className="space-y-4">
           <AnimatePresence>
-            {search ? (
-              filteredServices.map((service: any) => {
-                const originalIndex = serviceList.findIndex(s => s.id === service.id);
-                const hasTitle = service.title.trim() !== "";
-                const hasDescription = service.description.trim() !== "";
-                const hasIcon = service.icon.trim() !== "";
-                const hasImage = Boolean(service.image?.trim() !== "" || service.file);
-                const isLastInOriginalList = originalIndex === serviceList.length - 1;
-                const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasDescription && !hasIcon;
-                const imageUrl = getImageUrl(service);
-
-                return (
-                  <div
-                    key={service.id || `service-${originalIndex}`}
-                    ref={isLastAndEmpty ? setNewItemRef : null}
-                  >
-                    <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-                      isLastInOriginalList && showValidation && !hasTitle ? 'ring-2 ring-red-500' : ''
-                    }`}>
-                      <div className="p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-                        <ItemHeader
-                          index={originalIndex}
-                          fields={[
-                            { label: 'Título', hasValue: hasTitle },
-                            { label: 'Descrição', hasValue: hasDescription },
-                            { label: 'Ícone', hasValue: hasIcon },
-                            { label: 'Imagem', hasValue: hasImage }
-                          ]}
-                          showValidation={showValidation}
-                          isLast={isLastInOriginalList}
-                          onDelete={() => openDeleteSingleModal(originalIndex, service.title)}
-                          showDelete={serviceList.length > 1}
-                        />
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Imagem do Serviço
-                              </label>
-
-                              <ImageUpload
-                                imageUrl={imageUrl}
-                                hasImage={hasImage}
-                                file={service.file || null}
-                                onFileChange={(file) => handleFileChange(originalIndex, file)}
-                                onExpand={setExpandedImage}
-                                label="Imagem do Serviço"
-                                altText="Preview do serviço"
-                                imageInfo={hasImage && !service.file
-                                  ? "Imagem atual do servidor. Selecione um novo arquivo para substituir."
-                                  : "Formatos suportados: JPG, PNG, WEBP. Use imagens de alta qualidade (1920x1080 recomendado)."}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Título do Serviço
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: Aquisição Cirúrgica"
-                                value={service.title}
-                                onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
-                                className="font-medium"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Ícone do Serviço
-                              </label>
-                              <IconSelector
-                                value={service.icon}
-                                onChange={(value) => handleChange(originalIndex, "icon", value)}
-                                label="Ícone do Serviço"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Descrição do Serviço
-                              </label>
-                              <textarea
-                                placeholder="Tráfego pago focado em ICPs (Perfis de Cliente Ideal). Ignoramos curiosos e atraímos decisores com Google e Meta Ads de alta intenção."
-                                value={service.description}
-                                onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
-                                rows={3}
-                                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                );
-              })
+            {filteredServices.length === 0 ? (
+              <Card className="p-8 bg-[var(--color-background)]">
+                <div className="text-center">
+                  <Settings className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                    Nenhum serviço encontrado
+                  </h3>
+                  <p className="text-sm text-[var(--color-secondary)]/70">
+                    {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro serviço usando o botão abaixo'}
+                  </p>
+                </div>
+              </Card>
             ) : (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <ClientOnly>
-                  <SortableContext
-                    items={stableIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {serviceList.map((service, index) => {
-                      const originalIndex = index;
-                      const hasTitle = service.title.trim() !== "";
-                      const hasDescription = service.description.trim() !== "";
-                      const hasIcon = service.icon.trim() !== "";
-                      const isLastInOriginalList = index === serviceList.length - 1;
-                      const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasDescription && !hasIcon;
+                <SortableContext
+                  items={stableIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {filteredServices.map((service, index) => {
+                    const originalIndex = localServices.findIndex(s => s.id === service.id) || index;
+                    const hasTitle = service.title.trim() !== "";
+                    const hasDescription = service.description.trim() !== "";
+                    const hasIcon = service.icon.trim() !== "";
+                    const hasImage = Boolean(service.image?.trim() !== "" || service.file);
+                    const isLastInOriginalList = originalIndex === localServices.length - 1;
+                    const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasDescription && !hasIcon && !hasImage;
 
-                      return (
-                        <SortableServiceItem
-                          key={stableIds[index]}
-                          service={service}
-                          index={index}
-                          originalIndex={originalIndex}
-                          isLastInOriginalList={isLastInOriginalList}
-                          isLastAndEmpty={isLastAndEmpty}
-                          showValidation={showValidation}
-                          serviceList={serviceList}
-                          handleChange={handleChange}
-                          handleFileChange={handleFileChange}
-                          openDeleteSingleModal={openDeleteSingleModal}
-                          setExpandedImage={setExpandedImage}
-                          getImageUrl={getImageUrl}
-                          setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
-                        />
-                      );
-                    })}
-                  </SortableContext>
-                </ClientOnly>
+                    return (
+                      <SortableServiceItem
+                        key={stableIds[index]}
+                        service={service}
+                        index={index}
+                        originalIndex={originalIndex}
+                        isLastInOriginalList={isLastInOriginalList}
+                        isLastAndEmpty={isLastAndEmpty}
+                        showValidation={showValidation}
+                        serviceList={localServices}
+                        handleChange={handleChange}
+                        handleFileChange={handleFileChange}
+                        openDeleteSingleModal={openDeleteSingleModal}
+                        getImageUrl={getImageUrl}
+                        setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
+                      />
+                    );
+                  })}
+                </SortableContext>
               </DndContext>
             )}
           </AnimatePresence>
-        </form>
-      </div>
+        </div>
 
-      <FixedActionBar
-        onDeleteAll={openDeleteAllModal}
-        onAddNew={() => addItem()}
-        onSubmit={handleSubmitWrapper}
-        isAddDisabled={!canAddNewItem || isLimitReached}
-        isSaving={loading}
-        exists={!!exists}
-        completeCount={completeCount}
-        totalCount={serviceList.length}
-        itemName="Serviço"
-        icon={Settings}
-      />
+        <FixedActionBar
+          onDeleteAll={openDeleteAllModal}
+          onSubmit={handleSubmit}
+          onAddNew={handleAddService}
+          isAddDisabled={!canAddNewService}
+          isSaving={loading}
+          exists={!!exists}
+          totalCount={completion.total}
+          itemName="Serviço"
+          icon={Settings}
+        />
+      </form>
 
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
@@ -681,57 +691,11 @@ export default function ServicesPage({
         onConfirm={() => confirmDelete(updateServices)}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={serviceList.length}
+        totalItems={localServices.length}
         itemName="Serviço"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />
-
-      <AnimatePresence>
-        {expandedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
-            onClick={() => setExpandedImage(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="relative max-w-4xl max-h-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                onClick={() => setExpandedImage(null)}
-                className="absolute -top-4 -right-4 !p-3 !rounded-full bg-red-500 hover:bg-red-600 z-10"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-              {expandedImage.startsWith('blob:') ? (
-                <img
-                  src={expandedImage}
-                  alt="Preview expandido"
-                  className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-                  onError={(e) => {
-                    console.error('Erro ao carregar imagem expandida:', expandedImage);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <Image
-                  src={expandedImage}
-                  alt="Preview expandido"
-                  width={800}
-                  height={600}
-                  className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-                />
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </ManageLayout>
   );
 }

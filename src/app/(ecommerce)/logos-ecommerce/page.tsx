@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   Image as ImageIcon, 
@@ -16,7 +17,9 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Trash2,
-  XCircle
+  XCircle,
+  Search,
+  Target
 } from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -119,9 +122,9 @@ function SortableLogoItem({
       className={`relative ${isDragging ? 'z-50' : ''}`}
     >
       <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-        isLastInOriginalList && showValidation && !hasName ? 'ring-2 ring-red-500' : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)]`}>
-        <div className="p-6 border-b border-[var(--color-border)]">
+        isLastInOriginalList && showValidation && !hasName ? 'ring-2 ring-[var(--color-danger)]' : ''
+      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-primary)]`}>
+        <div className="p-6">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
               <button
@@ -148,11 +151,11 @@ function SortableLogoItem({
                     </h4>
                   )}
                   {hasName && hasDescription && hasImage ? (
-                    <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-300 rounded-full border border-[var(--color-success)]/30">
                       Completo
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-red rounded-full border border-[var(--color-warning)]/30">
                       Incompleto
                     </span>
                   )}
@@ -164,7 +167,7 @@ function SortableLogoItem({
               type="button"
               onClick={() => openDeleteSingleModal(originalIndex, logo.name)}
               variant="danger"
-              className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+              className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
               disabled={logoList.length <= 1}
             >
               <Trash2 className="w-4 h-4" />
@@ -172,11 +175,12 @@ function SortableLogoItem({
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Logo
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  Imagem do Logo
                 </label>
                 <ImageUpload
                   label="Imagem do Logo"
@@ -191,7 +195,7 @@ function SortableLogoItem({
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className="lg:col-span-2 space-y-6">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Nome da Empresa/Marca
@@ -201,7 +205,7 @@ function SortableLogoItem({
                   placeholder="Ex: Google, Apple, Microsoft"
                   value={logo.name}
                   onChange={(e: any) => handleChange(originalIndex, "name", e.target.value)}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-medium"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
 
@@ -222,15 +226,15 @@ function SortableLogoItem({
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                  Descrição
-                </label>
-                <textarea
+                <TextArea
+                  label="Descrição"
                   placeholder="Descrição sobre a empresa, parceria ou contexto do logo"
                   value={logo.description}
-                  onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                    handleChange(originalIndex, "description", e.target.value)
+                  }
                   rows={3}
-                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
                 <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
                   Use para descrever a relação com a empresa ou informações adicionais
@@ -260,9 +264,7 @@ export default function LogosPage({
   }), []);
 
   const [localLogos, setLocalLogos] = useState<LogoItem[]>([]);
-  const [draggingLogo, setDraggingLogo] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const apiBase = `/api/${subtype}/form`;
 
@@ -278,13 +280,8 @@ export default function LogosPage({
     setErrorMsg,
     showValidation,
     deleteModal,
-    newItemRef,
-    canAddNewItem,
-    completeCount,
-    isLimitReached,
     currentPlanLimit,
     currentPlanType,
-    addItem,
     openDeleteSingleModal,
     openDeleteAllModal,
     closeDeleteModal,
@@ -293,7 +290,7 @@ export default function LogosPage({
     type,
     apiPath: `${apiBase}/${type}`,
     defaultItem: defaultLogo,
-    validationFields: ["name", "description"]
+    validationFields: ["name", "description", "image"]
   });
 
   // Sincroniza logos locais
@@ -301,7 +298,6 @@ export default function LogosPage({
     setLocalLogos(logoList);
   }, [logoList]);
 
-  const remainingSlots = Math.max(0, currentPlanLimit - localLogos.length);
   const newLogoRef = useRef<HTMLDivElement>(null);
 
   const setNewItemRef = useCallback((node: HTMLDivElement | null) => {
@@ -351,11 +347,11 @@ export default function LogosPage({
 
     try {
       const filteredList = localLogos.filter(
-        logo => logo.name.trim() && logo.description.trim()
+        logo => logo.name.trim() && logo.description.trim() && (logo.image?.trim() || logo.file)
       );
 
       if (!filteredList.length) {
-        setErrorMsg("Adicione ao menos um logo completo.");
+        setErrorMsg("Adicione ao menos um logo completo com nome, descrição e imagem.");
         return;
       }
 
@@ -385,7 +381,7 @@ export default function LogosPage({
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Erro ao salvar");
+        throw new Error(err.error || "Erro ao salvar logos");
       }
 
       const saved = await res.json();
@@ -515,14 +511,8 @@ export default function LogosPage({
       );
     }
     
-    if (sortOrder === "asc") {
-      filtered.sort((a, b) => a.name.localeCompare(b.name));
-    } else {
-      filtered.sort((a, b) => b.name.localeCompare(a.name));
-    }
-    
     return filtered;
-  }, [localLogos, searchTerm, sortOrder]);
+  }, [localLogos, searchTerm]);
 
   const isLogosLimitReached = localLogos.length >= currentPlanLimit;
   const canAddNewLogo = !isLogosLimitReached;
@@ -578,7 +568,7 @@ export default function LogosPage({
               </h3>
               <div className="flex items-center gap-2 mt-1">
                 <div className="flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <CheckCircle2 className="w-4 h-4 text-green-300" />
                   <span className="text-sm text-[var(--color-secondary)]/70">
                     {logosCompleteCount} de {logosTotalCount} completos
                   </span>
@@ -589,38 +579,21 @@ export default function LogosPage({
                 </span>
               </div>
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <Button
-                type="button"
-                onClick={handleAddLogo}
-                variant="primary"
-                className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
-                disabled={!canAddNewLogo}
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar Logo
-              </Button>
-              {isLogosLimitReached && (
-                <p className="text-xs text-red-500 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Limite do plano atingido
-                </p>
-              )}
-            </div>
           </div>
 
-          {/* Barra de busca e ordenação */}
-          <div className="w-full">
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                Buscar
-              </label>
+          {/* Barra de busca */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--color-secondary)]">
+              Buscar Logos
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
               <Input
                 type="text"
                 placeholder="Buscar logos por nome, descrição ou categoria..."
                 value={searchTerm}
                 onChange={(e: any) => setSearchTerm(e.target.value)}
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
               />
             </div>
           </div>
@@ -628,14 +601,18 @@ export default function LogosPage({
 
         {/* Mensagem de erro */}
         {logosValidationError && (
-          <div className={`p-3 rounded-lg ${isLogosLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+          <div className={`p-3 rounded-lg ${isLogosLimitReached 
+            ? 'bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30' 
+            : 'bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30'}`}>
             <div className="flex items-start gap-2">
               {isLogosLimitReached ? (
-                <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <XCircle className="w-5 h-5 text-[var(--color-danger)] flex-shrink-0 mt-0.5" />
               ) : (
-                <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
               )}
-              <p className={`text-sm ${isLogosLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+              <p className={`text-sm ${isLogosLimitReached 
+                ? 'text-[var(--color-danger)]' 
+                : 'text-[var(--color-warning)]'}`}>
                 {logosValidationError}
               </p>
             </div>
@@ -653,7 +630,7 @@ export default function LogosPage({
                     Nenhum logo encontrado
                   </h3>
                   <p className="text-sm text-[var(--color-secondary)]/70">
-                    {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro logo usando o botão acima'}
+                    {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro logo usando o botão abaixo'}
                   </p>
                 </div>
               </Card>
@@ -671,8 +648,9 @@ export default function LogosPage({
                     const originalIndex = localLogos.findIndex(l => l.id === logo.id) || index;
                     const hasName = logo.name.trim() !== "";
                     const hasDescription = logo.description.trim() !== "";
+                    const hasImage = Boolean(logo.image?.trim() !== "" || logo.file);
                     const isLastInOriginalList = originalIndex === localLogos.length - 1;
-                    const isLastAndEmpty = isLastInOriginalList && !hasName && !hasDescription;
+                    const isLastAndEmpty = isLastInOriginalList && !hasName && !hasDescription && !hasImage;
 
                     return (
                       <SortableLogoItem
@@ -701,11 +679,12 @@ export default function LogosPage({
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
-          isAddDisabled={false}
+          onAddNew={handleAddLogo}
+          isAddDisabled={!canAddNewLogo}
           isSaving={loading}
           exists={!!exists}
           totalCount={completion.total}
-          itemName="Logos"
+          itemName="Logo"
           icon={ImageIcon}
         />
       </form>

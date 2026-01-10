@@ -6,13 +6,18 @@ import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
+import { Button } from "@/components/Button";
 import { 
   Type, 
   Tag, 
   Zap, 
   ChevronDown, 
   ChevronUp, 
-  LucideIcon
+  LucideIcon,
+  CheckCircle2,
+  AlertCircle,
+  XCircle
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -124,10 +129,10 @@ const exampleData = {
 
 const expandedSectionsDefault = {
   badge: true,
-  title: true,
-  subtitle: true,
-  cta: true,
-  ctaSubtitle: true
+  title: false,
+  subtitle: false,
+  cta: false,
+  ctaSubtitle: false
 };
 
 // Componente SectionHeader
@@ -149,18 +154,18 @@ const SectionHeader = ({
   <button
     type="button"
     onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+    className="w-full flex items-center justify-between p-4 bg-[var(--color-background)] rounded-lg hover:bg-[var(--color-background-body)] transition-colors"
   >
     <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+      <Icon className="w-5 h-5 text-[var(--color-secondary)]" />
+      <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
         {title}
       </h3>
     </div>
     {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+      <ChevronUp className="w-5 h-5 text-[var(--color-secondary)]" />
     ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+      <ChevronDown className="w-5 h-5 text-[var(--color-secondary)]" />
     )}
   </button>
 );
@@ -177,15 +182,54 @@ const ThemeTab = ({ themeKey, label, isActive, onClick }: ThemeTabProps) => (
   <button
     type="button"
     onClick={() => onClick(themeKey)}
-    className={`px-4 py-2 font-medium rounded-lg transition-colors ${
+    className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 ${
       isActive
-        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-        : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+        ? "bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20"
+        : "bg-[var(--color-background-body)] text-[var(--color-secondary)] hover:bg-[var(--color-background)]"
     }`}
   >
     {label}
   </button>
 );
+
+// Componente FieldPreview
+interface FieldPreviewProps {
+  label: string;
+  value: string;
+  placeholder?: string;
+  type?: "text" | "textarea";
+}
+
+const FieldPreview = ({ label, value, placeholder, type = "text" }: FieldPreviewProps) => {
+  const displayValue = value || placeholder;
+  
+  if (!displayValue) return null;
+
+  return (
+    <div className="space-y-2">
+      <span className="text-sm font-medium text-[var(--color-secondary)]">{label}</span>
+      <div className="p-3 bg-[var(--color-background-body)] rounded-lg">
+        <p className="text-[var(--color-secondary)] break-words">
+          {type === "textarea" ? (
+            displayValue.split('\n').map((line, i) => (
+              <span key={i}>
+                {line}
+                {i < displayValue.split('\n').length - 1 && <br />}
+              </span>
+            ))
+          ) : (
+            displayValue
+          )}
+        </p>
+        {!value && (
+          <p className="text-xs text-[var(--color-secondary)]/70 mt-1 italic">
+            Valor de exemplo
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Helper para obter valores de exemplo com type safety
 const getExampleValue = (theme: "ecommerce" | "marketing", path: string): string => {
@@ -382,22 +426,28 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.badge ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Texto do Badge
-              </label>
-              <Input
-                type="text"
-                placeholder={getExampleValue(activeTheme, 'badge.text')}
-                value={badgeData.text || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleThemeChange('badge.text', e.target.value)
-                }
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Texto curto e impactante que aparece no topo da seção
-              </p>
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Texto do Badge
+                </label>
+                <Input
+                  type="text"
+                  placeholder={getExampleValue(activeTheme, 'badge.text')}
+                  value={badgeData.text || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleThemeChange('badge.text', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                  <p className="text-xs text-[var(--color-secondary)]">
+                    Texto curto e impactante que aparece no topo da seção
+                  </p>
+                </div>
+              </div>
             </div>
           </Card>
         </motion.div>
@@ -423,9 +473,9 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.title ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 space-y-6">
+          <Card className="p-6 bg-[var(--color-background)] space-y-6">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Primeira Parte do Título
               </label>
               <Input
@@ -435,14 +485,18 @@ export default function HeroTextsPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                   handleThemeChange('title.part1', e.target.value)
                 }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
-              <p className="text-xs text-zinc-500 mt-1">
-                Texto antes do destaque
-              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                <p className="text-xs text-[var(--color-secondary)]">
+                  Texto antes do destaque
+                </p>
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Segunda Parte do Título (Destaque)
               </label>
               <Input
@@ -452,45 +506,61 @@ export default function HeroTextsPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                   handleThemeChange('title.part2', e.target.value)
                 }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
-              <p className="text-xs text-zinc-500 mt-1">
-                Parte destacada do título
-              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                <p className="text-xs text-[var(--color-secondary)]">
+                  Parte destacada do título
+                </p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Texto em Destaque (Highlight)
-              </label>
-              <Input
-                type="text"
-                placeholder={getExampleValue(activeTheme, 'title.highlight') || ""}
-                value={titleData.highlight || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleThemeChange('title.highlight', e.target.value)
-                }
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Texto que aparece com destaque especial (E-commerce)
-              </p>
-            </div>
+            {activeTheme === "ecommerce" && (
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Texto em Destaque (Highlight)
+                </label>
+                <Input
+                  type="text"
+                  placeholder={getExampleValue(activeTheme, 'title.highlight') || ""}
+                  value={titleData.highlight || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleThemeChange('title.highlight', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                  <p className="text-xs text-[var(--color-secondary)]">
+                    Texto que aparece com destaque especial
+                  </p>
+                </div>
+              </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Texto com Gradiente
-              </label>
-              <Input
-                type="text"
-                placeholder={getExampleValue(activeTheme, 'title.gradient') || ""}
-                value={titleData.gradient || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleThemeChange('title.gradient', e.target.value)
-                }
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Texto que aparece com efeito gradiente (Marketing)
-              </p>
-            </div>
+            {activeTheme === "marketing" && (
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Texto com Gradiente
+                </label>
+                <Input
+                  type="text"
+                  placeholder={getExampleValue(activeTheme, 'title.gradient') || ""}
+                  value={titleData.gradient || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleThemeChange('title.gradient', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <div className="flex items-center gap-2 mt-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                  <p className="text-xs text-[var(--color-secondary)]">
+                    Texto que aparece com efeito gradiente
+                  </p>
+                </div>
+              </div>
+            )}
           </Card>
         </motion.div>
       </div>
@@ -515,27 +585,30 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.subtitle ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 space-y-6">
+          <Card className="p-6 bg-[var(--color-background)] space-y-6">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Texto do Subtítulo
               </label>
-              <textarea
+              <TextArea
                 placeholder={getExampleValue(activeTheme, 'subtitle.text')}
                 value={subtitleData.text || ""}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
                   handleThemeChange('subtitle.text', e.target.value)
                 }
                 rows={3}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
-              <p className="text-xs text-zinc-500 mt-1">
-                Texto principal do subtítulo
-              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                <p className="text-xs text-[var(--color-secondary)]">
+                  Texto principal do subtítulo
+                </p>
+              </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Texto em Destaque (Highlight)
               </label>
               <Input
@@ -545,45 +618,61 @@ export default function HeroTextsPage() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                   handleThemeChange('subtitle.highlight', e.target.value)
                 }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
-              <p className="text-xs text-zinc-500 mt-1">
-                Palavras ou frase em destaque
-              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                <p className="text-xs text-[var(--color-secondary)]">
+                  Palavras ou frase em destaque
+                </p>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Texto Forte 1
-              </label>
-              <Input
-                type="text"
-                placeholder={getExampleValue(activeTheme, 'subtitle.strong1') || ""}
-                value={subtitleData.strong1 || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleThemeChange('subtitle.strong1', e.target.value)
-                }
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Primeira parte em negrito (Marketing)
-              </p>
-            </div>
+            {activeTheme === "marketing" && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Texto Forte 1
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder={getExampleValue(activeTheme, 'subtitle.strong1') || ""}
+                    value={subtitleData.strong1 || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('subtitle.strong1', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                    <p className="text-xs text-[var(--color-secondary)]">
+                      Primeira parte em negrito
+                    </p>
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Texto Forte 2
-              </label>
-              <Input
-                type="text"
-                placeholder={getExampleValue(activeTheme, 'subtitle.strong2') || ""}
-                value={subtitleData.strong2 || ""}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                  handleThemeChange('subtitle.strong2', e.target.value)
-                }
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Segunda parte em negrito (Marketing)
-              </p>
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Texto Forte 2
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder={getExampleValue(activeTheme, 'subtitle.strong2') || ""}
+                    value={subtitleData.strong2 || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('subtitle.strong2', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <div className="flex items-center gap-2 mt-2">
+                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                    <p className="text-xs text-[var(--color-secondary)]">
+                      Segunda parte em negrito
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </Card>
         </motion.div>
       </div>
@@ -608,18 +697,26 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.cta ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
+          <Card className="p-6 bg-[var(--color-background)]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <IconSelector
-                  value={ctaData.icon || ""}
-                  onChange={(value) => handleThemeChange('cta.icon', value)}
-                  label="Ícone do Botão"
-                />
+                <div className="space-y-2">
+                  <IconSelector
+                    value={ctaData.icon || ""}
+                    onChange={(value) => handleThemeChange('cta.icon', value)}
+                    label="Ícone do Botão"
+                  />
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                    <p className="text-xs text-[var(--color-secondary)]">
+                      Selecione um ícone para o botão principal
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                   Texto do Botão
                 </label>
                 <Input
@@ -629,11 +726,12 @@ export default function HeroTextsPage() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('cta.text', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                   Link (URL)
                 </label>
                 <Input
@@ -643,10 +741,14 @@ export default function HeroTextsPage() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('cta.href', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
-                <p className="text-xs text-zinc-500 mt-1">
-                  Use # para âncora ou URL completa
-                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                  <p className="text-xs text-[var(--color-secondary)]">
+                    Use # para âncora ou URL completa
+                  </p>
+                </div>
               </div>
             </div>
           </Card>
@@ -673,9 +775,9 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.ctaSubtitle ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6">
+          <Card className="p-6 bg-[var(--color-background)]">
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Texto do Subtítulo do CTA
               </label>
               {activeTheme === "ecommerce" ? (
@@ -686,6 +788,7 @@ export default function HeroTextsPage() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('ctaSubtitle', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               ) : (
                 <Input
@@ -695,13 +798,17 @@ export default function HeroTextsPage() {
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
                     handleThemeChange('ctaSubtitle.text', e.target.value)
                   }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               )}
-              <p className="text-xs text-zinc-500 mt-1">
-                {activeTheme === "ecommerce" 
-                  ? "Texto abaixo do botão principal (E-commerce)" 
-                  : "Texto abaixo do botão principal (Marketing)"}
-              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                <p className="text-xs text-[var(--color-secondary)]">
+                  {activeTheme === "ecommerce" 
+                    ? "Texto abaixo do botão principal" 
+                    : "Texto abaixo do botão principal"}
+                </p>
+              </div>
             </div>
           </Card>
         </motion.div>
@@ -718,21 +825,28 @@ export default function HeroTextsPage() {
       itemName="Textos Equipe"
     >
       <div className="space-y-6 pb-32">
-        {/* Tabs de Temas */}
-        <Card className="p-6">
-          <div className="flex flex-wrap gap-2">
-            <ThemeTab 
-              themeKey="ecommerce" 
-              label="E-commerce" 
-              isActive={activeTheme === "ecommerce"} 
-              onClick={setActiveTheme} 
-            />
-            <ThemeTab 
-              themeKey="marketing" 
-              label="Marketing" 
-              isActive={activeTheme === "marketing"} 
-              onClick={setActiveTheme} 
-            />
+        {/* Tabs de Temas e Preview */}
+        <Card className="p-6 bg-[var(--color-background)]">
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-4">
+                Selecione o Tema
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                <ThemeTab 
+                  themeKey="ecommerce" 
+                  label="E-commerce" 
+                  isActive={activeTheme === "ecommerce"} 
+                  onClick={setActiveTheme} 
+                />
+                <ThemeTab 
+                  themeKey="marketing" 
+                  label="Marketing" 
+                  isActive={activeTheme === "marketing"} 
+                  onClick={setActiveTheme} 
+                />
+              </div>
+            </div>
           </div>
         </Card>
 
@@ -744,7 +858,6 @@ export default function HeroTextsPage() {
           {renderCtaSection()}
           {renderCtaSubtitleSection()}
 
-          {/* Fixed Action Bar */}
           <FixedActionBar
             onDeleteAll={openDeleteAllModal}
             onSubmit={handleSubmitWrapper}
