@@ -201,7 +201,7 @@ function SortableCaseItem({
                 <div>
                   <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
                     Título do Case
-                    <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-[var(--color-success)]/10 text-[var(--color-success)] dark:bg-[var(--color-success)]/20 dark:text-[var(--color-success)] rounded">
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-[var(--color-success)]/10 text-white rounded">
                       <Bold className="w-3 h-3" />
                       Use **texto** para negrito
                     </span>

@@ -13,7 +13,7 @@ export const Button = ({
   
   const variants = {
     primary: "shadow-button hover:shadow-primary bg-[var(--color-primary)] hover:bg-[var(--color-secondary)] text-[var(--color-secondary)] hover:text-[var(--color-primary)] border border-[var(--color-primary)]",
-    secondary: "bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white",
+    secondary: "bg-zinc-800 hover:bg-zinc-700 text-white",
     danger: "bg-red-500 hover:bg-red-600 text-white"
   };
 

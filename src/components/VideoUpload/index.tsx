@@ -164,19 +164,19 @@ export const VideoUpload = ({
   return (
     <>
       <div className="space-y-4">
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="block text-sm font-medium text-zinc-300">
           {label}
         </label>
         
         {description && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+          <p className="text-sm text-zinc-400 mb-2">
             {description}
           </p>
         )}
 
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <div className="p-3 bg-red-900/20 border border-red-800 rounded-lg">
+            <p className="text-sm text-red-400">{error}</p>
           </div>
         )}
 
@@ -185,7 +185,7 @@ export const VideoUpload = ({
           {videoUrl ? (
             <div className="relative group w-full">
               <div 
-                className={`relative ${aspectRatio} rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-black cursor-pointer`}
+                className={`relative ${aspectRatio} rounded-lg overflow-hidden border border-zinc-600 bg-black cursor-pointer`}
                 style={{ 
                   width: previewWidth ? `${previewWidth}px` : '100%',
                   maxWidth: '100%',
@@ -260,12 +260,12 @@ export const VideoUpload = ({
                 
                 {/* Overlay para play */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="bg-white/90 dark:bg-zinc-800/90 p-3 rounded-full">
-                    <Play className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                  <div className="bg-zinc-800/90 p-3 rounded-full">
+                    <Play className="w-6 h-6 text-zinc-300" />
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 text-center">
+              <p className="text-xs text-zinc-400 mt-1 text-center">
                 Clique para ampliar • {formatTime(duration)}
               </p>
             </div>
@@ -324,7 +324,7 @@ export const VideoUpload = ({
           
           {/* Informações técnicas */}
           <div className="mt-3 text-center w-full">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-zinc-400">
               Formatos: MP4, WebM, OGG • Tamanho máximo: {maxSizeMB}MB
             </p>
           </div>
@@ -333,11 +333,11 @@ export const VideoUpload = ({
           {videoUrl && (
             <div className="mt-4 space-y-2 w-full max-w-md">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">Volume</span>
+                <span className="text-sm text-zinc-400">Volume</span>
                 <button
                   type="button"
                   onClick={toggleMute}
-                  className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                  className="p-1 hover:bg-zinc-800 rounded"
                 >
                   {isMuted ? (
                     <VolumeX className="w-4 h-4 text-zinc-500" />
@@ -353,7 +353,7 @@ export const VideoUpload = ({
                 step="0.1"
                 value={volume}
                 onChange={handleVolumeChange}
-                className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500"
+                className="w-full h-2 bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500"
               />
             </div>
           )}

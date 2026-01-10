@@ -106,7 +106,7 @@ const PositionPreview = ({ value }: PositionPreviewProps) => {
       </div>
       <div className="absolute bottom-2 left-2 right-2">
         <div className="text-center">
-          <p className="text-xs font-medium text-[var(--color-secondary)] bg-white/80 dark:bg-black/80 px-2 py-1 rounded inline-block">
+          <p className="text-xs font-medium text-[var(--color-secondary)] bg-black/80 px-2 py-1 rounded inline-block">
             {value || 'object-center'}
           </p>
         </div>

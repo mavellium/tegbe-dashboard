@@ -29,7 +29,7 @@ export const Switch: React.FC<SwitchProps> = ({
       onClick={handleToggle}
       className={`
         relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-        ${checked ? 'bg-blue-500' : 'bg-zinc-300 dark:bg-zinc-700'}
+        ${checked ? 'bg-blue-500' : 'bg-zinc-700'}
         ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
         ${className}

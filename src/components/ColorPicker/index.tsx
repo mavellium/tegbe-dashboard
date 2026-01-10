@@ -137,9 +137,9 @@ export default function ColorPicker({ color, onChange }: ColorPickerProps) {
         ref={buttonRef}
         type="button"
         onClick={togglePicker}
-        className="p-2 rounded-lg border border-zinc-300 dark:border-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-2"
+        className="p-2 rounded-lg border border-zinc-600 hover:bg-zinc-800 transition-colors flex items-center gap-2"
       >
-        <Palette className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+        <Palette className="w-4 h-4 text-zinc-300" />
         <div className="flex flex-col items-start">
           <div
             className="w-8 h-4 rounded border"
@@ -157,7 +157,7 @@ export default function ColorPicker({ color, onChange }: ColorPickerProps) {
 
           <div
             ref={pickerRef}
-            className="fixed z-50 p-4 bg-white dark:bg-zinc-800 border rounded-lg shadow-lg w-68 space-y-4"
+            className="fixed z-50 p-4 bg-zinc-800 border rounded-lg shadow-lg w-68 space-y-4"
           >
             <input
               type="color"
@@ -171,7 +171,7 @@ export default function ColorPicker({ color, onChange }: ColorPickerProps) {
               value={inputColor}
               onChange={handleInputChange}
               onBlur={handleInputBlur}
-              className="w-full px-3 py-2 border rounded font-mono"
+              className="w-full px-3 py-2 border rounded font-mono bg-zinc-700 text-white"
             />
 
             <div className="grid grid-cols-8 gap-1">
@@ -194,7 +194,7 @@ export default function ColorPicker({ color, onChange }: ColorPickerProps) {
 
             <button
               onClick={() => setShowPicker(false)}
-              className="w-full py-2 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded"
+              className="w-full py-2 text-sm hover:bg-zinc-700 rounded text-white"
             >
               Fechar
             </button>

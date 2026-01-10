@@ -17,7 +17,7 @@ export const ColorPropertyInput = ({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="text-sm font-medium text-zinc-300">
           {label}
         </label>
       </div>
@@ -39,7 +39,7 @@ export const ColorPropertyInput = ({
           onChange={onChange}
         />
         <div 
-          className="w-10 h-10 rounded-lg border border-zinc-300 dark:border-zinc-600"
+          className="w-10 h-10 rounded-lg border border-zinc-600"
           style={{ backgroundColor: value }}
         />
       </div>

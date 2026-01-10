@@ -33,7 +33,7 @@ export const FeaturesEditor = ({ features, onChange }: FeaturesEditorProps) => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+        <h4 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
           <Check className="w-5 h-5" />
           Benefícios ({features.length})
         </h4>
@@ -50,10 +50,10 @@ export const FeaturesEditor = ({ features, onChange }: FeaturesEditorProps) => {
       {features.length === 0 ? (
         <Card className="p-8 text-center">
           <Check className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
-          <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <h4 className="text-lg font-medium text-zinc-300 mb-2">
             Nenhum benefício adicionado
           </h4>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+          <p className="text-zinc-400 mb-4">
             Adicione os benefícios desta solução
           </p>
           <Button

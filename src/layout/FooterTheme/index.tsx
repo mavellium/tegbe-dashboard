@@ -503,7 +503,7 @@ export const FooterPageComponent: React.FC = () => {
             <Card className="p-6">
               <div className="space-y-8">
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
                     <Building className="w-5 h-5" />
                     Logos
                   </h3>
@@ -532,7 +532,7 @@ export const FooterPageComponent: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
                     <FileText className="w-5 h-5" />
                     Dados da Empresa
                   </h3>
@@ -568,7 +568,7 @@ export const FooterPageComponent: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
                     <Globe className="w-5 h-5" />
                     Redes Sociais
                   </h3>
@@ -628,17 +628,17 @@ export const FooterPageComponent: React.FC = () => {
             <Card className="p-6">
               <div className="space-y-6">
                 <div className="mb-4">
-                  <h4 className="text-md font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+                  <h4 className="text-md font-semibold text-zinc-200 mb-2">
                     Menu de Navegação do Footer
                   </h4>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-sm text-zinc-400">
                     Configure os links do menu de navegação no rodapé.
                   </p>
                 </div>
 
                 <div className="space-y-4">
                   {footerData.navigation.map((nav, index) => (
-                    <div key={index} className="flex gap-4 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                    <div key={index} className="flex gap-4 p-4 bg-zinc-900 rounded-lg">
                       <div className="flex-1 space-y-3">
                         <Input
                           label="Nome do Link"
@@ -666,7 +666,7 @@ export const FooterPageComponent: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleAddNav}
-                    className="w-full py-3 border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg text-zinc-600 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors"
+                    className="w-full py-3 border-2 border-dashed border-zinc-700 rounded-lg text-zinc-400 hover:border-zinc-600 transition-colors"
                   >
                     + Adicionar Novo Link de Navegação
                   </button>
@@ -693,16 +693,16 @@ export const FooterPageComponent: React.FC = () => {
             <Card className="p-6">
               <div className="space-y-8">
                 <div className="mb-4">
-                  <h4 className="text-md font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+                  <h4 className="text-md font-semibold text-zinc-200 mb-2">
                     Configuração do Conteúdo
                   </h4>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-sm text-zinc-400">
                     Todas as configurações serão aplicadas automaticamente a todas as páginas (E-commerce, Marketing, Sobre, Cursos).
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
                     <FileText className="w-5 h-5" />
                     Badge e Estatísticas
                   </h3>
@@ -735,7 +735,7 @@ export const FooterPageComponent: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-3">
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      <label className="block text-sm font-medium text-zinc-300">
                         Estatística 1
                       </label>
                       <Input
@@ -753,7 +753,7 @@ export const FooterPageComponent: React.FC = () => {
                     </div>
 
                     <div className="space-y-3">
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      <label className="block text-sm font-medium text-zinc-300">
                         Estatística 2
                       </label>
                       <Input
@@ -773,7 +773,7 @@ export const FooterPageComponent: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
                     <LinkIcon className="w-5 h-5" />
                     Coluna de Links
                   </h3>
@@ -787,7 +787,7 @@ export const FooterPageComponent: React.FC = () => {
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      <label className="block text-sm font-medium text-zinc-300">
                         Links da Coluna (aplicam a todas as páginas)
                       </label>
                       <button
@@ -821,7 +821,7 @@ export const FooterPageComponent: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-zinc-200 flex items-center gap-2">
                     <Mail className="w-5 h-5" />
                     Contato e Descrição
                   </h3>
@@ -864,10 +864,10 @@ export const FooterPageComponent: React.FC = () => {
             <Card className="p-6">
               <div className="space-y-6">
                 <div className="mb-4">
-                  <h4 className="text-md font-semibold text-zinc-800 dark:text-zinc-200 mb-2">
+                  <h4 className="text-md font-semibold text-zinc-200 mb-2">
                     Configuração das Cores
                   </h4>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                  <p className="text-sm text-zinc-400">
                     As cores configuradas aqui serão aplicadas automaticamente a todas as páginas (E-commerce, Marketing, Sobre, Cursos).
                   </p>
                 </div>

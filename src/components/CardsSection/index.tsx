@@ -67,10 +67,10 @@ export const CardsSection: React.FC<CardsSectionProps> = ({
       {cards.length === 0 ? (
         <div className="text-center py-12">
           <ShoppingBag className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-          <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+          <h4 className="text-lg font-medium text-zinc-300 mb-2">
             Nenhum card de solução adicionado
           </h4>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-6 max-w-md mx-auto">
+          <p className="text-zinc-400 mb-6 max-w-md mx-auto">
             Comece adicionando cards para mostrar suas soluções e casos de ROI
           </p>
           <Button

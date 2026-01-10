@@ -16,7 +16,7 @@ export const GeralSection: React.FC<GeralSectionProps> = ({ data, onChange }) =>
   return (
     <div className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+        <label className="block text-sm font-medium text-zinc-300 mb-2">
           ID da Seção
         </label>
         <Input
@@ -32,8 +32,8 @@ export const GeralSection: React.FC<GeralSectionProps> = ({ data, onChange }) =>
       {/* Título e Subtítulo */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Título
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Título 
           </label>
           <Input
             type="text"
@@ -56,7 +56,7 @@ export const GeralSection: React.FC<GeralSectionProps> = ({ data, onChange }) =>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+        <label className="block text-sm font-medium text-zinc-300 mb-2">
           Subtítulo
         </label>
         <Input

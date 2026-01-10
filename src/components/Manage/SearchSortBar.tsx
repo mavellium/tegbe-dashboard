@@ -77,12 +77,12 @@ export function SearchSortBar({
           </div>
           
           {isLimitReached ? (
-            <div className="flex items-center gap-1 px-3 py-1 bg-red-500/10 text-red-600 dark:text-red-400 rounded-full text-xs">
+            <div className="flex items-center gap-1 px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-xs">
               <AlertCircle className="w-3 h-3" />
               <span>Limite do plano {currentPlanType.toUpperCase()} atingido</span>
             </div>
           ) : (
-            <div className="text-xs text-blue-600 dark:text-blue-400">
+            <div className="text-xs text-blue-400">
               Plano: {currentPlanType.toUpperCase()}
             </div>
           )}

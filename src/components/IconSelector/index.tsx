@@ -197,7 +197,7 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
   return (
     <div className="relative" ref={containerRef}>
       {label && (
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+        <label className="block text-sm font-medium text-zinc-300 mb-2">
           {label}
         </label>
       )}
@@ -220,13 +220,13 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setShowDropdown(true)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+          className="w-full pl-10 pr-10 py-2 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-zinc-800 text-zinc-100"
         />
         
         <button
           type="button"
           onClick={() => setShowDropdown(!showDropdown)}
-          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded"
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 hover:bg-zinc-700 rounded"
         >
           {showDropdown ? (
             <X className="w-4 h-4 text-zinc-500" />
@@ -248,10 +248,10 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
           <div
             // eslint-disable-next-line react-hooks/refs
             style={getPickerPosition()}
-            className="fixed z-50 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded-lg shadow-lg overflow-hidden max-h-[500px] flex flex-col"
+            className="fixed z-50 bg-zinc-800 border border-zinc-600 rounded-lg shadow-lg overflow-hidden max-h-[500px] flex flex-col"
           >
             {/* Cabeçalho com busca e botão de fechar */}
-            <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 flex items-center justify-between">
+            <div className="p-3 border-b border-zinc-700 bg-zinc-800 flex items-center justify-between">
               <div className="relative flex-1 mr-2">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
                 <input
@@ -259,14 +259,14 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar ícones por nome..."
-                  className="w-full pl-10 pr-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                  className="w-full pl-10 pr-4 py-2 border border-zinc-600 rounded-lg bg-zinc-700 text-zinc-100"
                   autoFocus
                 />
               </div>
               <button
                 type="button"
                 onClick={closeDropdown}
-                className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-zinc-700 rounded-lg transition-colors"
                 aria-label="Fechar seletor de ícones"
               >
                 <X className="w-5 h-5 text-zinc-500" />
@@ -278,7 +278,7 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
                 <div className="p-4">
                   {iconCategories.map((category) => (
                     <div key={category.name} className="mb-6">
-                      <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-3 px-2">
+                      <h3 className="text-sm font-semibold text-zinc-300 mb-3 px-2">
                         {category.name}
                       </h3>
                       <div className="grid grid-cols-5 gap-2 p-2">
@@ -287,18 +287,18 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
                             key={icon.value}
                             type="button"
                             onClick={() => handleSelect(icon.value)}
-                            className={`flex flex-col items-center justify-center p-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors ${
-                              value === icon.value ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' : 'border border-transparent'
+                            className={`flex flex-col items-center justify-center p-3 rounded-lg hover:bg-zinc-700 transition-colors ${
+                              value === icon.value ? 'bg-blue-900/20 border border-blue-800' : 'border border-transparent'
                             }`}
                             title={`${icon.label} (${icon.value})`}
                           >
                             <Icon 
                               icon={icon.value} 
                               className={`w-6 h-6 mb-1 ${
-                                value === icon.value ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-400'
+                                value === icon.value ? 'text-blue-400' : 'text-zinc-400'
                               }`}
                             />
-                            <span className="text-xs text-center text-zinc-600 dark:text-zinc-400 truncate w-full">
+                            <span className="text-xs text-center text-zinc-400 truncate w-full">
                               {icon.label}
                             </span>
                           </button>
@@ -310,7 +310,7 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
               ) : (
                 <div className="p-4">
                   {filteredIcons.length === 0 ? (
-                    <div className="p-8 text-center text-zinc-500 dark:text-zinc-400">
+                    <div className="p-8 text-center text-zinc-400">
                       <Search className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       <p className="text-sm">Nenhum ícone encontrado</p>
                       <p className="text-xs mt-1">Tente buscar por outra palavra</p>
@@ -318,7 +318,7 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
                   ) : (
                     <>
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                        <h3 className="text-sm font-semibold text-zinc-300">
                           Resultados ({filteredIcons.length})
                         </h3>
                       </div>
@@ -328,18 +328,18 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
                             key={icon.value}
                             type="button"
                             onClick={() => handleSelect(icon.value)}
-                            className={`flex flex-col items-center justify-center p-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors ${
-                              value === icon.value ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800' : 'border border-transparent'
+                            className={`flex flex-col items-center justify-center p-3 rounded-lg hover:bg-zinc-700 transition-colors ${
+                              value === icon.value ? 'bg-blue-900/20 border border-blue-800' : 'border border-transparent'
                             }`}
                             title={`${icon.label} (${icon.value})`}
                           >
                             <Icon 
                               icon={icon.value} 
                               className={`w-6 h-6 mb-1 ${
-                                value === icon.value ? 'text-blue-600 dark:text-blue-400' : 'text-zinc-600 dark:text-zinc-400'
+                                value === icon.value ? 'text-blue-400' : 'text-zinc-400'
                               }`}
                             />
-                            <span className="text-xs text-center text-zinc-600 dark:text-zinc-400 truncate w-full">
+                            <span className="text-xs text-center text-zinc-400 truncate w-full">
                               {icon.label}
                             </span>
                           </button>
@@ -351,9 +351,9 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
               )}
             </div>
 
-            <div className="p-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
+            <div className="p-3 border-t border-zinc-700 bg-zinc-900/50">
               <div className="flex items-center justify-between">
-                <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                <div className="text-xs text-zinc-400">
                   <span className="font-medium">Selecionado:</span>{' '}
                   {value || 'Nenhum'}
                 </div>
@@ -383,7 +383,7 @@ export default function IconSelector({ value, onChange, placeholder = "mdi:check
       )}
 
       <div className="mt-2">
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-zinc-400">
           <strong>Formato:</strong> coleção:nome-do-ícone
         </p>
         <p className="text-xs text-zinc-500 mt-1">

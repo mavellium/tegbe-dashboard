@@ -79,12 +79,12 @@ export const ImageUpload = ({
   return (
     <>
       <div className="space-y-4">
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="block text-sm font-medium text-zinc-300">
           {label}
         </label>
         
         {description && (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
+          <p className="text-sm text-zinc-400 mb-2">
             {description}
           </p>
         )}
@@ -94,7 +94,7 @@ export const ImageUpload = ({
           {imageUrl ? (
             <div className="relative group w-full flex flex-col justify-center items-center">
               <div 
-                className={`relative flex ${aspectRatio} rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 cursor-pointer`}
+                className={`relative flex ${aspectRatio} rounded-lg overflow-hidden border border-zinc-600 bg-zinc-900 cursor-pointer`}
                 style={{ 
                   width: previewWidth ? `${previewWidth}px` : '100%',
                   maxWidth: '100%',
@@ -114,7 +114,7 @@ export const ImageUpload = ({
                     const parent = target.parentElement;
                     if (parent) {
                       parent.innerHTML = `
-                        <div class="w-full h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
+                        <div class="w-full h-full flex items-center justify-center bg-zinc-800">
                           <svg class="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
@@ -125,18 +125,18 @@ export const ImageUpload = ({
                 />
                 {/* Overlay para zoom */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <div className="bg-white/90 dark:bg-zinc-800/90 p-2 rounded-full">
-                    <ZoomIn className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+                  <div className="bg-zinc-800/90 p-2 rounded-full">
+                    <ZoomIn className="w-5 h-5 text-zinc-300" />
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 text-center">
+              <p className="text-xs text-zinc-400 mt-1 text-center">
                 Clique na imagem para visualizar em tela cheia
               </p>
             </div>
           ) : (
             <div 
-              className={`${aspectRatio} flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600`}
+              className={`${aspectRatio} flex items-center justify-center bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-600`}
               style={{ 
                 width: previewWidth ? `${previewWidth}px` : '100%',
                 maxWidth: '100%',
@@ -189,7 +189,7 @@ export const ImageUpload = ({
           
           {/* Informações técnicas */}
           <div className="mt-3 text-center w-full">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-zinc-400">
               Formatos: JPG, PNG, WebP, GIF • Tamanho ideal: 800x600px
             </p>
           </div>

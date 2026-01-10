@@ -69,15 +69,15 @@ export const CardEditor: React.FC<CardEditorProps> = ({
     <div className="space-y-4">
       <div
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-4 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
-          <ShoppingBag className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+          <ShoppingBag className="w-5 h-5 text-zinc-300" />
           <div>
-            <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
+            <h3 className="text-lg font-semibold text-zinc-200">
               Card {index + 1}: {card.title || "Sem título"}
             </h3>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            <p className="text-sm text-zinc-400">
               {card.highlightedText ? `Destaque: ${card.highlightedText}` : "Sem destaque"}
             </p>
           </div>
@@ -94,9 +94,9 @@ export const CardEditor: React.FC<CardEditorProps> = ({
             <Trash2 className="w-4 h-4" />
           </Button>
           {isExpanded ? (
-            <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+            <ChevronUp className="w-5 h-5 text-zinc-300" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+            <ChevronDown className="w-5 h-5 text-zinc-300" />
           )}
         </div>
       </div>
@@ -116,7 +116,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
                         Título
                       </label>
                       <Input
@@ -130,7 +130,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
                         Texto Destacado
                       </label>
                       <Input
@@ -145,7 +145,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Descrição
                     </label>
                     <textarea
@@ -153,7 +153,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                         onChange("description", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[100px]"
+                      className="w-full px-3 py-2 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-zinc-800 text-zinc-100 min-h-[100px]"
                       rows={3}
                       placeholder="Descrição detalhada do serviço..."
                     />
@@ -162,7 +162,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                   {/* Ícone e cores */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      <label className="block text-sm font-medium text-zinc-300 mb-2">
                         Ícone
                       </label>
                       <IconSelector
@@ -215,16 +215,16 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                   {/* Phone Image */}
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-medium text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+                      <h4 className="font-medium text-zinc-200 flex items-center gap-2">
                         <Phone className="w-5 h-5" />
                         Imagem de Telefone
                       </h4>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-zinc-600 dark:text-zinc-400">Ativar:</span>
+                        <span className="text-sm text-zinc-400">Ativar:</span>
                         <div
                           onClick={() => onChange("hasPhoneImage", !card.hasPhoneImage)}
                           className={`w-10 h-5 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
-                            card.hasPhoneImage ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700"
+                            card.hasPhoneImage ? "bg-green-500" : "bg-gray-700"
                           }`}
                         >
                           <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${
@@ -247,7 +247,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                         {card.phoneImageSize && (
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                              <label className="block text-sm font-medium text-zinc-300 mb-2">
                                 Largura (px)
                               </label>
                               <Input
@@ -263,7 +263,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                               />
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                              <label className="block text-sm font-medium text-zinc-300 mb-2">
                                 Altura (px)
                               </label>
                               <Input
@@ -295,15 +295,15 @@ export const CardEditor: React.FC<CardEditorProps> = ({
               </div>
 
               {/* CTA */}
-              <div className="space-y-6 p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg">
-                <h4 className="font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
+              <div className="space-y-6 p-4 border border-zinc-700 rounded-lg">
+                <h4 className="font-semibold text-zinc-200 flex items-center gap-2">
                   <Target className="w-5 h-5" />
                   Call to Action (CTA)
                 </h4>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Texto do Botão
                     </label>
                     <Input
@@ -317,7 +317,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Ação
                     </label>
                     <select
@@ -325,7 +325,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                       onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                         onChange("cta.action", e.target.value)
                       }
-                      className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                      className="w-full px-3 py-2 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-zinc-800 text-zinc-100"
                     >
                       <option value="whatsapp">WhatsApp</option>
                       <option value="link">Link</option>
@@ -335,7 +335,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Valor
                     </label>
                     <Input
@@ -349,7 +349,7 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+                <div className="flex items-center gap-3 text-sm text-zinc-400">
                   {card.cta.action === "whatsapp" && <MessageCircle className="w-4 h-4" />}
                   {card.cta.action === "link" && <LinkIcon className="w-4 h-4" />}
                   {card.cta.action === "email" && <span>@</span>}
