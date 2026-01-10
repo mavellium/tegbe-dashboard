@@ -200,9 +200,9 @@ export default function ComoFazemosPage() {
   const [draggingItem, setDraggingItem] = useState<{section: keyof ComoFazemosData, index: number} | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
-    home: false,
+    home: true,
     marketing: false,
-    ecommerce: true,
+    ecommerce: false,
     sobre: false,
   });
 

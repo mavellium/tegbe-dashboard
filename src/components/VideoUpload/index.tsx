@@ -17,6 +17,7 @@ interface VideoUploadProps {
   description?: string;
   accept?: string;
   maxSizeMB?: number;
+  showRemoveButton?: boolean; // Nova prop opcional
 }
 
 export const VideoUpload = ({ 
@@ -29,7 +30,8 @@ export const VideoUpload = ({
   previewHeight = 225,
   description,
   accept = "video/mp4,video/webm,video/ogg",
-  maxSizeMB = 50
+  maxSizeMB = 50,
+  showRemoveButton = false // Padrão: não mostrar botão remover
 }: VideoUploadProps) => {
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [showFullscreen, setShowFullscreen] = useState(false);
@@ -178,13 +180,15 @@ export const VideoUpload = ({
           </div>
         )}
 
-        <div className="flex flex-col md:flex-row gap-4 items-start">
+        <div className="flex flex-col items-start">
+          {/* Preview do vídeo */}
           {videoUrl ? (
-            <div className="relative group">
+            <div className="relative group w-full">
               <div 
                 className={`relative ${aspectRatio} rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-black cursor-pointer`}
                 style={{ 
                   width: previewWidth ? `${previewWidth}px` : '100%',
+                  maxWidth: '100%',
                   height: previewHeight ? `${previewHeight}px` : 'auto'
                 }}
                 onClick={handleVideoClick}
@@ -270,6 +274,7 @@ export const VideoUpload = ({
               className={`${aspectRatio} flex items-center justify-center bg-zinc-900 rounded-lg border-2 border-dashed border-zinc-700`}
               style={{ 
                 width: previewWidth ? `${previewWidth}px` : '100%',
+                maxWidth: '100%',
                 height: previewHeight ? `${previewHeight}px` : 'auto'
               }}
             >
@@ -277,88 +282,81 @@ export const VideoUpload = ({
             </div>
           )}
           
-          <div className="w-full md:w-auto space-y-4">
-            <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-4">
-              <div className="flex flex-col items-center justify-center">
-                {videoUrl ? (
-                  <>
-                    <div className="flex gap-3 mb-3">
-                      <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                        <Upload className="w-4 h-4" />
-                        {selectedFile ? "Substituir" : "Trocar Vídeo"}
-                        <input
-                          type="file"
-                          accept={accept}
-                          className="hidden"
-                          onChange={handleFileSelect}
-                        />
-                      </label>
-                      <Button
-                        type="button"
-                        variant="danger"
-                        onClick={() => onFileChange(null)}
-                      >
-                        Remover
-                      </Button>
-                    </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 text-center">
-                      Formatos: MP4, WebM, OGG<br/>
-                      Tamanho máximo: {maxSizeMB}MB
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                      <VideoIcon className="w-8 h-8 text-zinc-400" />
-                    </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 text-center">
-                      Upload recomendado: MP4 H.264<br/>
-                      Tamanho máximo: {maxSizeMB}MB
-                    </p>
-                    <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                      <Upload className="w-4 h-4" />
-                      Selecionar Vídeo
-                      <input
-                        type="file"
-                        accept={accept}
-                        className="hidden"
-                        onChange={handleFileSelect}
-                      />
-                    </label>
-                  </>
-                )}
-              </div>
-            </div>
-            
-            {/* Controles de volume (apenas quando há vídeo) */}
-            {videoUrl && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-zinc-600 dark:text-zinc-400">Volume</span>
-                  <button
+          {/* Botões de controle abaixo do preview */}
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+            {videoUrl ? (
+              <>
+                <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  {selectedFile ? "Alterar Vídeo" : "Substituir Vídeo"}
+                  <input
+                    type="file"
+                    accept={accept}
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                </label>
+                
+                {showRemoveButton && (
+                  <Button
                     type="button"
-                    onClick={toggleMute}
-                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                    variant="danger"
+                    onClick={() => onFileChange(null)}
+                    className="px-4 py-2"
                   >
-                    {isMuted ? (
-                      <VolumeX className="w-4 h-4 text-zinc-500" />
-                    ) : (
-                      <Volume2 className="w-4 h-4 text-zinc-500" />
-                    )}
-                  </button>
-                </div>
+                    Remover Vídeo
+                  </Button>
+                )}
+              </>
+            ) : (
+              <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Selecionar Vídeo
                 <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={volume}
-                  onChange={handleVolumeChange}
-                  className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500"
+                  type="file"
+                  accept={accept}
+                  className="hidden"
+                  onChange={handleFileSelect}
                 />
-              </div>
+              </label>
             )}
           </div>
+          
+          {/* Informações técnicas */}
+          <div className="mt-3 text-center w-full">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Formatos: MP4, WebM, OGG • Tamanho máximo: {maxSizeMB}MB
+            </p>
+          </div>
+          
+          {/* Controles de volume (apenas quando há vídeo) */}
+          {videoUrl && (
+            <div className="mt-4 space-y-2 w-full max-w-md">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">Volume</span>
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-4 h-4 text-zinc-500" />
+                  ) : (
+                    <Volume2 className="w-4 h-4 text-zinc-500" />
+                  )}
+                </button>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500"
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -61,8 +61,11 @@
           "children": [
             { "name": "Headline", "icon": "HelpCircle", "href": "/headline-ecommerce" },
             { "name": "Venda mais", "icon": "HelpCircle", "href": "/venda-mais-ecommerce" },
-            { "name": "Cards home", "icon": "HelpCircle", "href": "/cards" },
+            { "name": "Cards home", "icon": "HelpCircle", "href": "/cards-home-ecommerce" },
+            { "name": "Passos", "icon": "HelpCircle", "href": "/passos-ecommerce" },
+            { "name": "Plataformas", "icon": "HelpCircle", "href": "/plataformas-ecommerce" },
             { "name": "Logos", "icon": "HelpCircle", "href": "/logos-ecommerce" },
+            { "name": "Seção Certificada", "icon": "HelpCircle", "href": "/certified-ecommerce" },
             { "name": "Cards ecommerce", "icon": "HelpCircle", "href": "/cards-ecommerce" },
             { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-images-ecommerce" },
             { "name": "Equipe", "icon": "HelpCircle", "href": "/equipe-ecommerce" },

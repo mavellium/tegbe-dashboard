@@ -1,7 +1,8 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+"use client";
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { ImageIcon, Upload, X, ZoomIn } from "lucide-react";
 import { Button } from "@/components/Button";
 
@@ -14,6 +15,7 @@ interface ImageUploadProps {
   previewWidth?: number;
   previewHeight?: number;
   description?: string;
+  showRemoveButton?: boolean; // Nova prop opcional
 }
 
 export const ImageUpload = ({ 
@@ -24,7 +26,8 @@ export const ImageUpload = ({
   aspectRatio = "aspect-video",
   previewWidth = 300,
   previewHeight = 200,
-  description
+  description,
+  showRemoveButton = false // Padrão: não mostrar botão remover
 }: ImageUploadProps) => {
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [showFullscreen, setShowFullscreen] = useState(false);
@@ -65,9 +68,7 @@ export const ImageUpload = ({
     }
     // Se for uma URL relativa, garantir que seja completa
     if (previewUrl && !previewUrl.startsWith('http') && !previewUrl.startsWith('blob:')) {
-      // Remover barras duplas no início se existirem
       const cleanUrl = previewUrl.startsWith('//') ? previewUrl.substring(2) : previewUrl;
-      // Adicionar o protocolo se necessário (usando https como padrão)
       return `https://${cleanUrl}`;
     }
     return previewUrl;
@@ -88,13 +89,15 @@ export const ImageUpload = ({
           </p>
         )}
 
-        <div className="flex flex-col md:flex-row gap-4 items-start">
+        <div className="flex flex-col items-center justify-center">
+          {/* Preview da imagem */}
           {imageUrl ? (
-            <div className="relative group">
+            <div className="relative group w-full flex flex-col justify-center items-center">
               <div 
-                className={`relative ${aspectRatio} rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 cursor-pointer`}
+                className={`relative flex ${aspectRatio} rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 cursor-pointer`}
                 style={{ 
                   width: previewWidth ? `${previewWidth}px` : '100%',
+                  maxWidth: '100%',
                   height: previewHeight ? `${previewHeight}px` : 'auto'
                 }}
                 onClick={handleImageClick}
@@ -104,7 +107,7 @@ export const ImageUpload = ({
                   alt="Image preview"
                   width={previewWidth || undefined}
                   height={previewHeight || undefined}
-                  className="object-cover"
+                  className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.currentTarget;
                     target.style.display = 'none';
@@ -128,7 +131,7 @@ export const ImageUpload = ({
                 </div>
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 text-center">
-                Clique para ampliar
+                Clique na imagem para visualizar em tela cheia
               </p>
             </div>
           ) : (
@@ -136,6 +139,7 @@ export const ImageUpload = ({
               className={`${aspectRatio} flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600`}
               style={{ 
                 width: previewWidth ? `${previewWidth}px` : '100%',
+                maxWidth: '100%',
                 height: previewHeight ? `${previewHeight}px` : 'auto'
               }}
             >
@@ -143,62 +147,56 @@ export const ImageUpload = ({
             </div>
           )}
           
-          <div className="w-full md:w-auto space-y-4">
-            <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-4">
-              <div className="flex flex-col items-center justify-center">
-                {imageUrl ? (
-                  <>
-                    <div className="flex gap-3 mb-3">
-                      <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                        <Upload className="w-4 h-4" />
-                        {selectedFile ? "Substituir" : "Trocar Imagem"}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleFileSelect}
-                        />
-                      </label>
-                      <Button
-                        type="button" // ← ADICIONADO
-                        variant="danger"
-                        onClick={() => onFileChange(null)}
-                      >
-                        Remover
-                      </Button>
-                    </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                      Clique na imagem para visualizar em tela cheia
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                      <ImageIcon className="w-8 h-8 text-zinc-400" />
-                    </div>
-                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 text-center">
-                      Upload recomendado: JPG, PNG ou WebP<br/>
-                      Tamanho ideal: 800x600px
-                    </p>
-                    <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                      <Upload className="w-4 h-4" />
-                      Selecionar Imagem
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleFileSelect}
-                      />
-                    </label>
-                  </>
+          {/* Botões de controle abaixo do preview */}
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
+            {imageUrl ? (
+              <>
+                <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                  <Upload className="w-4 h-4" />
+                  {selectedFile ? "Alterar Imagem" : "Substituir Imagem"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                </label>
+                
+                {showRemoveButton && (
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={() => onFileChange(null)}
+                    className="px-4 py-2"
+                  >
+                    Remover Imagem
+                  </Button>
                 )}
-              </div>
-            </div>
+              </>
+            ) : (
+              <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+                <Upload className="w-4 h-4" />
+                Selecionar Imagem
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </label>
+            )}
+          </div>
+          
+          {/* Informações técnicas */}
+          <div className="mt-3 text-center w-full">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Formatos: JPG, PNG, WebP, GIF • Tamanho ideal: 800x600px
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Modal de visualização em tela cheia - ESTILIZAÇÃO ALTERADA */}
+      {/* Modal de visualização em tela cheia */}
       <AnimatePresence>
         {showFullscreen && imageUrl && (
           <motion.div
@@ -215,16 +213,14 @@ export const ImageUpload = ({
               className="relative max-w-4xl max-h-full"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Botão de fechar com estilo do componente fornecido */}
               <Button
-                type="button" // ← ADICIONADO
+                type="button"
                 onClick={handleFullscreenClose}
                 className="absolute -top-4 -right-4 !p-3 !rounded-full bg-red-500 hover:bg-red-100 z-10"
               >
                 <X className="w-5 h-5" />
               </Button>
               
-              {/* Container da imagem */}
               <div className="relative w-full h-full flex items-center justify-center">
                 <div className="relative w-full h-full max-w-full max-h-full">
                   <img

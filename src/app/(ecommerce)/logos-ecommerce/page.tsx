@@ -1,21 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState, useCallback, useId } from "react";
+import { useMemo, useState, useCallback, useId, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Image as ImageIcon, X, GripVertical, ArrowUpDown } from "lucide-react";
+import { 
+  Image as ImageIcon, 
+  X, 
+  GripVertical, 
+  ArrowUpDown, 
+  Plus, 
+  AlertCircle, 
+  CheckCircle2, 
+  Trash2,
+  XCircle
+} from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
-import { SearchSortBar } from "@/components/Manage/SearchSortBar";
-import { ItemHeader } from "@/components/Manage/ItemHeader";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
-import { ImageUpload } from "@/components/Manage/ImageUpload";
-import Image from "next/image";
+import { ImageUpload } from "@/components/ImageUpload";
 import {
   DndContext,
   closestCenter,
@@ -33,7 +40,6 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import ClientOnly from "@/components/ClientOnly";
 
 interface LogoItem {
   id?: string;
@@ -42,54 +48,6 @@ interface LogoItem {
   file?: File | null;
   image?: string;
   category?: string;
-}
-
-const ImagePreviewComponent = ({ imageUrl, alt = "Preview" }: { imageUrl: string, alt?: string }) => {
-  const isBlobUrl = imageUrl.startsWith('blob:');
-  
-  if (isBlobUrl) {
-    return (
-      <img
-        src={imageUrl}
-        alt={alt}
-        className="h-32 w-32 object-contain rounded-lg border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200 bg-white p-2"
-        onError={(e) => {
-          console.error('Erro ao carregar imagem:', imageUrl);
-          e.currentTarget.style.display = 'none';
-        }}
-      />
-    );
-  } else {
-    return (
-      <Image
-        src={imageUrl}
-        alt={alt}
-        width={128}
-        height={128}
-        className="h-32 w-32 object-contain rounded-lg border-2 border-zinc-300 dark:border-zinc-600 group-hover:border-blue-500 transition-all duration-200 bg-white p-2"
-        onError={(e) => {
-          console.error('Erro ao carregar imagem:', imageUrl);
-          e.currentTarget.style.display = 'none';
-        }}
-      />
-    );
-  }
-};
-
-interface SortableLogoItemProps {
-  logo: LogoItem;
-  index: number;
-  originalIndex: number;
-  isLastInOriginalList: boolean;
-  isLastAndEmpty: boolean;
-  showValidation: boolean;
-  logoList: LogoItem[];
-  handleChange: (index: number, field: keyof LogoItem, value: any) => void;
-  handleFileChange: (index: number, file: File | null) => void;
-  openDeleteSingleModal: (index: number, name: string) => void;
-  setExpandedImage: (image: string | null) => void;
-  getImageUrl: (logo: LogoItem) => string;
-  setNewItemRef?: (node: HTMLDivElement | null) => void;
 }
 
 function SortableLogoItem({
@@ -103,10 +61,22 @@ function SortableLogoItem({
   handleChange,
   handleFileChange,
   openDeleteSingleModal,
-  setExpandedImage,
   getImageUrl,
   setNewItemRef,
-}: SortableLogoItemProps) {
+}: {
+  logo: LogoItem;
+  index: number;
+  originalIndex: number;
+  isLastInOriginalList: boolean;
+  isLastAndEmpty: boolean;
+  showValidation: boolean;
+  logoList: LogoItem[];
+  handleChange: (index: number, field: keyof LogoItem, value: any) => void;
+  handleFileChange: (index: number, file: File | null) => void;
+  openDeleteSingleModal: (index: number, name: string) => void;
+  getImageUrl: (logo: LogoItem) => string;
+  setNewItemRef?: (node: HTMLDivElement | null) => void;
+}) {
   const stableId = useId();
   const sortableId = logo.id || `logo-${index}-${stableId}`;
 
@@ -150,66 +120,80 @@ function SortableLogoItem({
     >
       <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
         isLastInOriginalList && showValidation && !hasName ? 'ring-2 ring-red-500' : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''}`}>
-        <div className="p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-          <div className="flex items-start justify-between mb-4">
+      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)]`}>
+        <div className="p-6 border-b border-[var(--color-border)]">
+          <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="cursor-move text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="cursor-grab active:cursor-grabbing text-[var(--color-secondary)]/70 hover:text-[var(--color-primary)] transition-colors p-2 rounded-lg hover:bg-[var(--color-background)]/50"
                 {...attributes}
                 {...listeners}
               >
                 <GripVertical className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                <ArrowUpDown className="w-4 h-4" />
-                <span>Posição: {index + 1}</span>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]/70">
+                  <ArrowUpDown className="w-4 h-4" />
+                  <span>Posição: {index + 1}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {hasName ? (
+                    <h4 className="font-medium text-[var(--color-secondary)]">
+                      {logo.name}
+                    </h4>
+                  ) : (
+                    <h4 className="font-medium text-[var(--color-secondary)]/50">
+                      Logo sem nome
+                    </h4>
+                  )}
+                  {hasName && hasDescription && hasImage ? (
+                    <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                      Completo
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                      Incompleto
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <ItemHeader
-                index={originalIndex}
-                fields={[
-                  { label: 'Nome', hasValue: hasName },
-                  { label: 'Descrição', hasValue: hasDescription },
-                  { label: 'Categoria', hasValue: hasCategory },
-                  { label: 'Logo', hasValue: hasImage }
-                ]}
-                showValidation={showValidation}
-                isLast={isLastInOriginalList}
-                onDelete={() => openDeleteSingleModal(originalIndex, logo.name)}
-                showDelete={logoList.length > 1}
-              />
-            </div>
+            
+            <Button
+              type="button"
+              onClick={() => openDeleteSingleModal(originalIndex, logo.name)}
+              variant="danger"
+              className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+              disabled={logoList.length <= 1}
+            >
+              <Trash2 className="w-4 h-4" />
+              Remover
+            </Button>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                   Logo
                 </label>
-
                 <ImageUpload
-                  imageUrl={imageUrl}
-                  hasImage={hasImage}
-                  file={logo.file || null}
-                  onFileChange={(file) => handleFileChange(originalIndex, file)}
-                  onExpand={setExpandedImage}
                   label="Imagem do Logo"
-                  altText="Preview do logo"
-                  imageInfo={hasImage && !logo.file
-                    ? "Logo atual do servidor. Selecione um novo arquivo para substituir."
-                    : "Formatos suportados: PNG (transparente), SVG, JPG. Use arquivos de alta qualidade."}
-                  customPreview={imageUrl ? <ImagePreviewComponent imageUrl={imageUrl} /> : undefined}
+                  description="Formatos suportados: PNG (transparente), SVG, JPG. Use arquivos de alta qualidade."
+                  currentImage={logo.image || ""}
+                  selectedFile={logo.file || null}
+                  onFileChange={(file) => handleFileChange(originalIndex, file)}
+                  aspectRatio="aspect-square"
+                  previewWidth={200}
+                  previewHeight={200}
                 />
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Nome da Empresa/Marca
                 </label>
                 <Input
@@ -217,12 +201,12 @@ function SortableLogoItem({
                   placeholder="Ex: Google, Apple, Microsoft"
                   value={logo.name}
                   onChange={(e: any) => handleChange(originalIndex, "name", e.target.value)}
-                  className="font-medium"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-medium"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Categoria
                 </label>
                 <Input
@@ -230,14 +214,15 @@ function SortableLogoItem({
                   placeholder="Ex: Tecnologia, Parceiros, Clientes"
                   value={logo.category || ""}
                   onChange={(e: any) => handleChange(originalIndex, "category", e.target.value)}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
-                <p className="text-xs text-zinc-500 mt-1">
+                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
                   Use para organizar os logos em grupos (opcional)
                 </p>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
                   Descrição
                 </label>
                 <textarea
@@ -245,9 +230,9 @@ function SortableLogoItem({
                   value={logo.description}
                   onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                  className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
                 />
-                <p className="text-xs text-zinc-500 mt-1">
+                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
                   Use para descrever a relação com a empresa ou informações adicionais
                 </p>
               </div>
@@ -274,7 +259,10 @@ export default function LogosPage({
     image: "" 
   }), []);
 
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
+  const [localLogos, setLocalLogos] = useState<LogoItem[]>([]);
+  const [draggingLogo, setDraggingLogo] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const apiBase = `/api/${subtype}/form`;
 
@@ -288,12 +276,7 @@ export default function LogosPage({
     setSuccess,
     errorMsg,
     setErrorMsg,
-    search,
-    setSearch,
-    sortOrder,
-    setSortOrder,
     showValidation,
-    filteredItems: filteredLogos,
     deleteModal,
     newItemRef,
     canAddNewItem,
@@ -306,7 +289,6 @@ export default function LogosPage({
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    clearFilters,
   } = useListManagement<LogoItem>({
     type,
     apiPath: `${apiBase}/${type}`,
@@ -314,13 +296,19 @@ export default function LogosPage({
     validationFields: ["name", "description"]
   });
 
-  const remainingSlots = Math.max(0, currentPlanLimit - logoList.length);
+  // Sincroniza logos locais
+  useEffect(() => {
+    setLocalLogos(logoList);
+  }, [logoList]);
+
+  const remainingSlots = Math.max(0, currentPlanLimit - localLogos.length);
+  const newLogoRef = useRef<HTMLDivElement>(null);
 
   const setNewItemRef = useCallback((node: HTMLDivElement | null) => {
-    if (newItemRef && node) {
-      (newItemRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    if (node) {
+      newLogoRef.current = node;
     }
-  }, [newItemRef]);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -339,15 +327,16 @@ export default function LogosPage({
     if (!over) return;
 
     if (active.id !== over.id) {
-      const oldIndex = logoList.findIndex((item) => 
+      const oldIndex = localLogos.findIndex((item) => 
         item.id === active.id || item.id?.includes(active.id as string)
       );
-      const newIndex = logoList.findIndex((item) => 
+      const newIndex = localLogos.findIndex((item) => 
         item.id === over.id || item.id?.includes(over.id as string)
       );
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newList = arrayMove(logoList, oldIndex, newIndex);
+        const newList = arrayMove(localLogos, oldIndex, newIndex);
+        setLocalLogos(newList);
         setLogoList(newList);
       }
     }
@@ -361,7 +350,7 @@ export default function LogosPage({
     setErrorMsg("");
 
     try {
-      const filteredList = logoList.filter(
+      const filteredList = localLogos.filter(
         logo => logo.name.trim() && logo.description.trim()
       );
 
@@ -407,6 +396,7 @@ export default function LogosPage({
         file: null,
       }));
 
+      setLocalLogos(normalized);
       setLogoList(normalized);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -419,14 +409,16 @@ export default function LogosPage({
   };
 
   const handleChange = (index: number, field: keyof LogoItem, value: any) => {
-    const newList = [...logoList];
+    const newList = [...localLogos];
     newList[index] = { ...newList[index], [field]: value };
+    setLocalLogos(newList);
     setLogoList(newList);
   };
 
   const handleFileChange = (index: number, file: File | null) => {
-    const newList = [...logoList];
+    const newList = [...localLogos];
     newList[index] = { ...newList[index], file };
+    setLocalLogos(newList);
     setLogoList(newList);
   };
 
@@ -484,13 +476,88 @@ export default function LogosPage({
     return updated;
   };
 
-  const handleSubmitWrapper = () => {
-    handleSubmit();
+  const handleAddLogo = () => {
+    if (localLogos.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newItem: LogoItem = {
+      name: '',
+      description: '',
+      category: '',
+      file: null,
+      image: ''
+    };
+    
+    const updated = [...localLogos, newItem];
+    setLocalLogos(updated);
+    setLogoList(updated);
+    
+    setTimeout(() => {
+      newLogoRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
   };
 
+  const filteredLogos = useMemo(() => {
+    let filtered = [...localLogos];
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(logo => 
+        logo.name.toLowerCase().includes(term) ||
+        logo.description.toLowerCase().includes(term) ||
+        (logo.category && logo.category.toLowerCase().includes(term))
+      );
+    }
+    
+    if (sortOrder === "asc") {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      filtered.sort((a, b) => b.name.localeCompare(a.name));
+    }
+    
+    return filtered;
+  }, [localLogos, searchTerm, sortOrder]);
+
+  const isLogosLimitReached = localLogos.length >= currentPlanLimit;
+  const canAddNewLogo = !isLogosLimitReached;
+  const logosCompleteCount = localLogos.filter(logo => 
+    logo.name.trim() !== '' && 
+    logo.description.trim() !== '' && 
+    (logo.image?.trim() !== '' || logo.file)
+  ).length;
+  const logosTotalCount = localLogos.length;
+
+  const logosValidationError = isLogosLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Cada logo tem 4 campos (nome, descrição, categoria, imagem)
+    total += localLogos.length * 4;
+    localLogos.forEach(logo => {
+      if (logo.name.trim()) completed++;
+      if (logo.description.trim()) completed++;
+      if (logo.category?.trim()) completed++;
+      if (logo.image?.trim() || logo.file) completed++;
+    });
+
+    return { completed, total };
+  };
+
+  const completion = calculateCompletion();
+
   const stableIds = useMemo(
-    () => logoList.map((item, index) => item.id ?? `logo-${index}`),
-    [logoList]
+    () => localLogos.map((item, index) => item.id ?? `logo-${index}`),
+    [localLogos]
   );
 
   return (
@@ -499,188 +566,149 @@ export default function LogosPage({
       title="Logos"
       description="Gerencie os logos de parceiros, clientes e marcas associadas"
       exists={!!exists}
-      itemName="Logo"
+      itemName="Logos"
     >
-      <div className="mb-6 space-y-4">
-        <SearchSortBar
-          search={search}
-          setSearch={setSearch}
-          sortOrder={sortOrder}
-          setSortOrder={setSortOrder}
-          onClearFilters={clearFilters}
-          searchPlaceholder="Buscar logos por nome ou categoria..."
-          total={logoList.length}
-          showing={filteredLogos.length}
-          searchActiveText="ⓘ Busca ativa - não é possível adicionar novo logo"
-          currentPlanType={currentPlanType}
-          currentPlanLimit={currentPlanLimit}
-          remainingSlots={remainingSlots}
-          isLimitReached={isLimitReached}
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Cabeçalho de Controle */}
+        <Card className="p-6 bg-[var(--color-background)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                Gerenciamento de Logos
+              </h3>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span className="text-sm text-[var(--color-secondary)]/70">
+                    {logosCompleteCount} de {logosTotalCount} completos
+                  </span>
+                </div>
+                <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <Button
+                type="button"
+                onClick={handleAddLogo}
+                variant="primary"
+                className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                disabled={!canAddNewLogo}
+              >
+                <Plus className="w-4 h-4" />
+                Adicionar Logo
+              </Button>
+              {isLogosLimitReached && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Limite do plano atingido
+                </p>
+              )}
+            </div>
+          </div>
 
-      <div className="space-y-4 pb-32">
-        <form onSubmit={handleSubmit}>
+          {/* Barra de busca e ordenação */}
+          <div className="w-full">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Buscar
+              </label>
+              <Input
+                type="text"
+                placeholder="Buscar logos por nome, descrição ou categoria..."
+                value={searchTerm}
+                onChange={(e: any) => setSearchTerm(e.target.value)}
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* Mensagem de erro */}
+        {logosValidationError && (
+          <div className={`p-3 rounded-lg ${isLogosLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+            <div className="flex items-start gap-2">
+              {isLogosLimitReached ? (
+                <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+              )}
+              <p className={`text-sm ${isLogosLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                {logosValidationError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Lista de Logos */}
+        <div className="space-y-4">
           <AnimatePresence>
-            {search ? (
-              filteredLogos.map((logo: any) => {
-                const originalIndex = logoList.findIndex(l => l.id === logo.id);
-                const hasName = logo.name.trim() !== "";
-                const hasDescription = logo.description.trim() !== "";
-                const hasCategory = logo.category?.trim() !== "";
-                const hasImage = Boolean(logo.image?.trim() !== "" || logo.file);
-                const isLastInOriginalList = originalIndex === logoList.length - 1;
-                const isLastAndEmpty = isLastInOriginalList && !hasName && !hasDescription && !hasCategory;
-                const imageUrl = getImageUrl(logo);
-
-                return (
-                  <div
-                    key={logo.id || `logo-${originalIndex}`}
-                    ref={isLastAndEmpty ? setNewItemRef : null}
-                  >
-                    <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-                      isLastInOriginalList && showValidation && !hasName ? 'ring-2 ring-red-500' : ''
-                    }`}>
-                      <div className="p-4 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-700">
-                        <ItemHeader
-                          index={originalIndex}
-                          fields={[
-                            { label: 'Nome', hasValue: hasName },
-                            { label: 'Descrição', hasValue: hasDescription },
-                            { label: 'Categoria', hasValue: hasCategory },
-                            { label: 'Logo', hasValue: hasImage }
-                          ]}
-                          showValidation={showValidation}
-                          isLast={isLastInOriginalList}
-                          onDelete={() => openDeleteSingleModal(originalIndex, logo.name)}
-                          showDelete={logoList.length > 1}
-                        />
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Logo
-                              </label>
-
-                              <ImageUpload
-                                imageUrl={imageUrl}
-                                hasImage={hasImage}
-                                file={logo.file || null}
-                                onFileChange={(file) => handleFileChange(originalIndex, file)}
-                                onExpand={setExpandedImage}
-                                label="Imagem do Logo"
-                                altText="Preview do logo"
-                                imageInfo={hasImage && !logo.file
-                                  ? "Logo atual do servidor. Selecione um novo arquivo para substituir."
-                                  : "Formatos suportados: PNG (transparente), SVG, JPG. Use arquivos de alta qualidade."}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Nome da Empresa/Marca
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: Google, Apple, Microsoft"
-                                value={logo.name}
-                                onChange={(e: any) => handleChange(originalIndex, "name", e.target.value)}
-                                className="font-medium"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Categoria
-                              </label>
-                              <Input
-                                type="text"
-                                placeholder="Ex: Tecnologia, Parceiros, Clientes"
-                                value={logo.category || ""}
-                                onChange={(e: any) => handleChange(originalIndex, "category", e.target.value)}
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Descrição
-                              </label>
-                              <textarea
-                                placeholder="Descrição sobre a empresa, parceria ou contexto do logo"
-                                value={logo.description}
-                                onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
-                                rows={3}
-                                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                );
-              })
+            {filteredLogos.length === 0 ? (
+              <Card className="p-8 bg-[var(--color-background)]">
+                <div className="text-center">
+                  <ImageIcon className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                    Nenhum logo encontrado
+                  </h3>
+                  <p className="text-sm text-[var(--color-secondary)]/70">
+                    {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro logo usando o botão acima'}
+                  </p>
+                </div>
+              </Card>
             ) : (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <ClientOnly>
-                  <SortableContext
-                    items={stableIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {logoList.map((logo, index) => {
-                      const originalIndex = index;
-                      const hasName = logo.name.trim() !== "";
-                      const hasDescription = logo.description.trim() !== "";
-                      const hasCategory = logo.category?.trim() !== "";
-                      const isLastInOriginalList = index === logoList.length - 1;
-                      const isLastAndEmpty = isLastInOriginalList && !hasName && !hasDescription && !hasCategory;
+                <SortableContext
+                  items={stableIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {filteredLogos.map((logo, index) => {
+                    const originalIndex = localLogos.findIndex(l => l.id === logo.id) || index;
+                    const hasName = logo.name.trim() !== "";
+                    const hasDescription = logo.description.trim() !== "";
+                    const isLastInOriginalList = originalIndex === localLogos.length - 1;
+                    const isLastAndEmpty = isLastInOriginalList && !hasName && !hasDescription;
 
-                      return (
-                        <SortableLogoItem
-                          key={stableIds[index]}
-                          logo={logo}
-                          index={index}
-                          originalIndex={originalIndex}
-                          isLastInOriginalList={isLastInOriginalList}
-                          isLastAndEmpty={isLastAndEmpty}
-                          showValidation={showValidation}
-                          logoList={logoList}
-                          handleChange={handleChange}
-                          handleFileChange={handleFileChange}
-                          openDeleteSingleModal={openDeleteSingleModal}
-                          setExpandedImage={setExpandedImage}
-                          getImageUrl={getImageUrl}
-                          setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
-                        />
-                      );
-                    })}
-                  </SortableContext>
-                </ClientOnly>
+                    return (
+                      <SortableLogoItem
+                        key={stableIds[index]}
+                        logo={logo}
+                        index={index}
+                        originalIndex={originalIndex}
+                        isLastInOriginalList={isLastInOriginalList}
+                        isLastAndEmpty={isLastAndEmpty}
+                        showValidation={showValidation}
+                        logoList={localLogos}
+                        handleChange={handleChange}
+                        handleFileChange={handleFileChange}
+                        openDeleteSingleModal={openDeleteSingleModal}
+                        getImageUrl={getImageUrl}
+                        setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
+                      />
+                    );
+                  })}
+                </SortableContext>
               </DndContext>
             )}
           </AnimatePresence>
-        </form>
-      </div>
+        </div>
 
-      <FixedActionBar
-        onDeleteAll={openDeleteAllModal}
-        onAddNew={() => addItem()}
-        onSubmit={handleSubmitWrapper}
-        isAddDisabled={!canAddNewItem || isLimitReached}
-        isSaving={loading}
-        exists={!!exists}
-        completeCount={completeCount}
-        totalCount={logoList.length}
-        itemName="Logo"
-        icon={ImageIcon}
-      />
+        <FixedActionBar
+          onDeleteAll={openDeleteAllModal}
+          onSubmit={handleSubmit}
+          isAddDisabled={false}
+          isSaving={loading}
+          exists={!!exists}
+          totalCount={completion.total}
+          itemName="Logos"
+          icon={ImageIcon}
+        />
+      </form>
 
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
@@ -688,57 +716,11 @@ export default function LogosPage({
         onConfirm={() => confirmDelete(updateLogos)}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={logoList.length}
+        totalItems={localLogos.length}
         itemName="Logo"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />
-
-      <AnimatePresence>
-        {expandedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
-            onClick={() => setExpandedImage(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="relative max-w-4xl max-h-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                onClick={() => setExpandedImage(null)}
-                className="absolute -top-4 -right-4 !p-3 !rounded-full bg-red-500 hover:bg-red-600 z-10"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-              {expandedImage.startsWith('blob:') ? (
-                <img
-                  src={expandedImage}
-                  alt="Logo expandido"
-                  className="max-w-full max-h-[80vh] object-contain rounded-2xl bg-white p-8"
-                  onError={(e) => {
-                    console.error('Erro ao carregar logo expandido:', expandedImage);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <Image
-                  src={expandedImage}
-                  alt="Logo expandido"
-                  width={800}
-                  height={600}
-                  className="max-w-full max-h-[80vh] object-contain rounded-2xl bg-white p-8"
-                />
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </ManageLayout>
   );
 }

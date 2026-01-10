@@ -276,29 +276,29 @@ export default function Page() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estados para listas locais
-  const [localFeatures, setLocalFeatures] = useState<Feature[]>([]);
-  const [localGallery, setLocalGallery] = useState<GalleryItem[]>([]);
-  const [localTags, setLocalTags] = useState<TagItem[]>([]);
+  // Estados para listas locais - REMOVIDOS
+  // const [localFeatures, setLocalFeatures] = useState<Feature[]>([]);
+  // const [localGallery, setLocalGallery] = useState<GalleryItem[]>([]);
+  // const [localTags, setLocalTags] = useState<TagItem[]>([]);
 
-  // Sincronizar com pageData quando ele mudar
-  useEffect(() => {
-    if (pageData.content.features) {
-      setLocalFeatures(pageData.content.features);
-    }
-  }, [pageData.content.features]);
+  // Sincronizar com pageData quando ele mudar - REMOVIDO
+  // useEffect(() => {
+  //   if (pageData.content.features) {
+  //     setLocalFeatures(pageData.content.features);
+  //   }
+  // }, [pageData.content.features]);
 
-  useEffect(() => {
-    if (pageData.content.gallery) {
-      setLocalGallery(pageData.content.gallery);
-    }
-  }, [pageData.content.gallery]);
+  // useEffect(() => {
+  //   if (pageData.content.gallery) {
+  //     setLocalGallery(pageData.content.gallery);
+  //   }
+  // }, [pageData.content.gallery]);
 
-  useEffect(() => {
-    if (pageData.metadata.tags) {
-      setLocalTags(pageData.metadata.tags);
-    }
-  }, [pageData.metadata.tags]);
+  // useEffect(() => {
+  //   if (pageData.metadata.tags) {
+  //     setLocalTags(pageData.metadata.tags);
+  //   }
+  // }, [pageData.metadata.tags]);
 
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
@@ -315,7 +315,7 @@ export default function Page() {
     }));
   };
 
-  // Funções para gerenciar features
+  // Funções para gerenciar features - ATUALIZADAS para usar pageData diretamente
   const handleAddFeature = () => {
     const newFeature: Feature = {
       id: `feat-${Date.now()}`,
@@ -323,24 +323,25 @@ export default function Page() {
       title: '',
       description: '',
       enabled: true,
-      order: localFeatures.length,
+      order: pageData.content.features.length,
       color: 'blue-500'
     };
-    setLocalFeatures([...localFeatures, newFeature]);
+    const updatedFeatures = [...pageData.content.features, newFeature];
+    updateNested('content.features', updatedFeatures);
   };
 
   const handleUpdateFeature = (index: number, updates: Partial<Feature>) => {
-    const updatedFeatures = [...localFeatures];
+    const updatedFeatures = [...pageData.content.features];
     updatedFeatures[index] = { ...updatedFeatures[index], ...updates };
-    setLocalFeatures(updatedFeatures);
+    updateNested('content.features', updatedFeatures);
   };
 
   const handleRemoveFeature = (index: number) => {
-    const updatedFeatures = localFeatures.filter((_, i) => i !== index);
-    setLocalFeatures(updatedFeatures);
+    const updatedFeatures = pageData.content.features.filter((_, i) => i !== index);
+    updateNested('content.features', updatedFeatures);
   };
 
-  // Funções para gerenciar gallery
+  // Funções para gerenciar gallery - ATUALIZADAS para usar pageData diretamente
   const handleAddGalleryItem = () => {
     const newItem: GalleryItem = {
       id: `gallery-${Date.now()}`,
@@ -348,53 +349,51 @@ export default function Page() {
       url: '',
       title: '',
       description: '',
-      order: localGallery.length,
+      order: pageData.content.gallery.length,
       enabled: true
     };
-    setLocalGallery([...localGallery, newItem]);
+    const updatedGallery = [...pageData.content.gallery, newItem];
+    updateNested('content.gallery', updatedGallery);
   };
 
   const handleUpdateGalleryItem = (index: number, updates: Partial<GalleryItem>) => {
-    const updatedGallery = [...localGallery];
+    const updatedGallery = [...pageData.content.gallery];
     updatedGallery[index] = { ...updatedGallery[index], ...updates };
-    setLocalGallery(updatedGallery);
+    updateNested('content.gallery', updatedGallery);
   };
 
   const handleRemoveGalleryItem = (index: number) => {
-    const updatedGallery = localGallery.filter((_, i) => i !== index);
-    setLocalGallery(updatedGallery);
+    const updatedGallery = pageData.content.gallery.filter((_, i) => i !== index);
+    updateNested('content.gallery', updatedGallery);
   };
 
-  // Funções para gerenciar tags
+  // Funções para gerenciar tags - ATUALIZADAS para usar pageData diretamente
   const handleAddTag = () => {
     const newTag: TagItem = {
       id: `tag-${Date.now()}`,
       text: ''
     };
-    setLocalTags([...localTags, newTag]);
+    const updatedTags = [...pageData.metadata.tags, newTag];
+    updateNested('metadata.tags', updatedTags);
   };
 
   const handleUpdateTag = (index: number, text: string) => {
-    const updatedTags = [...localTags];
+    const updatedTags = [...pageData.metadata.tags];
     updatedTags[index] = { ...updatedTags[index], text };
-    setLocalTags(updatedTags);
+    updateNested('metadata.tags', updatedTags);
   };
 
   const handleRemoveTag = (index: number) => {
-    const updatedTags = localTags.filter((_, i) => i !== index);
-    setLocalTags(updatedTags);
+    const updatedTags = pageData.metadata.tags.filter((_, i) => i !== index);
+    updateNested('metadata.tags', updatedTags);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
     try {
-      // Atualizar os arrays no pageData antes de salvar
-      updateNested('content.features', localFeatures);
-      updateNested('content.gallery', localGallery);
-      updateNested('metadata.tags', localTags);
+      // Apenas atualizar lastModified
       updateNested('metadata.lastModified', new Date().toISOString());
-      
       await save();
     } catch (err) {
       console.error("Erro ao salvar:", err);
@@ -453,8 +452,8 @@ export default function Page() {
     if (pageData.content.ctaButtonLink.trim()) completed++;
 
     // Features
-    total += localFeatures.length * 4;
-    localFeatures.forEach(feature => {
+    total += pageData.content.features.length * 4;
+    pageData.content.features.forEach(feature => {
       if (feature.title.trim()) completed++;
       if (feature.description.trim()) completed++;
       if (feature.icon.trim()) completed++;
@@ -462,8 +461,8 @@ export default function Page() {
     });
 
     // Gallery
-    total += localGallery.length * 3;
-    localGallery.forEach(item => {
+    total += pageData.content.gallery.length * 3;
+    pageData.content.gallery.forEach(item => {
       if (item.title.trim()) completed++;
       if (item.url.trim()) completed++;
       if (item.type) completed++;
@@ -482,7 +481,7 @@ export default function Page() {
     if (pageData.metadata.author.trim()) completed++;
     if (pageData.metadata.version.trim()) completed++;
     if (pageData.metadata.category?.trim()) completed++;
-    completed += localTags.filter(tag => tag.text.trim()).length;
+    completed += pageData.metadata.tags.filter(tag => tag.text.trim()).length;
 
     return { completed, total };
   };
@@ -739,7 +738,7 @@ export default function Page() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {localFeatures.filter(f => f.title && f.description && f.icon).length} de {localFeatures.length} completos
+                          {pageData.content.features.filter(f => f.title && f.description && f.icon).length} de {pageData.content.features.length} completos
                         </span>
                       </div>
                     </div>
@@ -757,7 +756,7 @@ export default function Page() {
                 </div>
 
                 <div className="space-y-4">
-                  {localFeatures.map((feature, index) => (
+                  {pageData.content.features.map((feature, index) => (
                     <div 
                       key={feature.id}
                       className="p-6 border border-[var(--color-border)] rounded-lg space-y-6 hover:border-[var(--color-primary)]/50 transition-all duration-200"
@@ -888,14 +887,6 @@ export default function Page() {
                               onCheckedChange={(checked) => handleUpdateFeature(index, { enabled: checked })}
                             />
                           </div>
-                          <Button
-                            type="button"
-                            onClick={() => handleRemoveFeature(index)}
-                            variant="danger"
-                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
-                          >
-                            Remover
-                          </Button>
                         </div>
                       </div>
                     </div>
@@ -915,7 +906,7 @@ export default function Page() {
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {localGallery.filter(item => item.title && item.url).length} de {localGallery.length} completos
+                          {pageData.content.gallery.filter(item => item.title && item.url).length} de {pageData.content.gallery.length} completos
                         </span>
                       </div>
                     </div>
@@ -933,7 +924,7 @@ export default function Page() {
                 </div>
 
                 <div className="space-y-4">
-                  {localGallery.map((item, index) => (
+                  {pageData.content.gallery.map((item, index) => (
                     <div 
                       key={item.id}
                       className="p-6 border border-[var(--color-border)] rounded-lg space-y-6 hover:border-[var(--color-primary)]/50 transition-all duration-200"
@@ -1259,7 +1250,7 @@ export default function Page() {
                   </div>
 
                   <div className="space-y-2">
-                    {localTags.map((tag, index) => (
+                    {pageData.metadata.tags.map((tag, index) => (
                       <div key={tag.id} className="flex items-center gap-2 p-2 border border-[var(--color-border)] rounded-lg">
                         <Input
                           value={tag.text}
@@ -1267,14 +1258,6 @@ export default function Page() {
                           placeholder="Ex: template, ia, base"
                           className="bg-transparent border-none text-[var(--color-secondary)]"
                         />
-                        <Button
-                          type="button"
-                          onClick={() => handleRemoveTag(index)}
-                          variant="danger"
-                          className="px-2 py-1 bg-red-600 hover:bg-red-700 border-none"
-                        >
-                          Remover
-                        </Button>
                       </div>
                     ))}
                   </div>
