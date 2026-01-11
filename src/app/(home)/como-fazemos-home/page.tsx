@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -17,7 +17,8 @@ import {
   Cpu,
   Trash2,
   ArrowRight,
-  Plus
+  Plus,
+  Link
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -44,6 +45,7 @@ interface SectionHeaderData {
 interface CtaData {
   text: string;
   icon: string;
+  href: string; // ADICIONADO: campo para o link
 }
 
 interface MethodologyData {
@@ -72,7 +74,8 @@ const defaultMethodologyData: MethodologyData = {
     ],
     cta: {
       text: "",
-      icon: "solar:arrow-right-linear"
+      icon: "solar:arrow-right-linear",
+      href: "" // ADICIONADO: valor padrão
     }
   }
 };
@@ -84,7 +87,11 @@ const mergeWithDefaults = (apiData: any, defaultData: MethodologyData): Methodol
     methodology: {
       section_header: apiData.methodology?.section_header || defaultData.methodology.section_header,
       steps: apiData.methodology?.steps || defaultData.methodology.steps,
-      cta: apiData.methodology?.cta || defaultData.methodology.cta,
+      cta: {
+        text: apiData.methodology?.cta?.text || defaultData.methodology.cta.text,
+        icon: apiData.methodology?.cta?.icon || defaultData.methodology.cta.icon,
+        href: apiData.methodology?.cta?.href || defaultData.methodology.cta.href // ADICIONADO
+      },
     },
   };
 };
@@ -108,8 +115,8 @@ export default function MethodologyPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estado local para gerenciar os steps
-  const [localSteps, setLocalSteps] = useState<Step[]>([]);
+  // Estado local para gerenciar os steps - MANTIDO como estado local para drag & drop
+  const [localSteps, setLocalSteps] = useState<Step[]>(pageData.methodology.steps);
   const [draggingItem, setDraggingItem] = useState<number | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
@@ -122,23 +129,8 @@ export default function MethodologyPage() {
   const newStepRef = useRef<HTMLDivElement>(null);
 
   // Controle de planos
-  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanType = 'pro';
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
-
-  // Sincroniza os dados quando carregam do banco
-  useEffect(() => {
-    if (pageData.methodology.steps && pageData.methodology.steps.length > 0) {
-      // Garante que todos os steps tenham IDs válidos
-      const stepsWithIds = pageData.methodology.steps.map((step, index) => ({
-        ...step,
-        id: step.id || (index + 1).toString().padStart(2, '0')
-      }));
-      setLocalSteps(stepsWithIds);
-    } else {
-      // Se não houver steps, inicializa com o default
-      setLocalSteps(defaultMethodologyData.methodology.steps);
-    }
-  }, [pageData.methodology.steps]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -334,10 +326,11 @@ export default function MethodologyPage() {
       if (step.desc.trim()) completed++;
     });
 
-    // CTA (2 campos)
-    total += 2;
+    // CTA (3 campos) - ATUALIZADO: agora são 3 campos
+    total += 3;
     if (pageData.methodology.cta.text.trim()) completed++;
     if (pageData.methodology.cta.icon.trim()) completed++;
+    if (pageData.methodology.cta.href.trim()) completed++;
 
     return { completed, total };
   };
@@ -616,7 +609,7 @@ export default function MethodologyPage() {
           </motion.div>
         </div>
 
-        {/* Seção CTA */}
+        {/* Seção CTA - ATUALIZADA com campo de link */}
         <div className="space-y-4">
           <SectionHeader
             title="Call to Action"
@@ -632,9 +625,10 @@ export default function MethodologyPage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                    <ArrowRight className="w-4 h-4" />
                     Texto do Botão
                   </label>
                   <Input
@@ -655,6 +649,22 @@ export default function MethodologyPage() {
                     placeholder="solar:arrow-right-linear"
                   />
                 </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                    <Link className="w-4 h-4" />
+                    Link do Botão (href)
+                  </label>
+                  <Input
+                    value={pageData.methodology.cta.href}
+                    onChange={(e) => updateNested('methodology.cta.href', e.target.value)}
+                    placeholder="Ex: /planos, #contato, https://..."
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/50 mt-1">
+                    Use &quot;/&quot; para links internos ou URL completa para externos
+                  </p>
+                </div>
               </div>
             </Card>
           </motion.div>
@@ -666,6 +676,7 @@ export default function MethodologyPage() {
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
+          completeCount={completion.completed} // CORRIGIDO: use completeCount em vez de totalCount
           totalCount={completion.total}
           itemName="Metodologia"
           icon={Cpu}
