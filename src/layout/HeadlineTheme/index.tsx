@@ -352,7 +352,7 @@ const SectionCard = ({
   return (
     <div className="space-y-4">
       <div 
-        className="flex items-center justify-between p-4 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg cursor-pointer hover:bg-[var(--color-background)]/80 transition-colors"
+        className="flex items-center justify-between p-4 bg-[var(--color-background)] rounded-lg cursor-pointer hover:bg-[var(--color-background)]/80 transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-3">
