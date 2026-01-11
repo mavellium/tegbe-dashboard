@@ -104,6 +104,7 @@
             { "name": "Cursos", "icon": "HelpCircle", "href": "/cursos-curso" },
             { "name": "Alunos", "icon": "HelpCircle", "href": "/alunos-curso" },
             { "name": "Galeria", "icon": "HelpCircle", "href": "/galeria-curso" },
+            { "name": "Localização", "icon": "HelpCircle", "href": "/localizacao-curso" },
             { "name": "Empresa", "icon": "HelpCircle", "href": "/expertise-curso" },
             { "name": "Concorrencia", "icon": "HelpCircle", "href": "/concorrentes-curso" },
             { "name": "Faq", "icon": "HelpCircle", "href": "/faq-curso" }

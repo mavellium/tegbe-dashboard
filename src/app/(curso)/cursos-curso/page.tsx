@@ -1,37 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
-import { Switch } from "@/components/Switch";
-import { Button } from "@/components/Button";
+import IconSelector from "@/components/IconSelector";
 import { 
+  Layout, 
   Layers,
-  Tag,
-  Type,
-  ChevronDown,
-  ChevronUp,
-  Plus,
-  Trash2,
-  Settings,
-  Sparkles,
-  ArrowRight,
-  Grid,
-  ListChecks,
-  Hash,
-  Wrench,
-  Target,
-  Users,
-  Bot,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
   GripVertical,
-  Zap
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Tag,
+  Sparkles,
+  Palette,
+  Trash2,
+  Plus,
+  Heading,
+  Zap,
+  Link as LinkIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -39,7 +30,20 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import IconSelector from "@/components/IconSelector";
+import { Button } from "@/components/Button";
+import { ThemePropertyInput } from "@/components/ThemePropertyInput";
+import { tailwindToHex, hexToTailwindTextClass, hexToTailwindBgClass } from "@/lib/colors";
+
+interface ThemeColors {
+  accentColor: string; // formato hex
+  secondaryColor: string; // formato hex
+}
+
+interface HeaderData {
+  badge: string;
+  title: string;
+  subtitle: string;
+}
 
 interface Module {
   id: string;
@@ -55,56 +59,54 @@ interface CTA {
   link: string;
 }
 
-interface Header {
-  badge: string;
-  title: string;
-  subtitle: string;
-}
-
-interface TegProData {
-  id?: string;
-  header: Header;
+interface TegProProtocolData {
+  theme: ThemeColors;
+  header: HeaderData;
   modules: Module[];
   cta: CTA;
 }
 
-const defaultTegProData: TegProData = {
+const defaultTegProProtocolData: TegProProtocolData = {
+  theme: {
+    accentColor: "#FFD700",
+    secondaryColor: "#C59D1F"
+  },
   header: {
     badge: "O Protocolo TegPro",
     title: "Engenharia Reversa da Venda",
-    subtitle: "Não é um curso. É a instalação do nosso sistema operacional dentro da sua empresa, dividido em 4 fases de execução."
+    subtitle: "Não é um curso. É a instalação do nosso sistema operacional dividido em 4 fases."
   },
   modules: [
     {
       id: "01",
       phase: "FASE DE FUNDAÇÃO",
       title: "Setup da Máquina",
-      description: "Antes de acelerar, blindamos o chassi. Configuramos seu Business Manager, estruturamos o CRM (Kommo/Bitrix) e definimos os KPIs que realmente importam. Sem isso, o tráfego é desperdício.",
-      tags: ["Setup Técnico", "Governança", "KPIs"],
+      description: "Antes de acelerar, blindamos o chassi. Configuramos seu Business Manager e estruturamos o CRM.",
+      tags: ["Setup Técnico", "Governança"],
       icon: "ph:wrench-bold"
     },
     {
       id: "02",
       phase: "FASE DE TRAÇÃO",
       title: "Tráfego de Alta Intenção",
-      description: "Esqueça métricas de vaidade. Ensinamos a criar campanhas que buscam o 'lead comprador'. Estratégias de Google Ads (Fundo de Funil) e Meta Ads (Criação de Demanda) validadas com milhões em verba.",
-      tags: ["Google Ads", "Meta Ads", "Tracking"],
+      description: "Campanhas que buscam o 'lead comprador'. Estratégias validadas com milhões em verba.",
+      tags: ["Google Ads", "Meta Ads"],
       icon: "ph:target-bold"
     },
     {
       id: "03",
       phase: "FASE DE CONVERSÃO",
       title: "Comercial & Scripts",
-      description: "O tráfego traz o lead, o processo traz o dinheiro. Entregamos nossos scripts de vendas, playbooks de contorno de objeções e rituais de gestão para seu time fechar mais contratos.",
-      tags: ["Playbook de Vendas", "Spin Selling", "Gestão"],
+      description: "O tráfego traz o lead, o processo traz o dinheiro. Scripts de vendas e playbooks de objeções.",
+      tags: ["Playbook", "Spin Selling"],
       icon: "ph:users-three-bold"
     },
     {
       id: "04",
       phase: "FASE DE ESCALA",
       title: "Automação & LTV",
-      description: "Hora de tirar o humano do processo repetitivo. Implementação de automações de follow-up, recuperação de vendas e estratégias de upsell para aumentar o valor vitalício do cliente.",
-      tags: ["Automação", "Z-API", "Recompra"],
+      description: "Implementação de automações de follow-up, recuperação de vendas e estratégias de upsell.",
+      tags: ["Automação", "Z-API"],
       icon: "ph:robot-bold"
     }
   ],
@@ -114,11 +116,14 @@ const defaultTegProData: TegProData = {
   }
 };
 
-const mergeWithDefaults = (apiData: any, defaultData: TegProData): TegProData => {
+const mergeWithDefaults = (apiData: any, defaultData: TegProProtocolData): TegProProtocolData => {
   if (!apiData) return defaultData;
   
   return {
-    id: apiData.id,
+    theme: {
+      accentColor: apiData.theme?.accentColor || defaultData.theme.accentColor,
+      secondaryColor: apiData.theme?.secondaryColor || defaultData.theme.secondaryColor,
+    },
     header: {
       badge: apiData.header?.badge || defaultData.header.badge,
       title: apiData.header?.title || defaultData.header.title,
@@ -132,87 +137,9 @@ const mergeWithDefaults = (apiData: any, defaultData: TegProData): TegProData =>
   };
 };
 
-// Componente para editar Tags
-interface TagsEditorProps {
-  tags: string[];
-  onChange: (tags: string[]) => void;
-  label?: string;
-}
-
-const TagsEditor = ({ tags, onChange, label = "Tags" }: TagsEditorProps) => {
-  const [newTag, setNewTag] = useState("");
-
-  const addTag = () => {
-    if (newTag.trim() && !tags.includes(newTag.trim())) {
-      onChange([...tags, newTag.trim()]);
-      setNewTag("");
-    }
-  };
-
-  const removeTag = (index: number) => {
-    const newTags = tags.filter((_, i) => i !== index);
-    onChange(newTags);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addTag();
-    }
-  };
-
-  return (
-    <div className="space-y-3">
-      <label className="block text-sm font-medium text-[var(--color-secondary)]">
-        {label}
-      </label>
-      
-      <div className="flex gap-2 mb-3">
-        <Input
-          type="text"
-          value={newTag}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTag(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Digite uma tag e pressione Enter"
-          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-        />
-        <Button
-          type="button"
-          onClick={addTag}
-          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-        >
-          Adicionar
-        </Button>
-      </div>
-
-      {tags.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag, index) => (
-            <div
-              key={index}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-background-body)] rounded-full text-sm border border-[var(--color-border)]"
-            >
-              <span className="text-[var(--color-secondary)]">{tag}</span>
-              <button
-                type="button"
-                onClick={() => removeTag(index)}
-                className="text-[var(--color-secondary)]/50 hover:text-red-500"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-[var(--color-secondary)]/70">Nenhuma tag adicionada</p>
-      )}
-    </div>
-  );
-};
-
-export default function TegProProtocolPage() {
+export default function Page() {
   const {
-    data: tegProData,
+    data: pageData,
     exists,
     loading,
     success,
@@ -223,17 +150,27 @@ export default function TegProProtocolPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<TegProData>({
-    apiPath: "/api/tegbe-institucional/json/cursos",
-    defaultData: defaultTegProData,
+  } = useJsonManagement<TegProProtocolData>({
+    apiPath: "/api/tegbe-institucional/json/cursos-curso",
+    defaultData: defaultTegProProtocolData,
     mergeFunction: mergeWithDefaults,
   });
 
+  // Estados para drag & drop
+  const [draggingModule, setDraggingModule] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState({
+    theme: true,
     header: true,
-    modules: true,
-    cta: true
+    modules: false,
+    cta: false,
   });
+
+  // Referência para novo item
+  const newModuleRef = useRef<HTMLDivElement>(null);
+
+  // Controle de planos
+  const currentPlanType = 'pro';
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -242,28 +179,159 @@ export default function TegProProtocolPage() {
     }));
   };
 
+  // Funções para módulos
   const handleAddModule = () => {
+    const modules = pageData.modules;
+    if (modules.length >= currentPlanLimit) {
+      return false;
+    }
+    
     const newModule: Module = {
-      id: `${tegProData.modules.length + 1}`.padStart(2, '0'),
+      id: `0${modules.length + 1}`,
       phase: "",
       title: "",
       description: "",
-      tags: [],
-      icon: "ph:rocket-bold"
+      tags: [""],
+      icon: "ph:star-bold"
     };
-    const updatedModules = [...tegProData.modules, newModule];
-    updateNested('modules', updatedModules);
+    
+    const updated = [...modules, newModule];
+    updateNested('modules', updated);
+    
+    setTimeout(() => {
+      newModuleRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
   };
 
   const handleUpdateModule = (index: number, updates: Partial<Module>) => {
-    const updatedModules = [...tegProData.modules];
-    updatedModules[index] = { ...updatedModules[index], ...updates };
-    updateNested('modules', updatedModules);
+    const modules = pageData.modules;
+    const updated = [...modules];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      updateNested('modules', updated);
+    }
+  };
+
+  const handleUpdateModuleTag = (moduleIndex: number, tagIndex: number, value: string) => {
+    const modules = pageData.modules;
+    const updated = [...modules];
+    if (moduleIndex >= 0 && moduleIndex < updated.length) {
+      const updatedTags = [...updated[moduleIndex].tags];
+      updatedTags[tagIndex] = value;
+      updated[moduleIndex] = { ...updated[moduleIndex], tags: updatedTags };
+      updateNested('modules', updated);
+    }
+  };
+
+  const handleAddModuleTag = (moduleIndex: number) => {
+    const modules = pageData.modules;
+    const updated = [...modules];
+    if (moduleIndex >= 0 && moduleIndex < updated.length) {
+      const updatedTags = [...updated[moduleIndex].tags, ""];
+      updated[moduleIndex] = { ...updated[moduleIndex], tags: updatedTags };
+      updateNested('modules', updated);
+    }
+  };
+
+  const handleRemoveModuleTag = (moduleIndex: number, tagIndex: number) => {
+    const modules = pageData.modules;
+    const updated = [...modules];
+    if (moduleIndex >= 0 && moduleIndex < updated.length) {
+      const updatedTags = updated[moduleIndex].tags.filter((_, i) => i !== tagIndex);
+      if (updatedTags.length === 0) updatedTags.push(""); // Mantém pelo menos um vazio
+      updated[moduleIndex] = { ...updated[moduleIndex], tags: updatedTags };
+      updateNested('modules', updated);
+    }
   };
 
   const handleRemoveModule = (index: number) => {
-    const updatedModules = tegProData.modules.filter((_, i) => i !== index);
-    updateNested('modules', updatedModules);
+    const modules = pageData.modules;
+    
+    if (modules.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyModule: Module = {
+        id: "01",
+        phase: "",
+        title: "",
+        description: "",
+        tags: [""],
+        icon: "ph:star-bold"
+      };
+      updateNested('modules', [emptyModule]);
+    } else {
+      const updated = modules.filter((_, i) => i !== index);
+      // Atualiza IDs sequenciais
+      const renumbered = updated.map((module, i) => ({
+        ...module,
+        id: `0${i + 1}`
+      }));
+      updateNested('modules', renumbered);
+    }
+  };
+
+  // Funções de drag & drop para módulos
+  const handleModuleDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingModule(index);
+  };
+
+  const handleModuleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingModule === null || draggingModule === index) return;
+    
+    const modules = pageData.modules;
+    const updated = [...modules];
+    const draggedItem = updated[draggingModule];
+    
+    // Remove o item arrastado
+    updated.splice(draggingModule, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingModule ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    // Renumber IDs
+    const renumbered = updated.map((module, i) => ({
+      ...module,
+      id: `0${i + 1}`
+    }));
+    
+    updateNested('modules', renumbered);
+    setDraggingModule(index);
+  };
+
+  const handleModuleDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingModule(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  // Funções para atualizar cores do tema
+  const handleAccentColorChange = (hexColor: string) => {
+    updateNested('theme.accentColor', hexColor);
+  };
+
+  const handleSecondaryColorChange = (hexColor: string) => {
+    updateNested('theme.secondaryColor', hexColor);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -276,30 +344,58 @@ export default function TegProProtocolPage() {
     }
   };
 
+  // Validações
+  const isModuleValid = (module: Module): boolean => {
+    return module.phase.trim() !== '' && 
+           module.title.trim() !== '' && 
+           module.description.trim() !== '' &&
+           module.icon.trim() !== '' &&
+           module.tags.some(tag => tag.trim() !== '');
+  };
+
+  const modules = pageData.modules;
+  const isModulesLimitReached = modules.length >= currentPlanLimit;
+  const canAddNewModule = !isModulesLimitReached;
+  const modulesCompleteCount = modules.filter(isModuleValid).length;
+  const modulesTotalCount = modules.length;
+
+  const modulesValidationError = isModulesLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} módulos).`
+    : null;
+
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Header
+    // Theme (2 campos)
+    total += 2;
+    if (pageData.theme.accentColor?.trim()) completed++;
+    if (pageData.theme.secondaryColor?.trim()) completed++;
+
+    // Header (3 campos)
     total += 3;
-    if (tegProData.header.badge.trim()) completed++;
-    if (tegProData.header.title.trim()) completed++;
-    if (tegProData.header.subtitle.trim()) completed++;
+    if (pageData.header.badge.trim()) completed++;
+    if (pageData.header.title.trim()) completed++;
+    if (pageData.header.subtitle.trim()) completed++;
 
     // Modules
-    total += tegProData.modules.length * 5;
-    tegProData.modules.forEach(module => {
-      if (module.id.trim()) completed++;
+    modules.forEach(module => {
+      // 4 campos principais: phase, title, description, icon
+      total += 4;
       if (module.phase.trim()) completed++;
       if (module.title.trim()) completed++;
       if (module.description.trim()) completed++;
       if (module.icon.trim()) completed++;
+      
+      // Tags (pelo menos uma tag válida)
+      total += 1;
+      if (module.tags.some(tag => tag.trim())) completed++;
     });
 
-    // CTA
+    // CTA (2 campos)
     total += 2;
-    if (tegProData.cta.text.trim()) completed++;
-    if (tegProData.cta.link.trim()) completed++;
+    if (pageData.cta.text.trim()) completed++;
+    if (pageData.cta.link.trim()) completed++;
 
     return { completed, total };
   };
@@ -307,34 +403,72 @@ export default function TegProProtocolPage() {
   const completion = calculateCompletion();
 
   if (loading && !exists) {
-    return <Loading layout={Layers} exists={!!exists} />;
+    return <Loading layout={Layout} exists={!!exists} />;
   }
-
-  const getModuleIcon = (index: number) => {
-    switch (index) {
-      case 0: return Wrench;
-      case 1: return Target;
-      case 2: return Users;
-      case 3: return Bot;
-      default: return ListChecks;
-    }
-  };
 
   return (
     <ManageLayout
       headerIcon={Layers}
-      title="Cursos TegPro"
-      description="Gerencie o conteúdo do sistema de cursos da venda em 4 fases"
+      title="Gerenciar Protocolo TegPro"
+      description="Configure o protocolo TegPro com suas fases e módulos"
       exists={!!exists}
-      itemName="Cursos TegPro"
+      itemName="Protocolo TegPro"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Header */}
+        {/* Seção Tema */}
         <div className="space-y-4">
           <SectionHeader
-            title="Cabeçalho"
+            title="Cores do Tema"
+            section="theme"
+            icon={Palette}
+            isExpanded={expandedSections.theme}
+            onToggle={() => toggleSection("theme")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.theme ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Configure as cores do protocolo
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  As cores serão usadas em toda a seção do protocolo
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ThemePropertyInput
+                  property="bg"
+                  label="Cor de Destaque (Accent)"
+                  description="Cor principal para elementos de destaque"
+                  currentHex={pageData.theme.accentColor}
+                  tailwindClass={hexToTailwindBgClass(pageData.theme.accentColor)}
+                  onThemeChange={(_, hex) => handleAccentColorChange(hex)}
+                />
+
+                <ThemePropertyInput
+                  property="bg"
+                  label="Cor Secundária"
+                  description="Cor para elementos secundários"
+                  currentHex={pageData.theme.secondaryColor}
+                  tailwindClass={hexToTailwindBgClass(pageData.theme.secondaryColor)}
+                  onThemeChange={(_, hex) => handleSecondaryColorChange(hex)}
+                />
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Cabeçalho */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Cabeçalho do Protocolo"
             section="header"
-            icon={Tag}
+            icon={Heading}
             isExpanded={expandedSections.header}
             onToggle={() => toggleSection("header")}
           />
@@ -345,32 +479,44 @@ export default function TegProProtocolPage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Badge"
-                  value={tegProData.header.badge}
-                  onChange={(e) => updateNested('header.badge', e.target.value)}
-                  placeholder="O Protocolo TegPro"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Tag className="w-4 h-4" />
+                      Badge
+                    </label>
+                    <Input
+                      value={pageData.header.badge}
+                      onChange={(e) => updateNested('header.badge', e.target.value)}
+                      placeholder="Ex: O Protocolo TegPro"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
 
-                <Input
-                  label="Título"
-                  value={tegProData.header.title}
-                  onChange={(e) => updateNested('header.title', e.target.value)}
-                  placeholder="Engenharia Reversa da Venda"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Título Principal</label>
+                    <Input
+                      value={pageData.header.title}
+                      onChange={(e) => updateNested('header.title', e.target.value)}
+                      placeholder="Ex: Engenharia Reversa da Venda"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <TextArea
-                    label="Subtítulo"
-                    value={tegProData.header.subtitle}
-                    onChange={(e) => updateNested('header.subtitle', e.target.value)}
-                    placeholder="Não é um curso. É a instalação do nosso sistema operacional dentro da sua empresa..."
-                    rows={3}
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Subtítulo
+                    </label>
+                    <TextArea
+                      value={pageData.header.subtitle}
+                      onChange={(e) => updateNested('header.subtitle', e.target.value)}
+                      placeholder="Ex: Não é um curso. É a instalação do nosso sistema operacional..."
+                      rows={3}
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
                 </div>
               </div>
             </Card>
@@ -379,167 +525,233 @@ export default function TegProProtocolPage() {
 
         {/* Seção Módulos */}
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <SectionHeader
-              title={`Módulos (${tegProData.modules.length} fases)`}
-              section="modules"
-              icon={Grid}
-              isExpanded={expandedSections.modules}
-              onToggle={() => toggleSection("modules")}
-            />
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-[var(--color-secondary)]/70">
-                  {tegProData.modules.filter(m => m.title && m.description && m.icon).length} de {tegProData.modules.length} completos
-                </span>
-              </div>
-              <Button
-                type="button"
-                onClick={handleAddModule}
-                variant="primary"
-                className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar Módulo
-              </Button>
-            </div>
-          </div>
+          <SectionHeader
+            title="Módulos do Protocolo"
+            section="modules"
+            icon={Layers}
+            isExpanded={expandedSections.modules}
+            onToggle={() => toggleSection("modules")}
+          />
 
           <motion.div
             initial={false}
             animate={{ height: expandedSections.modules ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            {tegProData.modules.length === 0 ? (
-              <Card className="p-6 bg-[var(--color-background)]">
-                <div className="text-center py-12">
-                  <Grid className="w-16 h-16 text-[var(--color-secondary)]/30 mx-auto mb-4" />
-                  <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                    Nenhum módulo adicionado
-                  </h4>
-                  <p className="text-[var(--color-secondary)]/70 mb-6 max-w-md mx-auto">
-                    Adicione os módulos que compõem o protocolo TegPro
-                  </p>
-                  <Button
-                    type="button"
-                    onClick={handleAddModule}
-                    variant="primary"
-                    className="mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Adicionar Primeiro Módulo
-                  </Button>
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-8">
+                <div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">Fases e Módulos</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4 text-green-500" />
+                          <span className="text-sm text-[var(--color-secondary)]/70">
+                            {modulesCompleteCount} de {modulesTotalCount} completos
+                          </span>
+                        </div>
+                        <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          Limite: {currentPlanType === 'pro' ? '10' : '5'} módulos
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleAddModule}
+                        variant="primary"
+                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                        disabled={!canAddNewModule}
+                      >
+                        <Plus className="w-4 h-4" />
+                        Adicionar Módulo
+                      </Button>
+                      {isModulesLimitReached && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Limite do plano atingido
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Mensagem de erro */}
+                  {modulesValidationError && (
+                    <div className={`p-3 rounded-lg ${isModulesLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                      <div className="flex items-start gap-2">
+                        {isModulesLimitReached ? (
+                          <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                        )}
+                        <p className={`text-sm ${isModulesLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                          {modulesValidationError}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {modules.map((module, index) => (
+                      <div 
+                        key={`module-${module.id}-${index}`}
+                        ref={index === modules.length - 1 ? newModuleRef : undefined}
+                        draggable
+                        onDragStart={(e) => handleModuleDragStart(e, index)}
+                        onDragOver={(e) => handleModuleDragOver(e, index)}
+                        onDragEnter={handleDragEnter}
+                        onDragLeave={handleDragLeave}
+                        onDragEnd={handleModuleDragEnd}
+                        onDrop={handleDrop}
+                        className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+                          draggingModule === index 
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                            : 'hover:border-[var(--color-primary)]/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-start gap-3 flex-1">
+                            {/* Handle para drag & drop */}
+                            <div 
+                              className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                              draggable
+                              onDragStart={(e) => handleModuleDragStart(e, index)}
+                            >
+                              <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                            </div>
+                            
+                            {/* Indicador de posição */}
+                            <div className="flex flex-col items-center">
+                              <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+                                {module.id}
+                              </span>
+                              <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+                            </div>
+                            
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <h4 className="font-medium text-[var(--color-secondary)]">
+                                  Módulo {module.id} - {module.title || "Sem título"}
+                                </h4>
+                                {isModuleValid(module) ? (
+                                  <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                    Completo
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                    Incompleto
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Fase</label>
+                                    <Input
+                                      value={module.phase}
+                                      onChange={(e) => handleUpdateModule(index, { phase: e.target.value })}
+                                      placeholder="Ex: FASE DE FUNDAÇÃO"
+                                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Título do Módulo</label>
+                                    <Input
+                                      value={module.title}
+                                      onChange={(e) => handleUpdateModule(index, { title: e.target.value })}
+                                      placeholder="Ex: Setup da Máquina"
+                                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone</label>
+                                    <IconSelector
+                                      value={module.icon}
+                                      onChange={(value) => handleUpdateModule(index, { icon: value })}
+                                      placeholder="ph:wrench-bold"
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
+                                    <TextArea
+                                      value={module.description}
+                                      onChange={(e) => handleUpdateModule(index, { description: e.target.value })}
+                                      placeholder="Descrição detalhada do módulo"
+                                      rows={3}
+                                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <label className="block text-sm font-medium text-[var(--color-secondary)]">Tags</label>
+                                      <Button
+                                        type="button"
+                                        onClick={() => handleAddModuleTag(index)}
+                                        variant="secondary"
+                                        className="text-xs h-6 px-2"
+                                      >
+                                        <Plus className="w-3 h-3 mr-1" />
+                                        Adicionar Tag
+                                      </Button>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {module.tags.map((tag, tagIndex) => (
+                                        <div key={tagIndex} className="flex items-center gap-2">
+                                          <Input
+                                            value={tag}
+                                            onChange={(e) => handleUpdateModuleTag(index, tagIndex, e.target.value)}
+                                            placeholder="Ex: Setup Técnico"
+                                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                          />
+                                          {module.tags.length > 1 && (
+                                            <Button
+                                              type="button"
+                                              onClick={() => handleRemoveModuleTag(index, tagIndex)}
+                                              variant="danger"
+                                              className="h-9 w-9 p-0 flex items-center justify-center"
+                                            >
+                                              <Trash2 className="w-4 h-4" color="white" fill="white" />
+                                            </Button>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <p className="text-xs text-[var(--color-secondary)]/50">
+                                      Adicione tags para categorizar o módulo
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              type="button"
+                              onClick={() => handleRemoveModule(index)}
+                              variant="danger"
+                              className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Remover
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </Card>
-            ) : (
-              <div className="space-y-4">
-                {tegProData.modules.map((module, index) => {
-                  const ModuleIcon = getModuleIcon(index);
-                  return (
-                    <Card key={index} className="p-6 bg-[var(--color-background)]">
-                      <div className="flex items-start justify-between mb-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center">
-                            <ModuleIcon className="w-5 h-5 text-[var(--color-primary)]" />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-[var(--color-secondary)]">
-                              Módulo {module.id}: {module.title || "Sem título"}
-                            </h4>
-                            <p className="text-sm text-[var(--color-secondary)]/70">
-                              {module.phase || "Sem fase definida"}
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="danger"
-                          onClick={() => handleRemoveModule(index)}
-                          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 border-none"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remover
-                        </Button>
-                      </div>
-
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {/* Coluna 1: Informações básicas */}
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                                ID do Módulo
-                              </label>
-                              <Input
-                                value={module.id}
-                                onChange={(e) => handleUpdateModule(index, { id: e.target.value })}
-                                placeholder="01"
-                                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                              />
-                            </div>
-
-                            <div>
-                              <IconSelector
-                                value={module.icon}
-                                onChange={(value) => handleUpdateModule(index, { icon: value })}
-                                label="Ícone do Módulo"
-                              />
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                              Fase
-                            </label>
-                            <Input
-                              value={module.phase}
-                              onChange={(e) => handleUpdateModule(index, { phase: e.target.value })}
-                              placeholder="FASE DE FUNDAÇÃO"
-                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                              Título
-                            </label>
-                            <Input
-                              value={module.title}
-                              onChange={(e) => handleUpdateModule(index, { title: e.target.value })}
-                              placeholder="Setup da Máquina"
-                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Coluna 2: Descrição e Tags */}
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                              Descrição
-                            </label>
-                            <TextArea
-                              value={module.description}
-                              onChange={(e) => handleUpdateModule(index, { description: e.target.value })}
-                              placeholder="Descreva detalhadamente o módulo..."
-                              rows={4}
-                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                            />
-                          </div>
-
-                          <TagsEditor
-                            tags={module.tags}
-                            onChange={(tags) => handleUpdateModule(index, { tags })}
-                            label="Tags do Módulo"
-                          />
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                })}
               </div>
-            )}
+            </Card>
           </motion.div>
         </div>
 
@@ -548,7 +760,7 @@ export default function TegProProtocolPage() {
           <SectionHeader
             title="Call to Action"
             section="cta"
-            icon={ArrowRight}
+            icon={LinkIcon}
             isExpanded={expandedSections.cta}
             onToggle={() => toggleSection("cta")}
           />
@@ -559,22 +771,42 @@ export default function TegProProtocolPage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Texto do CTA"
-                  value={tegProData.cta.text}
-                  onChange={(e) => updateNested('cta.text', e.target.value)}
-                  placeholder="Ver Grade Detalhada"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Configuração da Ação Final
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Configure o botão de call to action que aparece no final da seção
+                </p>
+              </div>
 
-                <Input
-                  label="Link do CTA"
-                  value={tegProData.cta.link}
-                  onChange={(e) => updateNested('cta.link', e.target.value)}
-                  placeholder="#grade"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Texto do Botão
+                  </label>
+                  <Input
+                    value={pageData.cta.text}
+                    onChange={(e) => updateNested('cta.text', e.target.value)}
+                    placeholder="Ex: Ver Grade Detalhada"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Link do Botão
+                  </label>
+                  <Input
+                    value={pageData.cta.link}
+                    onChange={(e) => updateNested('cta.link', e.target.value)}
+                    placeholder="Ex: #grade, /protocolo-completo"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/50">
+                    Pode ser um link interno (#seção) ou externo (/página)
+                  </p>
+                </div>
               </div>
             </Card>
           </motion.div>
@@ -599,8 +831,8 @@ export default function TegProProtocolPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={tegProData.modules.length}
-        itemName="Módulo"
+        totalItems={1}
+        itemName="Configuração do Protocolo TegPro"
       />
 
       <FeedbackMessages 

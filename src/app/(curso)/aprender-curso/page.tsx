@@ -1,30 +1,28 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
-import IconSelector from "@/components/IconSelector";
+import { Button } from "@/components/Button";
 import { 
-  Layout, 
-  GraduationCap,
-  Award,
+  Palette,
+  Tag,
+  ListIcon,
   Type,
-  Settings,
-  CheckCircle,
-  Sparkles,
-  Bold,
-  Highlighter,
+  FileText,
   GripVertical,
   AlertCircle,
   CheckCircle2,
   XCircle,
-  ListChecks,
   Trash2,
-  Plus
+  Plus,
+  Sparkles,
+  Zap,
+  GraduationCap
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -32,13 +30,12 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { Button } from "@/components/Button";
-import { useSite } from "@/context/site-context";
+import ColorPicker from "@/components/ColorPicker";
+import IconSelector from "@/components/IconSelector";
 
-interface Headline {
-  prefix: string;
-  highlight: string;
-  suffix: string;
+interface Feature {
+  icon: string;
+  label: string;
 }
 
 interface Paragraph {
@@ -52,88 +49,134 @@ interface Description {
   paragraph2: Paragraph;
 }
 
-interface Feature {
-  id: string;
-  label: string;
-  icon: string;
+interface Headline {
+  prefix: string;
+  highlight: string;
+  suffix: string;
 }
 
-interface WhyLearnData {
+interface Theme {
+  accentColor: string;
+  secondaryColor: string;
+}
+
+interface CursosData {
+  theme: Theme;
   badge: string;
+  features: Feature[];
   headline: Headline;
   description: Description;
-  features: Feature[];
 }
 
-const defaultWhyLearnData: WhyLearnData = {
+interface PageData {
+  cursos: CursosData;
+}
+
+const defaultCursosData: CursosData = {
+  theme: {
+    accentColor: "#FFD700",
+    secondaryColor: "#B8860B"
+  },
   badge: "Vivência de Campo",
+  features: [
+    {
+      icon: "mdi:currency-usd",
+      label: "Liberdade Financeira"
+    },
+    {
+      icon: "mdi:clock-fast",
+      label: "Resultado Prático"
+    }
+  ],
   headline: {
-    prefix: "Por que aprender com a",
+    prefix: "Por que aprender com a ",
     highlight: "Tegbe",
-    suffix: "e não com um \"guru\"?"
+    suffix: " e não com um \"guru\"?"
   },
   description: {
     paragraph1: {
-      text: "O mercado está cheio de professores que nunca venderam nada. A Tegbe é, antes de tudo, uma",
-      bold: "operação de vendas ativa"
+      text: "O mercado está cheio de professores que nunca venderam nada. A Tegbe é, antes de tudo, uma ",
+      bold: "operação de vendas ativa."
     },
     paragraph2: {
-      text: "Não ensinamos teorias de livros antigos. Nós abrimos a caixa-preta das estratégias que geram milhões todos os meses para nossos clientes de assessoria.",
+      text: "Não ensinamos teorias de livros antigos. Nós abrimos a caixa-preta das estratégias que geram milhões todos os meses.",
       highlight: "Você aprende o que nós aplicamos hoje."
     }
-  },
-  features: [
-    { id: "feature-01", label: "Método Validado", icon: "ph:check-circle-fill" },
-    { id: "feature-02", label: "Foco em ROI", icon: "ph:chart-line-up-bold" },
-    { id: "feature-03", label: "Comunidade Ativa", icon: "ph:users-three-fill" }
-  ]
+  }
 };
 
-const mergeWithDefaults = (apiData: any, defaultData: WhyLearnData): WhyLearnData => {
+const defaultPageData: PageData = {
+  cursos: defaultCursosData
+};
+
+// Função de merge para garantir que todos os campos estejam definidos
+const mergeWithDefaults = (apiData: any, defaultData: PageData): PageData => {
   if (!apiData) return defaultData;
   
+  const apiCursos = apiData.cursos || {};
+  
   return {
-    badge: apiData.badge || defaultData.badge,
-    headline: apiData.headline || defaultData.headline,
-    description: apiData.description || defaultData.description,
-    features: apiData.features || defaultData.features,
+    cursos: {
+      theme: {
+        accentColor: apiCursos.theme?.accentColor || defaultData.cursos.theme.accentColor,
+        secondaryColor: apiCursos.theme?.secondaryColor || defaultData.cursos.theme.secondaryColor,
+      },
+      badge: apiCursos.badge || defaultData.cursos.badge,
+      features: apiCursos.features || defaultData.cursos.features,
+      headline: {
+        prefix: apiCursos.headline?.prefix || defaultData.cursos.headline.prefix,
+        highlight: apiCursos.headline?.highlight || defaultData.cursos.headline.highlight,
+        suffix: apiCursos.headline?.suffix || defaultData.cursos.headline.suffix,
+      },
+      description: {
+        paragraph1: {
+          text: apiCursos.description?.paragraph1?.text || defaultData.cursos.description.paragraph1.text,
+          bold: apiCursos.description?.paragraph1?.bold || defaultData.cursos.description.paragraph1.bold,
+        },
+        paragraph2: {
+          text: apiCursos.description?.paragraph2?.text || defaultData.cursos.description.paragraph2.text,
+          highlight: apiCursos.description?.paragraph2?.highlight || defaultData.cursos.description.paragraph2.highlight,
+        }
+      }
+    }
   };
 };
 
-export default function WhyLearnPage() {
-  const { currentSite } = useSite();
-  const currentPlanType = currentSite.planType;
-  const currentFeatureLimit = currentPlanType === 'pro' ? 10 : 5;
-
+export default function CursosPage() {
   const {
     data: pageData,
-    exists,
     loading,
     success,
     errorMsg,
     deleteModal,
+    exists,
     updateNested,
     save,
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<WhyLearnData>({
-    apiPath: "/api/tegbe-institucional/json/porque-aprender",
-    defaultData: defaultWhyLearnData,
+  } = useJsonManagement<PageData>({
+    apiPath: "/api/tegbe-institucional/json/aprender",
+    defaultData: defaultPageData,
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estados para drag & drop
-  const [draggingFeature, setDraggingFeature] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState({
-    badge: true,
+    theme: true,
+    badge: false,
+    features: false,
     headline: false,
     description: false,
-    features: false,
   });
 
-  // Referência para novo item
+  const [draggingFeature, setDraggingFeature] = useState<number | null>(null);
+
+  // Referência para novo feature
   const newFeatureRef = useRef<HTMLDivElement>(null);
+
+  // Controle de planos
+  const currentPlanType = 'pro';
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -142,22 +185,34 @@ export default function WhyLearnPage() {
     }));
   };
 
-  // Funções para manipular a lista de features
+  // Helper para obter dados da seção cursos
+  const getCursosData = (): CursosData => {
+    return pageData?.cursos || defaultCursosData;
+  };
+
+  const handleUpdate = useCallback((path: string, value: any) => {
+    updateNested(`cursos.${path}`, value);
+  }, [updateNested]);
+
+  const handleColorChange = (path: string, color: string) => {
+    const cleanColor = color.startsWith('#') ? color : `#${color}`;
+    handleUpdate(path, cleanColor);
+  };
+
+  // Funções para features
   const handleAddFeature = () => {
-    const features = pageData.features;
-    if (features.length >= currentFeatureLimit) {
+    const features = getCursosData().features;
+    if (features.length >= currentPlanLimit) {
       return false;
     }
     
-    const newId = `feature-${Date.now()}`;
-    const newFeature: Feature = {
-      id: newId,
-      label: "",
-      icon: "ph:check-circle-fill"
+    const newItem: Feature = {
+      icon: "mdi:star",
+      label: ""
     };
     
-    const updated = [...features, newFeature];
-    updateNested('features', updated);
+    const updated = [...features, newItem];
+    handleUpdate('features', updated);
     
     setTimeout(() => {
       newFeatureRef.current?.scrollIntoView({ 
@@ -170,28 +225,27 @@ export default function WhyLearnPage() {
   };
 
   const handleUpdateFeature = (index: number, updates: Partial<Feature>) => {
-    const features = pageData.features;
+    const features = getCursosData().features;
     const updated = [...features];
     if (index >= 0 && index < updated.length) {
       updated[index] = { ...updated[index], ...updates };
-      updateNested('features', updated);
+      handleUpdate('features', updated);
     }
   };
 
   const handleRemoveFeature = (index: number) => {
-    const features = pageData.features;
+    const features = getCursosData().features;
     
     if (features.length <= 1) {
-      // Mantém pelo menos um feature vazio
+      // Mantém pelo menos um item vazio
       const emptyFeature: Feature = {
-        id: "feature-01",
-        label: "",
-        icon: "ph:check-circle-fill"
+        icon: "mdi:star",
+        label: ""
       };
-      updateNested('features', [emptyFeature]);
+      handleUpdate('features', [emptyFeature]);
     } else {
       const updated = features.filter((_, i) => i !== index);
-      updateNested('features', updated);
+      handleUpdate('features', updated);
     }
   };
 
@@ -207,18 +261,14 @@ export default function WhyLearnPage() {
     
     if (draggingFeature === null || draggingFeature === index) return;
     
-    const features = pageData.features;
+    const features = getCursosData().features;
     const updated = [...features];
-    const draggedFeature = updated[draggingFeature];
+    const draggedItem = updated[draggingFeature];
     
-    // Remove o item arrastado
     updated.splice(draggingFeature, 1);
+    updated.splice(index, 0, draggedItem);
     
-    // Insere na nova posição
-    const newIndex = index > draggingFeature ? index : index;
-    updated.splice(newIndex, 0, draggedFeature);
-    
-    updateNested('features', updated);
+    handleUpdate('features', updated);
     setDraggingFeature(index);
   };
 
@@ -252,431 +302,565 @@ export default function WhyLearnPage() {
 
   // Validações
   const isFeatureValid = (feature: Feature): boolean => {
-    return feature.label.trim() !== '' && feature.icon.trim() !== '';
+    return feature.icon.trim() !== '' && feature.label.trim() !== '';
   };
 
-  const isFeatureLimitReached = pageData.features.length >= currentFeatureLimit;
-  const canAddNewFeature = !isFeatureLimitReached;
-  const featuresCompleteCount = pageData.features.filter(isFeatureValid).length;
-  const featuresTotalCount = pageData.features.length;
+  const features = getCursosData().features;
+  const isFeaturesLimitReached = features.length >= currentPlanLimit;
+  const canAddNewFeature = !isFeaturesLimitReached;
+  const featuresCompleteCount = features.filter(isFeatureValid).length;
+  const featuresTotalCount = features.length;
 
-  const featuresValidationError = isFeatureLimitReached 
-    ? `Você chegou ao limite do plano ${currentPlanType} (${currentFeatureLimit} diferenciais).`
+  const featuresValidationError = isFeaturesLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
     : null;
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
+    const data = getCursosData();
+
+    // Tema (2 campos) - USANDO VALIDAÇÃO SEGURA
+    total += 2;
+    if (data.theme?.accentColor?.trim()) completed++;
+    if (data.theme?.secondaryColor?.trim()) completed++;
 
     // Badge (1 campo)
     total += 1;
-    if (pageData.badge.trim()) completed++;
+    if (data.badge?.trim()) completed++;
+
+    // Features (2 campos cada)
+    total += features.length * 2;
+    features.forEach(feature => {
+      if (feature.icon?.trim()) completed++;
+      if (feature.label?.trim()) completed++;
+    });
 
     // Headline (3 campos)
     total += 3;
-    if (pageData.headline.prefix.trim()) completed++;
-    if (pageData.headline.highlight.trim()) completed++;
-    if (pageData.headline.suffix.trim()) completed++;
+    if (data.headline?.prefix?.trim()) completed++;
+    if (data.headline?.highlight?.trim()) completed++;
+    if (data.headline?.suffix?.trim()) completed++;
 
-    // Description (parágrafo 1 - 2 campos, parágrafo 2 - 2 campos)
+    // Description (4 campos - 2 parágrafos, cada um com texto e destaque)
     total += 4;
-    if (pageData.description.paragraph1.text.trim()) completed++;
-    if (pageData.description.paragraph1.bold?.trim()) completed++;
-    if (pageData.description.paragraph2.text.trim()) completed++;
-    if (pageData.description.paragraph2.highlight?.trim()) completed++;
-
-    // Features (2 campos por feature)
-    total += pageData.features.length * 2;
-    pageData.features.forEach(feature => {
-      if (feature.label.trim()) completed++;
-      if (feature.icon.trim()) completed++;
-    });
+    if (data.description?.paragraph1?.text?.trim()) completed++;
+    if (data.description?.paragraph1?.bold?.trim()) completed++;
+    if (data.description?.paragraph2?.text?.trim()) completed++;
+    if (data.description?.paragraph2?.highlight?.trim()) completed++;
 
     return { completed, total };
   };
 
   const completion = calculateCompletion();
 
+  // Renderizar seção de tema
+  const renderThemeSection = () => {
+    const themeData = getCursosData().theme;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Tema" 
+          section="theme" 
+          icon={Palette}
+          isExpanded={expandedSections.theme}
+          onToggle={() => toggleSection("theme")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedSections.theme ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor de Destaque (Primária)
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="#FFD700"
+                    value={themeData?.accentColor || "#FFD700"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleUpdate('theme.accentColor', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                  />
+                  <ColorPicker
+                    color={themeData?.accentColor || "#FFD700"}
+                    onChange={(color: string) => handleColorChange('theme.accentColor', color)}
+                  />
+                </div>
+                <p className="text-xs text-[var(--color-secondary)]/70">
+                  Cor dourada para elementos principais
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor Secundária
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="#B8860B"
+                    value={themeData?.secondaryColor || "#B8860B"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleUpdate('theme.secondaryColor', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                  />
+                  <ColorPicker
+                    color={themeData?.secondaryColor || "#B8860B"}
+                    onChange={(color: string) => handleColorChange('theme.secondaryColor', color)}
+                  />
+                </div>
+                <p className="text-xs text-[var(--color-secondary)]/70">
+                  Cor bronze para elementos secundários
+                </p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  // Renderizar seção de badge
+  const renderBadgeSection = () => {
+    const badge = getCursosData().badge;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Badge" 
+          section="badge" 
+          icon={Tag}
+          isExpanded={expandedSections.badge}
+          onToggle={() => toggleSection("badge")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedSections.badge ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Texto do Badge
+              </label>
+              <Input
+                type="text"
+                placeholder="Vivência de Campo"
+                value={badge || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleUpdate('badge', e.target.value)
+                }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+              <p className="text-xs text-[var(--color-secondary)]/70">
+                Texto que aparece no badge da seção
+              </p>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  // Renderizar seção de features
+  const renderFeaturesSection = () => {
+    const features = getCursosData().features;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Features" 
+          section="features" 
+          icon={ListIcon}
+          isExpanded={expandedSections.features}
+          onToggle={() => toggleSection("features")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedSections.features ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                <div>
+                  <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                    Lista de Features
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {featuresCompleteCount} de {featuresTotalCount} completos
+                      </span>
+                    </div>
+                    <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                    <span className="text-sm text-[var(--color-secondary)]/70">
+                      Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleAddFeature}
+                    variant="primary"
+                    className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                    disabled={!canAddNewFeature}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Feature
+                  </Button>
+                  {isFeaturesLimitReached && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Limite do plano atingido
+                    </p>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-[var(--color-secondary)]/70">
+                Cada feature deve ter um ícone e um rótulo.
+              </p>
+            </div>
+
+            {/* Mensagem de erro */}
+            {featuresValidationError && (
+              <div className={`p-3 rounded-lg ${isFeaturesLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                <div className="flex items-start gap-2">
+                  {isFeaturesLimitReached ? (
+                    <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  )}
+                  <p className={`text-sm ${isFeaturesLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                    {featuresValidationError}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {features.map((feature, index) => (
+                <div 
+                  key={index}
+                  ref={index === features.length - 1 ? newFeatureRef : undefined}
+                  draggable
+                  onDragStart={(e) => handleFeatureDragStart(e, index)}
+                  onDragOver={(e) => handleFeatureDragOver(e, index)}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragEnd={handleFeatureDragEnd}
+                  onDrop={handleDrop}
+                  className={`p-4 border border-[var(--color-border)] rounded-lg space-y-4 transition-all duration-200 ${
+                    draggingFeature === index 
+                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                      : 'hover:border-[var(--color-primary)]/50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 flex-1">
+                      {/* Handle para drag & drop */}
+                      <div 
+                        className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                        draggable
+                        onDragStart={(e) => handleFeatureDragStart(e, index)}
+                      >
+                        <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                      </div>
+                      
+                      <div className="flex flex-col items-center">
+                        <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+                          {index + 1}
+                        </span>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h5 className="font-medium text-[var(--color-secondary)]">
+                            {feature?.label || "Feature sem nome"}
+                          </h5>
+                          {isFeatureValid(feature) ? (
+                            <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                              Completo
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                              Incompleto
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                              Ícone
+                            </label>
+                            <IconSelector
+                              value={feature?.icon || ""}
+                              onChange={(value) => handleUpdateFeature(index, { icon: value })}
+                              placeholder="mdi:currency-usd"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                              Rótulo
+                            </label>
+                            <Input
+                              value={feature?.label || ""}
+                              onChange={(e) => handleUpdateFeature(index, { label: e.target.value })}
+                              placeholder="Liberdade Financeira"
+                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        type="button"
+                        onClick={() => handleRemoveFeature(index)}
+                        variant="danger"
+                        className="bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Remover
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  // Renderizar seção de headline
+  const renderHeadlineSection = () => {
+    const headlineData = getCursosData().headline;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Headline" 
+          section="headline" 
+          icon={Type}
+          isExpanded={expandedSections.headline}
+          onToggle={() => toggleSection("headline")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedSections.headline ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Prefixo
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Por que aprender com a "
+                  value={headlineData?.prefix || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleUpdate('headline.prefix', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <p className="text-xs text-[var(--color-secondary)]/70">
+                  Texto antes da palavra destacada
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Palavra em Destaque
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Tegbe"
+                  value={headlineData?.highlight || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleUpdate('headline.highlight', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <p className="text-xs text-[var(--color-secondary)]/70">
+                  Parte do headline que será destacada
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Sufixo
+                </label>
+                <Input
+                  type="text"
+                  placeholder=' e não com um "guru"?'
+                  value={headlineData?.suffix || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                    handleUpdate('headline.suffix', e.target.value)
+                  }
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <p className="text-xs text-[var(--color-secondary)]/70">
+                  Texto após a palavra destacada
+                </p>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  // Renderizar seção de description
+  const renderDescriptionSection = () => {
+    const descriptionData = getCursosData().description;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Descrição" 
+          section="description" 
+          icon={FileText}
+          isExpanded={expandedSections.description}
+          onToggle={() => toggleSection("description")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedSections.description ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-8">
+              {/* Parágrafo 1 */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-[var(--color-secondary)]">Parágrafo 1</h4>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Texto
+                    </label>
+                    <TextArea
+                      value={descriptionData?.paragraph1?.text || ""}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                        handleUpdate('description.paragraph1.text', e.target.value)
+                      }
+                      placeholder="O mercado está cheio de professores que nunca venderam nada. A Tegbe é, antes de tudo, uma "
+                      rows={3}
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Texto em Negrito
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="operação de vendas ativa."
+                      value={descriptionData?.paragraph1?.bold || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleUpdate('description.paragraph1.bold', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70">
+                      Parte do texto que aparecerá em negrito (opcional)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parágrafo 2 */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-[var(--color-secondary)]">Parágrafo 2</h4>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Texto
+                    </label>
+                    <TextArea
+                      value={descriptionData?.paragraph2?.text || ""}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                        handleUpdate('description.paragraph2.text', e.target.value)
+                      }
+                      placeholder="Não ensinamos teorias de livros antigos. Nós abrimos a caixa-preta das estratégias que geram milhões todos os meses."
+                      rows={3}
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Texto em Destaque
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Você aprende o que nós aplicamos hoje."
+                      value={descriptionData?.paragraph2?.highlight || ''}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleUpdate('description.paragraph2.highlight', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70">
+                      Parte do texto que aparecerá destacada (opcional)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
   if (loading && !exists) {
-    return <Loading layout={Layout} exists={!!exists} />;
+    return <Loading layout={GraduationCap} exists={!!exists} />;
   }
 
   return (
     <ManageLayout
       headerIcon={GraduationCap}
-      title="Por que Aprender com a Tegbe"
-      description="Gerencie o conteúdo da seção que explica os diferenciais"
+      title="Conteúdo de Cursos"
+      description="Configure o conteúdo da seção de diferenciais dos cursos"
       exists={!!exists}
-      itemName="Por que Aprender"
+      itemName="Cursos"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Badge */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Badge"
-            section="badge"
-            icon={Award}
-            isExpanded={expandedSections.badge}
-            onToggle={() => toggleSection("badge")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.badge ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Badge
-                  </label>
-                  <Input
-                    value={pageData.badge}
-                    onChange={(e) => updateNested('badge', e.target.value)}
-                    placeholder="Ex: Vivência de Campo"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/50 mt-2">
-                    Texto curto que aparece como um selo ou destaque acima do título
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção Headline */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Headline (Título Principal)"
-            section="headline"
-            icon={Type}
-            isExpanded={expandedSections.headline}
-            onToggle={() => toggleSection("headline")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.headline ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Prefixo
-                    </label>
-                    <Input
-                      value={pageData.headline.prefix}
-                      onChange={(e) => updateNested('headline.prefix', e.target.value)}
-                      placeholder="Por que aprender com a"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Destaque
-                    </label>
-                    <Input
-                      value={pageData.headline.highlight}
-                      onChange={(e) => updateNested('headline.highlight', e.target.value)}
-                      placeholder="Tegbe"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-semibold"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Sufixo
-                    </label>
-                    <Input
-                      value={pageData.headline.suffix}
-                      onChange={(e) => updateNested('headline.suffix', e.target.value)}
-                      placeholder='e não com um "guru"?'
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção Description */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Descrição"
-            section="description"
-            icon={Settings}
-            isExpanded={expandedSections.description}
-            onToggle={() => toggleSection("description")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.description ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="space-y-6">
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                      <Bold className="w-5 h-5" />
-                      Parágrafo 1
-                    </h4>
-                    
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                          Texto
-                        </label>
-                        <TextArea
-                          value={pageData.description.paragraph1.text}
-                          onChange={(e) => updateNested('description.paragraph1.text', e.target.value)}
-                          placeholder="O mercado está cheio de professores que nunca venderam nada. A Tegbe é, antes de tudo, uma"
-                          rows={3}
-                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                          <Bold className="w-4 h-4" />
-                          Texto em Negrito (Opcional)
-                        </label>
-                        <Input
-                          value={pageData.description.paragraph1.bold || ''}
-                          onChange={(e) => updateNested('description.paragraph1.bold', e.target.value)}
-                          placeholder="operação de vendas ativa"
-                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-semibold"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                      <Highlighter className="w-5 h-5" />
-                      Parágrafo 2
-                    </h4>
-                    
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                          Texto
-                        </label>
-                        <TextArea
-                          value={pageData.description.paragraph2.text}
-                          onChange={(e) => updateNested('description.paragraph2.text', e.target.value)}
-                          placeholder="Não ensinamos teorias de livros antigos. Nós abrimos a caixa-preta das estratégias que geram milhões todos os meses para nossos clientes de assessoria."
-                          rows={3}
-                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                          <Sparkles className="w-4 h-4" />
-                          Texto Destacado (Opcional)
-                        </label>
-                        <Input
-                          value={pageData.description.paragraph2.highlight || ''}
-                          onChange={(e) => updateNested('description.paragraph2.highlight', e.target.value)}
-                          placeholder="Você aprende o que nós aplicamos hoje."
-                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] bg-yellow-500/10 border-yellow-500/20"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção Features */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Diferenciais"
-            section="features"
-            icon={CheckCircle}
-            isExpanded={expandedSections.features}
-            onToggle={() => toggleSection("features")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.features ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                      <ListChecks className="w-5 h-5" />
-                      Diferenciais
-                    </h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-[var(--color-secondary)]/70">
-                          {featuresCompleteCount} de {featuresTotalCount} completos
-                        </span>
-                      </div>
-                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
-                      <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <Button
-                      type="button"
-                      onClick={handleAddFeature}
-                      variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
-                      disabled={!canAddNewFeature}
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar Diferencial
-                    </Button>
-                    {isFeatureLimitReached && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Limite do plano atingido
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Adicione os diferenciais que tornam a Tegbe única.
-                </p>
-              </div>
-
-              {/* Mensagem de erro */}
-              {featuresValidationError && (
-                <div className={`p-3 rounded-lg ${isFeatureLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
-                  <div className="flex items-start gap-2">
-                    {isFeatureLimitReached ? (
-                      <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                    )}
-                    <p className={`text-sm ${isFeatureLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {featuresValidationError}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {pageData.features.map((feature, index) => (
-                  <div 
-                    key={index}
-                    ref={index === pageData.features.length - 1 ? newFeatureRef : undefined}
-                    draggable
-                    onDragStart={(e) => handleFeatureDragStart(e, index)}
-                    onDragOver={(e) => handleFeatureDragOver(e, index)}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                    onDragEnd={handleFeatureDragEnd}
-                    onDrop={handleDrop}
-                    className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      draggingFeature === index 
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
-                        : 'hover:border-[var(--color-primary)]/50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
-                        {/* Handle para drag & drop */}
-                        <div 
-                          className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
-                          draggable
-                          onDragStart={(e) => handleFeatureDragStart(e, index)}
-                        >
-                          <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
-                        </div>
-                        
-                        {/* Indicador de posição */}
-                        <div className="flex flex-col items-center">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
-                            <span className="text-sm font-bold text-[var(--color-primary)]">
-                              {index + 1}
-                            </span>
-                          </div>
-                          <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-medium text-[var(--color-secondary)]">
-                              {feature.label || "Sem título"}
-                            </h4>
-                            {isFeatureValid(feature) ? (
-                              <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
-                                Completo
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                                Incompleto
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Texto do Diferencial
-                                </label>
-                                <Input
-                                  value={feature.label}
-                                  onChange={(e) => handleUpdateFeature(index, { label: e.target.value })}
-                                  placeholder="Ex: Método Validado"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Ícone
-                                </label>
-                                <IconSelector
-                                  value={feature.icon}
-                                  onChange={(value) => handleUpdateFeature(index, { icon: value })}
-                                  placeholder="ph:check-circle-fill"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => handleRemoveFeature(index)}
-                          variant="danger"
-                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remover
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
+        {/* Seções */}
+        <div className="space-y-6">
+          {renderThemeSection()}
+          {renderBadgeSection()}
+          {renderFeaturesSection()}
+          {renderHeadlineSection()}
+          {renderDescriptionSection()}
         </div>
 
         <FixedActionBar
@@ -687,7 +871,7 @@ export default function WhyLearnPage() {
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Por que Aprender"
+          itemName="Cursos"
           icon={GraduationCap}
         />
       </form>
@@ -699,13 +883,10 @@ export default function WhyLearnPage() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Conteúdo da Seção"
+        itemName="Configuração de Cursos"
       />
 
-      <FeedbackMessages 
-        success={success} 
-        errorMsg={errorMsg} 
-      />
+      <FeedbackMessages success={success} errorMsg={errorMsg} />
     </ManageLayout>
   );
 }
