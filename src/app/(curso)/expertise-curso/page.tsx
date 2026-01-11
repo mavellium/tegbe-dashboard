@@ -7,19 +7,23 @@ import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Button } from "@/components/Button";
+import IconSelector from "@/components/IconSelector";
 import { 
-  Crown,
-  Target,
-  ImageIcon,
-  Type,
-  Tag,
+  TrendingUp,
   Palette,
-  Sparkles,
-  ArrowRight,
-  Layers,
-  FileText,
+  Type,
   Settings,
-  CheckCircle2
+  Layers,
+  ChevronDown,
+  ChevronUp,
+  ImageIcon,
+  Zap,
+  CheckCircle2,
+  School,
+  Target,
+  Star,
+  Link as LinkIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -27,14 +31,15 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { Button } from "@/components/Button";
+import { ThemePropertyInput } from "@/components/ThemePropertyInput";
+import { hexToTailwindTextClass, tailwindToHex } from "@/lib/colors";
 import { ImageUpload } from "@/components/ImageUpload";
-import ColorPicker from "@/components/ColorPicker";
-import IconSelector from "@/components/IconSelector";
 
 interface ThemeData {
   accentColor: string;
   secondaryColor: string;
+  buttonTextColor: string;
+  buttonIconColor: string;
 }
 
 interface HeaderData {
@@ -44,7 +49,7 @@ interface HeaderData {
   titleHighlight: string;
 }
 
-interface FloatingCard {
+interface FloatingCardData {
   icon: string;
   title: string;
   subtitle: string;
@@ -53,7 +58,7 @@ interface FloatingCard {
 interface VisualData {
   imageSrc: string;
   imageAlt: string;
-  floatingCard: FloatingCard;
+  floatingCard: FloatingCardData;
 }
 
 interface ContentData {
@@ -66,10 +71,7 @@ interface CTAData {
   link: string;
 }
 
-interface MethodData {
-  id: string;
-  type: string;
-  subtype: string;
+interface SectionData {
   theme: ThemeData;
   header: HeaderData;
   visual: VisualData;
@@ -77,57 +79,133 @@ interface MethodData {
   cta: CTAData;
 }
 
-const defaultMethodData: MethodData = {
-  id: "metodo-tegpro",
-  type: "",
-  subtype: "",
-  theme: {
-    accentColor: "#FFD700",
-    secondaryColor: "#B8860B"
-  },
-  header: {
-    badgeIcon: "ph:strategy-bold",
-    badgeText: "Método Proprietário",
-    titleLine1: "Não é sorte. É engenharia.",
-    titleHighlight: "Processos que replicam sucesso."
-  },
-  visual: {
-    imageSrc: "",
-    imageAlt: "Dashboards de Alunos TegPro",
-    floatingCard: {
-      icon: "ph:crown-simple-fill",
-      title: "Protocolo Validado",
-      subtitle: "Aplicado em +1.200 negócios"
+interface ShowcaseData {
+  marketing: SectionData;
+  cursos: SectionData;
+}
+
+const defaultData: ShowcaseData = {
+  marketing: {
+    theme: {
+      accentColor: "#FF0F43",
+      secondaryColor: "#E31B63",
+      buttonTextColor: "#FFFFFF",
+      buttonIconColor: "#FFFFFF"
+    },
+    header: {
+      badgeIcon: "mdi:ChartLineVariant",
+      badgeText: "Engenharia de Vendas",
+      titleLine1: "Design de Elite focado em",
+      titleHighlight: "Alta Conversão"
+    },
+    visual: {
+      imageSrc: "",
+      imageAlt: "Marketing de Performance",
+      floatingCard: {
+        icon: "mdi:trending-up",
+        title: "ROI Exponencial",
+        subtitle: "Data-Driven"
+      }
+    },
+    content: {
+      paragraph1: "Transformamos tráfego frio em <strong>lucro real</strong> através de ecossistemas que rodam 24/7.",
+      paragraph2: "Seu negócio merece uma estrutura que evoque <strong>autoridade e desejo</strong> imediato."
+    },
+    cta: {
+      text: "Escalar meu faturamento",
+      link: "#contato"
     }
   },
-  content: {
-    paragraph1: "Você acabou de ver os resultados acima. Nenhum deles aconteceu por acaso. Eles aconteceram porque instalaram o <strong>Sistema Operacional TegPro</strong>.",
-    paragraph2: "Não vendemos 'hacks' que param de funcionar na próxima atualização. Ensinamos <strong>fundamentos de negócios</strong>: aquisição de clientes, processos comerciais e gestão financeira. É assim que transformamos autônomos em <strong style='border-bottom: 1px solid #FFD700'>empresários de escala.</strong>"
-  },
-  cta: {
-    text: "Acessar o Protocolo",
-    link: "#planos"
+  cursos: {
+    theme: {
+      accentColor: "#FFD700",
+      secondaryColor: "#B8860B",
+      buttonTextColor: "#000000",
+      buttonIconColor: "#000000"
+    },
+    header: {
+      badgeIcon: "mdi:school",
+      badgeText: "Ecossistema de Infoprodutos",
+      titleLine1: "Experiência de Aprendizado de",
+      titleHighlight: "Alto Valor Percebido"
+    },
+    visual: {
+      imageSrc: "",
+      imageAlt: "Plataforma de Alunos",
+      floatingCard: {
+        icon: "mdi:star",
+        title: "LTV Máximo",
+        subtitle: "Retenção de Alunos"
+      }
+    },
+    content: {
+      paragraph1: "Criamos LPs de lançamento e áreas de membros que transformam conhecimento em um <strong>ativo de luxo</strong>.",
+      paragraph2: "O mercado de cursos está saturado de amadorismo. Nós entregamos o <strong>Padrão Rolls-Royce</strong> para o seu infoproduto."
+    },
+    cta: {
+      text: "Profissionalizar meu curso",
+      link: "#contato"
+    }
   }
 };
 
-const mergeWithDefaults = (apiData: any, defaultData: MethodData): MethodData => {
+const mergeWithDefaults = (apiData: any, defaultData: ShowcaseData): ShowcaseData => {
   if (!apiData) return defaultData;
   
+  const mergeSection = (apiSection: any, defaultSection: SectionData): SectionData => {
+    if (!apiSection) return defaultSection;
+    
+    return {
+      theme: {
+        accentColor: apiSection.theme?.accentColor || defaultSection.theme.accentColor,
+        secondaryColor: apiSection.theme?.secondaryColor || defaultSection.theme.secondaryColor,
+        buttonTextColor: apiSection.theme?.buttonTextColor || defaultSection.theme.buttonTextColor,
+        buttonIconColor: apiSection.theme?.buttonIconColor || defaultSection.theme.buttonIconColor
+      },
+      header: {
+        badgeIcon: apiSection.header?.badgeIcon || defaultSection.header.badgeIcon,
+        badgeText: apiSection.header?.badgeText || defaultSection.header.badgeText,
+        titleLine1: apiSection.header?.titleLine1 || defaultSection.header.titleLine1,
+        titleHighlight: apiSection.header?.titleHighlight || defaultSection.header.titleHighlight
+      },
+      visual: {
+        imageSrc: apiSection.visual?.imageSrc || defaultSection.visual.imageSrc,
+        imageAlt: apiSection.visual?.imageAlt || defaultSection.visual.imageAlt,
+        floatingCard: {
+          icon: apiSection.visual?.floatingCard?.icon || defaultSection.visual.floatingCard.icon,
+          title: apiSection.visual?.floatingCard?.title || defaultSection.visual.floatingCard.title,
+          subtitle: apiSection.visual?.floatingCard?.subtitle || defaultSection.visual.floatingCard.subtitle
+        }
+      },
+      content: {
+        paragraph1: apiSection.content?.paragraph1 || defaultSection.content.paragraph1,
+        paragraph2: apiSection.content?.paragraph2 || defaultSection.content.paragraph2
+      },
+      cta: {
+        text: apiSection.cta?.text || defaultSection.cta.text,
+        link: apiSection.cta?.link || defaultSection.cta.link
+      }
+    };
+  };
+  
   return {
-    id: apiData.id || defaultData.id,
-    type: apiData.type || defaultData.type,
-    subtype: apiData.subtype || defaultData.subtype,
-    theme: apiData.theme || defaultData.theme,
-    header: apiData.header || defaultData.header,
-    visual: apiData.visual || defaultData.visual,
-    content: apiData.content || defaultData.content,
-    cta: apiData.cta || defaultData.cta,
+    marketing: mergeSection(apiData.marketing, defaultData.marketing),
+    cursos: mergeSection(apiData.cursos, defaultData.cursos)
   };
 };
 
-export default function MethodPage() {
+export default function DualShowcasePage() {
+  const [activeSection, setActiveSection] = useState<"marketing" | "cursos">("cursos");
+  const [expandedSections, setExpandedSections] = useState({
+    theme: true,
+    header: false,
+    visual: false,
+    content: false,
+    cta: false
+  });
+
   const {
-    data: pageData,
+    data: componentData,
     exists,
     loading,
     success,
@@ -140,20 +218,14 @@ export default function MethodPage() {
     confirmDelete,
     fileStates,
     setFileState,
-  } = useJsonManagement<MethodData>({
-    apiPath: "/api/tegbe-institucional/json/expertise-curso",
-    defaultData: defaultMethodData,
+  } = useJsonManagement<ShowcaseData>({
+    apiPath: "/api/tegbe-institucional/json/expertise",
+    defaultData: defaultData,
     mergeFunction: mergeWithDefaults,
   });
 
-  const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    theme: false,
-    header: false,
-    visual: false,
-    content: false,
-    cta: false
-  });
+  const currentData = componentData || defaultData;
+  const currentSectionData = currentData[activeSection];
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -162,14 +234,8 @@ export default function MethodPage() {
     }));
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
-    }
+  const handleChange = (path: string, value: any) => {
+    updateNested(`${activeSection}.${path}`, value);
   };
 
   // Função auxiliar para obter File do fileStates
@@ -178,44 +244,54 @@ export default function MethodPage() {
     return value instanceof File ? value : null;
   };
 
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await save();
+  };
+
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Informações básicas
-    total += 2; // type e subtype
-    if (pageData.type.trim()) completed++;
-    if (pageData.subtype.trim()) completed++;
+    // Função para contar completude de uma seção
+    const countSection = (section: SectionData) => {
+      // Theme
+      total += 4;
+      Object.values(section.theme).forEach(color => {
+        if (color?.trim()) completed++;
+      });
 
-    // Tema
-    total += 2;
-    if (pageData.theme.accentColor.trim()) completed++;
-    if (pageData.theme.secondaryColor.trim()) completed++;
+      // Header
+      total += 4;
+      Object.values(section.header).forEach(value => {
+        if (value?.trim()) completed++;
+      });
 
-    // Header
-    total += 4;
-    if (pageData.header.badgeIcon.trim()) completed++;
-    if (pageData.header.badgeText.trim()) completed++;
-    if (pageData.header.titleLine1.trim()) completed++;
-    if (pageData.header.titleHighlight.trim()) completed++;
+      // Visual
+      total += 2;
+      if (section.visual.imageSrc?.trim()) completed++;
+      if (section.visual.imageAlt?.trim()) completed++;
+      
+      // Floating Card
+      total += 3;
+      Object.values(section.visual.floatingCard).forEach(value => {
+        if (value?.trim()) completed++;
+      });
 
-    // Visual
-    total += 5;
-    if (pageData.visual.imageSrc.trim()) completed++;
-    if (pageData.visual.imageAlt.trim()) completed++;
-    if (pageData.visual.floatingCard.icon.trim()) completed++;
-    if (pageData.visual.floatingCard.title.trim()) completed++;
-    if (pageData.visual.floatingCard.subtitle.trim()) completed++;
+      // Content
+      total += 2;
+      if (section.content.paragraph1?.trim()) completed++;
+      if (section.content.paragraph2?.trim()) completed++;
 
-    // Content
-    total += 2;
-    if (pageData.content.paragraph1.trim()) completed++;
-    if (pageData.content.paragraph2.trim()) completed++;
+      // CTA
+      total += 2;
+      if (section.cta.text?.trim()) completed++;
+      if (section.cta.link?.trim()) completed++;
+    };
 
-    // CTA
-    total += 2;
-    if (pageData.cta.text.trim()) completed++;
-    if (pageData.cta.link.trim()) completed++;
+    // Contar ambas as seções
+    countSection(currentData.marketing);
+    countSection(currentData.cursos);
 
     return { completed, total };
   };
@@ -228,56 +304,55 @@ export default function MethodPage() {
 
   return (
     <ManageLayout
-      headerIcon={Layers}
-      title="Método Proprietário TegPro"
-      description="Gerencie o conteúdo e visual da seção que apresenta o método proprietário"
+      headerIcon={TrendingUp}
+      title="Dual Showcase"
+      description="Configure as seções de showcase para Marketing e Cursos"
       exists={!!exists}
-      itemName="Método"
+      itemName="Dual Showcase"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Básica */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Configurações da Seção"
-            section="basic"
-            icon={Settings}
-            isExpanded={expandedSections.basic}
-            onToggle={() => toggleSection("basic")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.basic ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Tipo de Conteúdo"
-                    value={pageData.type}
-                    onChange={(e) => updateNested('type', e.target.value)}
-                    placeholder="Tipo de conteúdo"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <Input
-                    label="Subtipo/Categoria"
-                    value={pageData.subtype}
-                    onChange={(e) => updateNested('subtype', e.target.value)}
-                    placeholder="Subtipo/categoria"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
+        {/* Tabs de Seções */}
+        <Card className="p-6 bg-[var(--color-background)]">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-[var(--color-secondary)]">Selecione a Seção</h3>
+            <p className="text-sm text-[var(--color-secondary)]/70">
+              Configure diferentes versões para Marketing e Cursos
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveSection("marketing")}
+              className={`px-4 py-2 font-medium rounded-lg transition-all flex items-center gap-2 ${
+                activeSection === "marketing"
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "bg-[var(--color-background-body)] text-[var(--color-secondary)] hover:bg-[var(--color-border)]"
+              }`}
+            >
+              <Target className="w-4 h-4" />
+              Marketing
+            </button>
+            
+            <button
+              type="button"
+              onClick={() => setActiveSection("cursos")}
+              className={`px-4 py-2 font-medium rounded-lg transition-all flex items-center gap-2 ${
+                activeSection === "cursos"
+                  ? "bg-[var(--color-primary)] text-white"
+                  : "bg-[var(--color-background-body)] text-[var(--color-secondary)] hover:bg-[var(--color-border)]"
+              }`}
+            >
+              <School className="w-4 h-4" />
+              Cursos
+            </button>
+          </div>
+        </Card>
 
         {/* Seção Tema */}
         <div className="space-y-4">
           <SectionHeader
-            title="Tema e Cores"
+            title="Tema de Cores"
             section="theme"
             icon={Palette}
             isExpanded={expandedSections.theme}
@@ -290,52 +365,51 @@ export default function MethodPage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Cor de Destaque (Acentuação)
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        value={pageData.theme.accentColor}
-                        onChange={(e) => updateNested('theme.accentColor', e.target.value)}
-                        placeholder="#FFD700"
-                        className="flex-1 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
-                      />
-                      <ColorPicker
-                        color={pageData.theme.accentColor}
-                        onChange={(color) => updateNested('theme.accentColor', color)}
-                      />
-                    </div>
-                    <p className="text-xs text-[var(--color-secondary)]/70">
-                      Cor principal para destaques e elementos importantes
-                    </p>
-                  </div>
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Paleta de Cores da Seção
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Configure as cores específicas para esta seção do showcase
+                </p>
+              </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Cor Secundária
-                    </label>
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        value={pageData.theme.secondaryColor}
-                        onChange={(e) => updateNested('theme.secondaryColor', e.target.value)}
-                        placeholder="#B8860B"
-                        className="flex-1 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
-                      />
-                      <ColorPicker
-                        color={pageData.theme.secondaryColor}
-                        onChange={(color) => updateNested('theme.secondaryColor', color)}
-                      />
-                    </div>
-                    <p className="text-xs text-[var(--color-secondary)]/70">
-                      Cor de apoio e elementos complementares
-                    </p>
-                  </div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <ThemePropertyInput
+                  property="bg"
+                  label="Cor de Destaque"
+                  description="Cor principal para elementos em destaque"
+                  currentHex={currentSectionData.theme.accentColor}
+                  tailwindClass={`bg-[${currentSectionData.theme.accentColor}]`}
+                  onThemeChange={(_, hex) => handleChange('theme.accentColor', hex)}
+                />
+
+                <ThemePropertyInput
+                  property="bg"
+                  label="Cor Secundária"
+                  description="Cor para elementos secundários e gradientes"
+                  currentHex={currentSectionData.theme.secondaryColor}
+                  tailwindClass={`bg-[${currentSectionData.theme.secondaryColor}]`}
+                  onThemeChange={(_, hex) => handleChange('theme.secondaryColor', hex)}
+                />
+
+                <ThemePropertyInput
+                  property="text"
+                  label="Cor do Texto do Botão"
+                  description="Cor do texto dentro dos botões"
+                  currentHex={currentSectionData.theme.buttonTextColor}
+                  tailwindClass={`text-[${currentSectionData.theme.buttonTextColor}]`}
+                  onThemeChange={(_, hex) => handleChange('theme.buttonTextColor', hex)}
+                />
+
+                <ThemePropertyInput
+                  property="text"
+                  label="Cor do Ícone do Botão"
+                  description="Cor dos ícones dentro dos botões"
+                  currentHex={currentSectionData.theme.buttonIconColor}
+                  tailwindClass={`text-[${currentSectionData.theme.buttonIconColor}]`}
+                  onThemeChange={(_, hex) => handleChange('theme.buttonIconColor', hex)}
+                />
               </div>
             </Card>
           </motion.div>
@@ -346,7 +420,7 @@ export default function MethodPage() {
           <SectionHeader
             title="Cabeçalho"
             section="header"
-            icon={Type}
+            icon={Zap}
             isExpanded={expandedSections.header}
             onToggle={() => toggleSection("header")}
           />
@@ -356,56 +430,57 @@ export default function MethodPage() {
             animate={{ height: expandedSections.header ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Ícone do Badge
-                    </label>
-                    <IconSelector
-                      value={pageData.header.badgeIcon}
-                      onChange={(value) => updateNested('header.badgeIcon', value)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Texto do Badge
-                    </label>
-                    <Input
-                      value={pageData.header.badgeText}
-                      onChange={(e) => updateNested('header.badgeText', e.target.value)}
-                      placeholder="Método Proprietário"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <IconSelector
+                    value={currentSectionData.header.badgeIcon}
+                    onChange={(value) => handleChange('header.badgeIcon', value)}
+                    label="Ícone do Badge"
+                    placeholder="mdi:ChartLineVariant"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ícone que aparece no badge
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Linha 1 do Título
-                    </label>
-                    <Input
-                      value={pageData.header.titleLine1}
-                      onChange={(e) => updateNested('header.titleLine1', e.target.value)}
-                      placeholder="Não é sorte. É engenharia."
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
+                <div>
+                  <Input
+                    label="Texto do Badge"
+                    value={currentSectionData.header.badgeText}
+                    onChange={(e) => handleChange('header.badgeText', e.target.value)}
+                    placeholder="Engenharia de Vendas"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Texto pequeno acima do título
+                  </p>
+                </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Destaque do Título
-                    </label>
-                    <Input
-                      value={pageData.header.titleHighlight}
-                      onChange={(e) => updateNested('header.titleHighlight', e.target.value)}
-                      placeholder="Processos que replicam sucesso."
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-semibold"
-                    />
-                  </div>
+                <div>
+                  <Input
+                    label="Linha 1 do Título"
+                    value={currentSectionData.header.titleLine1}
+                    onChange={(e) => handleChange('header.titleLine1', e.target.value)}
+                    placeholder="Design de Elite focado em"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Primeira parte do título
+                  </p>
+                </div>
+
+                <div>
+                  <Input
+                    label="Texto em Destaque"
+                    value={currentSectionData.header.titleHighlight}
+                    onChange={(e) => handleChange('header.titleHighlight', e.target.value)}
+                    placeholder="Alta Conversão"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Parte do título que será destacada
+                  </p>
                 </div>
               </div>
             </Card>
@@ -415,7 +490,7 @@ export default function MethodPage() {
         {/* Seção Visual */}
         <div className="space-y-4">
           <SectionHeader
-            title="Visual e Imagem"
+            title="Elementos Visuais"
             section="visual"
             icon={ImageIcon}
             isExpanded={expandedSections.visual}
@@ -427,80 +502,78 @@ export default function MethodPage() {
             animate={{ height: expandedSections.visual ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Imagem Principal
-                  </label>
-                  <ImageUpload
-                    label=""
-                    currentImage={pageData.visual.imageSrc || ''}
-                    selectedFile={getFileFromState('visual.imageSrc')}
-                    onFileChange={(file) => setFileState('visual.imageSrc', file)}
-                    aspectRatio="aspect-video"
-                    previewWidth={600}
-                    previewHeight={400}
-                    description="Imagem principal da seção (formato recomendado: 3:2)"
-                  />
-                </div>
+            <Card className="p-6 bg-[var(--color-background)] space-y-8">
+              {/* Upload de Imagem */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                  <ImageIcon className="w-5 h-5" />
+                  Imagem Principal
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <ImageUpload
+                      label="Imagem do Showcase"
+                      currentImage={currentSectionData.visual.imageSrc}
+                      selectedFile={getFileFromState(`${activeSection}.visual.imageSrc`)}
+                      onFileChange={(file) => setFileState(`${activeSection}.visual.imageSrc`, file)}
+                      aspectRatio="aspect-video"
+                      previewWidth={800}
+                      previewHeight={450}
+                      description="Imagem de destaque para a seção"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Texto Alternativo da Imagem
-                  </label>
-                  <Input
-                    value={pageData.visual.imageAlt}
-                    onChange={(e) => updateNested('visual.imageAlt', e.target.value)}
-                    placeholder="Dashboards de Alunos TegPro"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70">
-                    Descrição da imagem para acessibilidade e SEO
-                  </p>
-                </div>
-
-                {/* Floating Card */}
-                <div className="border border-[var(--color-border)] rounded-lg p-6">
-                  <h4 className="font-medium text-[var(--color-secondary)] mb-4 flex items-center gap-2">
-                    <Crown className="w-5 h-5" />
-                    Card Flutuante
-                  </h4>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                        Ícone do Card
-                      </label>
-                      <IconSelector
-                        value={pageData.visual.floatingCard.icon}
-                        onChange={(value) => updateNested('visual.floatingCard.icon', value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                        Título do Card
-                      </label>
+                  <div className="space-y-4">
+                    <div>
                       <Input
-                        value={pageData.visual.floatingCard.title}
-                        onChange={(e) => updateNested('visual.floatingCard.title', e.target.value)}
-                        placeholder="Protocolo Validado"
+                        label="Texto Alternativo (Alt)"
+                        value={currentSectionData.visual.imageAlt}
+                        onChange={(e) => handleChange('visual.imageAlt', e.target.value)}
+                        placeholder="Marketing de Performance"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                        Descrição da imagem para acessibilidade
+                      </p>
                     </div>
+                  </div>
+                </div>
+              </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                        Subtítulo do Card
-                      </label>
-                      <Input
-                        value={pageData.visual.floatingCard.subtitle}
-                        onChange={(e) => updateNested('visual.floatingCard.subtitle', e.target.value)}
-                        placeholder="Aplicado em +1.200 negócios"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      />
-                    </div>
+              {/* Floating Card */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                  <Star className="w-5 h-5" />
+                  Card Flutuante
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <IconSelector
+                      value={currentSectionData.visual.floatingCard.icon}
+                      onChange={(value) => handleChange('visual.floatingCard.icon', value)}
+                      label="Ícone do Card"
+                      placeholder="mdi:trending-up"
+                    />
+                  </div>
+
+                  <div>
+                    <Input
+                      label="Título do Card"
+                      value={currentSectionData.visual.floatingCard.title}
+                      onChange={(e) => handleChange('visual.floatingCard.title', e.target.value)}
+                      placeholder="ROI Exponencial"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div>
+                    <Input
+                      label="Subtítulo do Card"
+                      value={currentSectionData.visual.floatingCard.subtitle}
+                      onChange={(e) => handleChange('visual.floatingCard.subtitle', e.target.value)}
+                      placeholder="Data-Driven"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
                   </div>
                 </div>
               </div>
@@ -513,7 +586,7 @@ export default function MethodPage() {
           <SectionHeader
             title="Conteúdo"
             section="content"
-            icon={FileText}
+            icon={Type}
             isExpanded={expandedSections.content}
             onToggle={() => toggleSection("content")}
           />
@@ -523,35 +596,34 @@ export default function MethodPage() {
             animate={{ height: expandedSections.content ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Parágrafo 1 (HTML permitido)
-                  </label>
+                <div>
                   <TextArea
-                    value={pageData.content.paragraph1}
-                    onChange={(e) => updateNested('content.paragraph1', e.target.value)}
-                    placeholder="Você acabou de ver os resultados acima. Nenhum deles aconteceu por acaso..."
-                    rows={4}
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                    label="Parágrafo 1 (HTML permitido)"
+                    value={currentSectionData.content.paragraph1}
+                    onChange={(e) => handleChange('content.paragraph1', e.target.value)}
+                    placeholder="Transformamos tráfego frio em <strong>lucro real</strong>..."
+                    rows={3}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
-                  <p className="text-xs text-[var(--color-secondary)]/70">
-                    Use tags HTML como &lt;strong&gt; para texto em negrito
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Use &lt;strong&gt; para destacar palavras importantes
                   </p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Parágrafo 2 (HTML permitido)
-                  </label>
+                <div>
                   <TextArea
-                    value={pageData.content.paragraph2}
-                    onChange={(e) => updateNested('content.paragraph2', e.target.value)}
-                    placeholder="Não vendemos 'hacks' que param de funcionar na próxima atualização..."
-                    rows={4}
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                    label="Parágrafo 2 (HTML permitido)"
+                    value={currentSectionData.content.paragraph2}
+                    onChange={(e) => handleChange('content.paragraph2', e.target.value)}
+                    placeholder="Seu negócio merece uma estrutura que evoque <strong>autoridade e desejo</strong>..."
+                    rows={3}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Texto complementar com chamada emocional
+                  </p>
                 </div>
               </div>
             </Card>
@@ -563,7 +635,7 @@ export default function MethodPage() {
           <SectionHeader
             title="Call to Action"
             section="cta"
-            icon={ArrowRight}
+            icon={TrendingUp}
             isExpanded={expandedSections.cta}
             onToggle={() => toggleSection("cta")}
           />
@@ -573,32 +645,38 @@ export default function MethodPage() {
             animate={{ height: expandedSections.cta ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Texto do CTA
-                    </label>
-                    <Input
-                      value={pageData.cta.text}
-                      onChange={(e) => updateNested('cta.text', e.target.value)}
-                      placeholder="Acessar o Protocolo"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Input
+                    label="Texto do Botão"
+                    value={currentSectionData.cta.text}
+                    onChange={(e) => handleChange('cta.text', e.target.value)}
+                    placeholder="Escalar meu faturamento"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Texto persuasivo para ação
+                  </p>
+                </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Link do CTA
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <LinkIcon className="w-4 h-4 text-[var(--color-secondary)]" />
+                    <label className="text-sm font-medium text-[var(--color-secondary)]">
+                      Link do Botão
                     </label>
-                    <Input
-                      value={pageData.cta.link}
-                      onChange={(e) => updateNested('cta.link', e.target.value)}
-                      placeholder="#planos"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
                   </div>
+                  <Input
+                    type="text"
+                    value={currentSectionData.cta.link}
+                    onChange={(e) => handleChange('cta.link', e.target.value)}
+                    placeholder="#contato ou /contato"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Use âncoras (#) ou caminhos relativos
+                  </p>
                 </div>
               </div>
             </Card>
@@ -613,8 +691,8 @@ export default function MethodPage() {
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Método"
-          icon={Layers}
+          itemName="Dual Showcase"
+          icon={TrendingUp}
         />
       </form>
 
@@ -624,8 +702,8 @@ export default function MethodPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={1}
-        itemName="Método"
+        totalItems={2}
+        itemName="Dual Showcase"
       />
 
       <FeedbackMessages 
