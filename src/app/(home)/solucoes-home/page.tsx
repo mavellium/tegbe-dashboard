@@ -29,13 +29,13 @@ import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { Button } from "@/components/Button";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { hexToTailwindBgClass, hexToTailwindTextClass } from "@/lib/colors";
+import { hexToTailwindBgClass, hexToTailwindTextClass, tailwindToHex } from "@/lib/colors";
 
 interface ServiceTheme {
-  color: string;
-  bg: string;
-  border: string;
-  btn: string;
+  color: string; // Tailwind text class (ex: "text-gray-600")
+  bg: string;    // Tailwind bg class (ex: "bg-gray-50")
+  border: string; // Tailwind border class (ex: "border-gray-200")
+  btn: string;   // Tailwind button class (ex: "bg-gray-500")
 }
 
 interface Service {
@@ -72,14 +72,6 @@ interface ServiceRouterData {
   };
 }
 
-// Cores padrão em hex para garantir funcionamento
-const defaultTheme = {
-  color: "#4B5563", // text-gray-600
-  bg: "#F9FAFB",    // bg-gray-50
-  border: "#E5E7EB", // border-gray-200
-  btn: "#6B7280"    // hover:bg-gray-500
-};
-
 const defaultServiceRouterData: ServiceRouterData = {
   service_router: {
     header: {
@@ -99,10 +91,10 @@ const defaultServiceRouterData: ServiceRouterData = {
         buttonText: "",
         href: "",
         theme: {
-          color: hexToTailwindTextClass(defaultTheme.color),
-          bg: hexToTailwindBgClass(defaultTheme.bg),
-          border: `border-[${defaultTheme.border}]`,
-          btn: `hover:bg-[${defaultTheme.btn}]`
+          color: "text-gray-600",
+          bg: "bg-gray-50",
+          border: "border-gray-200",
+          btn: "bg-gray-500"
         }
       },
     ],
@@ -127,79 +119,6 @@ const mergeWithDefaults = (apiData: any, defaultData: ServiceRouterData): Servic
   };
 };
 
-// Função auxiliar para extrair hex de qualquer formato
-const extractHexFromAnyFormat = (colorString: string): string => {
-  if (!colorString) return "#000000";
-  
-  // Se já for um hex (começa com #)
-  if (colorString.startsWith("#")) {
-    return colorString.length === 7 ? colorString : "#000000";
-  }
-  
-  // Se for uma classe Tailwind com cor arbitrária [#ABC123]
-  const arbitraryMatch = colorString.match(/\[#([0-9A-Fa-f]{6})\]/i);
-  if (arbitraryMatch) {
-    return `#${arbitraryMatch[1]}`;
-  }
-  
-  // Mapeamento de cores Tailwind comuns para hex
-  const tailwindColorMap: Record<string, string> = {
-    // Gray
-    "gray-50": "#F9FAFB",
-    "gray-100": "#F3F4F6",
-    "gray-200": "#E5E7EB",
-    "gray-300": "#D1D5DB",
-    "gray-400": "#9CA3AF",
-    "gray-500": "#6B7280",
-    "gray-600": "#4B5563",
-    "gray-700": "#374151",
-    "gray-800": "#1F2937",
-    "gray-900": "#111827",
-    // Red
-    "red-500": "#EF4444",
-    "red-600": "#DC2626",
-    "red-700": "#B91C1C",
-    // Green
-    "green-500": "#22C55E",
-    "green-600": "#16A34A",
-    "green-700": "#15803D",
-    // Blue
-    "blue-500": "#3B82F6",
-    "blue-600": "#2563EB",
-    "blue-700": "#1D4ED8",
-    // Yellow/Amber
-    "amber-500": "#F59E0B",
-    "amber-600": "#D97706",
-    "amber-700": "#B45309",
-    // Purple/Violet
-    "violet-500": "#8B5CF6",
-    "violet-600": "#7C3AED",
-    "violet-700": "#6D28D9",
-    // Black and White
-    "black": "#000000",
-    "white": "#FFFFFF"
-  };
-  
-  // Tenta extrair o nome da cor da classe Tailwind
-  // Ex: "text-gray-600" -> "gray-600"
-  // Ex: "bg-gray-50" -> "gray-50"
-  // Ex: "border-gray-200" -> "gray-200"
-  // Ex: "hover:bg-gray-500" -> "gray-500"
-  const colorMatch = colorString.match(/(?:text-|bg-|border-|hover:bg-)?([a-z]+-\d+|black|white)/);
-  if (colorMatch && tailwindColorMap[colorMatch[1]]) {
-    return tailwindColorMap[colorMatch[1]];
-  }
-  
-  // Fallback para cor preta
-  return "#000000";
-};
-
-// Função para criar classe de borda a partir de hex
-const hexToTailwindBorderClass = (hex: string): string => {
-  const cleanHex = hex.replace("#", "");
-  return `border-[#${cleanHex}]`;
-};
-
 export default function ServiceRouterPage() {
   const {
     data: pageData,
@@ -213,42 +132,24 @@ export default function ServiceRouterPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
+    fileStates,
+    setFileState,
   } = useJsonManagement<ServiceRouterData>({
     apiPath: "/api/tegbe-institucional/json/solucoes",
     defaultData: defaultServiceRouterData,
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estado local para gerenciar services
-  const [localServices, setLocalServices] = useState<Service[]>([]);
   const [draggingItem, setDraggingItem] = useState<number | null>(null);
-
   const [expandedSections, setExpandedSections] = useState({
     header: true,
     services: false,
     animation: false,
   });
 
-  // Referência para novo item
   const newServiceRef = useRef<HTMLDivElement>(null);
-
-  // Controle de planos
-  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanType = 'pro';
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
-
-  // Sincroniza os dados quando carregam do banco
-  useEffect(() => {
-    if (pageData.service_router.services && pageData.service_router.services.length > 0) {
-      setLocalServices(pageData.service_router.services);
-    } else {
-      setLocalServices(defaultServiceRouterData.service_router.services);
-    }
-  }, [pageData.service_router.services]);
-
-  // Função para atualizar o estado do hook useJsonManagement
-  const updateServicesInPageData = (services: Service[]) => {
-    updateNested('service_router.services', services);
-  };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -257,14 +158,14 @@ export default function ServiceRouterPage() {
     }));
   };
 
-  // Função para adicionar serviço
+  // Função para adicionar serviço - ATUALIZADA para usar pageData diretamente
   const handleAddService = () => {
-    if (localServices.length >= currentPlanLimit) {
+    if (pageData.service_router.services.length >= currentPlanLimit) {
       return false;
     }
     
-    // Gera número sequencial
-    const numericIds = localServices
+    const services = pageData.service_router.services;
+    const numericIds = services
       .map(service => {
         const num = parseInt(service.number);
         return isNaN(num) ? 0 : num;
@@ -286,16 +187,15 @@ export default function ServiceRouterPage() {
       buttonText: '',
       href: '',
       theme: {
-        color: hexToTailwindTextClass(defaultTheme.color),
-        bg: hexToTailwindBgClass(defaultTheme.bg),
-        border: hexToTailwindBorderClass(defaultTheme.border),
-        btn: `hover:bg-[${defaultTheme.btn}]`
+        color: "text-gray-600",
+        bg: "bg-gray-50",
+        border: "border-gray-200",
+        btn: "bg-gray-500"
       }
     };
     
-    const updated = [...localServices, newItem];
-    setLocalServices(updated);
-    updateServicesInPageData(updated);
+    const updated = [...services, newItem];
+    updateNested('service_router.services', updated);
     
     setTimeout(() => {
       newServiceRef.current?.scrollIntoView({ 
@@ -307,21 +207,20 @@ export default function ServiceRouterPage() {
     return true;
   };
 
-  // Função para atualizar serviço
+  // Função para atualizar serviço - ATUALIZADA
   const updateService = (index: number, updates: Partial<Service>) => {
-    const updated = [...localServices];
+    const updated = [...pageData.service_router.services];
     if (index >= 0 && index < updated.length) {
       updated[index] = { ...updated[index], ...updates };
-      setLocalServices(updated);
-      updateServicesInPageData(updated);
+      updateNested('service_router.services', updated);
     }
   };
 
-  // Função para remover serviço
+  // Função para remover serviço - ATUALIZADA
   const removeService = (index: number) => {
-    const updated = [...localServices];
+    const services = pageData.service_router.services;
     
-    if (updated.length <= 1) {
+    if (services.length <= 1) {
       // Mantém pelo menos um item vazio
       const emptyItem: Service = {
         id: 'service-01',
@@ -334,16 +233,15 @@ export default function ServiceRouterPage() {
         buttonText: '',
         href: '',
         theme: {
-          color: hexToTailwindTextClass(defaultTheme.color),
-          bg: hexToTailwindBgClass(defaultTheme.bg),
-          border: hexToTailwindBorderClass(defaultTheme.border),
-          btn: `hover:bg-[${defaultTheme.btn}]`
+          color: "text-gray-600",
+          bg: "bg-gray-50",
+          border: "border-gray-200",
+          btn: "bg-gray-500"
         }
       };
-      setLocalServices([emptyItem]);
-      updateServicesInPageData([emptyItem]);
+      updateNested('service_router.services', [emptyItem]);
     } else {
-      updated.splice(index, 1);
+      const updated = services.filter((_, i) => i !== index);
       
       // Reajusta números após remoção
       const renumberedItems = updated.map((item, idx) => ({
@@ -352,12 +250,11 @@ export default function ServiceRouterPage() {
         id: `service-${(idx + 1).toString().padStart(2, '0')}`
       }));
       
-      setLocalServices(renumberedItems);
-      updateServicesInPageData(renumberedItems);
+      updateNested('service_router.services', renumberedItems);
     }
   };
 
-  // Funções de drag & drop para services
+  // Funções de drag & drop - ATUALIZADAS para usar pageData diretamente
   const handleServiceDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
@@ -369,13 +266,11 @@ export default function ServiceRouterPage() {
     
     if (draggingItem === null || draggingItem === index) return;
     
-    const updated = [...localServices];
+    const services = pageData.service_router.services;
+    const updated = [...services];
     const draggedItem = updated[draggingItem];
     
-    // Remove o item arrastado
     updated.splice(draggingItem, 1);
-    
-    // Insere na nova posição
     const newIndex = index > draggingItem ? index : index;
     updated.splice(newIndex, 0, draggedItem);
     
@@ -386,8 +281,7 @@ export default function ServiceRouterPage() {
       id: `service-${(idx + 1).toString().padStart(2, '0')}`
     }));
     
-    setLocalServices(reorderedItems);
-    updateServicesInPageData(reorderedItems);
+    updateNested('service_router.services', reorderedItems);
     setDraggingItem(index);
   };
 
@@ -409,9 +303,9 @@ export default function ServiceRouterPage() {
     e.currentTarget.classList.remove('drag-over');
   };
 
-  // Funções para atualizar tema do serviço
+  // Funções para atualizar tema do serviço - CORRIGIDAS
   const handleServiceThemeChange = (index: number, property: keyof ServiceTheme, hexColor: string) => {
-    const currentService = localServices[index];
+    const currentService = pageData.service_router.services[index];
     const newTheme = { ...currentService.theme };
     
     switch (property) {
@@ -422,48 +316,33 @@ export default function ServiceRouterPage() {
         newTheme.bg = hexToTailwindBgClass(hexColor);
         break;
       case 'border':
-        newTheme.border = hexToTailwindBorderClass(hexColor);
+        newTheme.border = `border-${hexToTailwindBgClass(hexColor).replace('bg-', '')}`;
         break;
       case 'btn':
-        // Para hover classes
-        const cleanHex = hexColor.replace("#", "");
-        newTheme.btn = `hover:bg-[#${cleanHex}]`;
+        newTheme.btn = hexToTailwindBgClass(hexColor);
         break;
     }
     
     updateService(index, { theme: newTheme });
   };
 
-  // Função para lidar com upload de imagem
-  const handleImageUpload = (index: number, file: File | null) => {
-    if (file) {
-      // Em uma implementação real, aqui você faria upload para um CDN/S3
-      // Por enquanto, vamos apenas simular com um objeto URL
-      const objectUrl = URL.createObjectURL(file);
-      updateService(index, { image: objectUrl });
-    } else {
-      updateService(index, { image: '' });
-    }
+  // Função auxiliar para obter File do fileStates - ADICIONADA
+  const getFileFromState = (key: string): File | null => {
+    const value = fileStates[key];
+    return value instanceof File ? value : null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
     try {
-      // Primeiro, garante que os dados locais estejam sincronizados
-      updateServicesInPageData(localServices);
-      
-      // Aguarda um momento para garantir a atualização
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Salva no banco
       await save();
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
   };
 
-  // Validações
+  // Validações - ATUALIZADAS para usar pageData
   const isServiceValid = (item: Service): boolean => {
     return item.title.trim() !== '' && 
            item.verticalTitle.trim() !== '' && 
@@ -472,29 +351,30 @@ export default function ServiceRouterPage() {
            item.href.trim() !== '';
   };
 
-  const isServicesLimitReached = localServices.length >= currentPlanLimit;
+  const services = pageData.service_router.services;
+  const isServicesLimitReached = services.length >= currentPlanLimit;
   const canAddNewService = !isServicesLimitReached;
-  const servicesCompleteCount = localServices.filter(isServiceValid).length;
-  const servicesTotalCount = localServices.length;
+  const servicesCompleteCount = services.filter(isServiceValid).length;
+  const servicesTotalCount = services.length;
 
   const servicesValidationError = isServicesLimitReached 
     ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
     : null;
 
-  // Função para obter a cor de fundo com fallback
+  // Funções para obter cores hex - SIMPLIFICADAS
   const getBackgroundColor = (bgClass: string) => {
-    const hex = extractHexFromAnyFormat(bgClass);
-    return hex + '20'; // Adiciona transparência (20 = 12%)
+    const hex = tailwindToHex(bgClass);
+    return hex ? hex + '20' : '#F9FAFB20';
   };
 
-  // Função para obter a cor da borda com fallback
   const getBorderColor = (borderClass: string) => {
-    return extractHexFromAnyFormat(borderClass);
+    const hex = tailwindToHex(borderClass);
+    return hex || '#E5E7EB';
   };
 
-  // Função para obter a cor do texto com fallback
   const getTextColor = (textClass: string) => {
-    return extractHexFromAnyFormat(textClass);
+    const hex = tailwindToHex(textClass);
+    return hex || '#4B5563';
   };
 
   const calculateCompletion = () => {
@@ -508,8 +388,8 @@ export default function ServiceRouterPage() {
     if (pageData.service_router.header.desc.trim()) completed++;
 
     // Services
-    total += localServices.length * 13; // 13 campos por serviço
-    localServices.forEach(service => {
+    total += services.length * 13;
+    services.forEach(service => {
       if (service.title.trim()) completed++;
       if (service.verticalTitle.trim()) completed++;
       if (service.icon.trim()) completed++;
@@ -667,7 +547,6 @@ export default function ServiceRouterPage() {
                 </p>
               </div>
 
-              {/* Mensagem de erro */}
               {servicesValidationError && (
                 <div className={`p-3 rounded-lg ${isServicesLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
                   <div className="flex items-start gap-2">
@@ -684,10 +563,10 @@ export default function ServiceRouterPage() {
               )}
 
               <div className="space-y-6">
-                {localServices.map((service, index) => (
+                {services.map((service, index) => (
                   <div 
                     key={`service-${service.id || index}`}
-                    ref={index === localServices.length - 1 ? newServiceRef : undefined}
+                    ref={index === services.length - 1 ? newServiceRef : undefined}
                     draggable
                     onDragStart={(e) => handleServiceDragStart(e, index)}
                     onDragOver={(e) => handleServiceDragOver(e, index)}
@@ -703,7 +582,6 @@ export default function ServiceRouterPage() {
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
-                        {/* Handle para drag & drop */}
                         <div 
                           className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
                           draggable
@@ -712,7 +590,6 @@ export default function ServiceRouterPage() {
                           <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
                         </div>
                         
-                        {/* Número do serviço */}
                         <div className="flex flex-col items-center">
                           <div 
                             className="flex items-center justify-center w-10 h-10 rounded-full border-2 font-bold"
@@ -744,7 +621,6 @@ export default function ServiceRouterPage() {
                           </div>
                           
                           <div className="space-y-6">
-                            {/* Informações básicas */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                               <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
@@ -823,8 +699,8 @@ export default function ServiceRouterPage() {
                                   <ImageUpload
                                     label=""
                                     currentImage={service.image}
-                                    selectedFile={null}
-                                    onFileChange={(file) => handleImageUpload(index, file)}
+                                    selectedFile={getFileFromState(`service_router.services.${index}.image`)}
+                                    onFileChange={(file) => setFileState(`service_router.services.${index}.image`, file)}
                                     description="Imagem de fundo do serviço"
                                     aspectRatio="aspect-video"
                                     previewWidth={200}
@@ -834,7 +710,6 @@ export default function ServiceRouterPage() {
                               </div>
                             </div>
                             
-                            {/* Descrição */}
                             <div className="space-y-2">
                               <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
                               <TextArea
@@ -846,7 +721,6 @@ export default function ServiceRouterPage() {
                               />
                             </div>
                             
-                            {/* Configurações de Tema */}
                             <div className="border-t border-[var(--color-border)] pt-6">
                               <div className="flex items-center gap-2 mb-4">
                                 <Palette className="w-5 h-5 text-[var(--color-secondary)]" />
@@ -858,7 +732,7 @@ export default function ServiceRouterPage() {
                                   property="color"
                                   label="Cor do Texto"
                                   description=""
-                                  currentHex={extractHexFromAnyFormat(service.theme.color)}
+                                  currentHex={tailwindToHex(service.theme.color)}
                                   tailwindClass={service.theme.color}
                                   onThemeChange={(_, hex) => handleServiceThemeChange(index, 'color', hex)}
                                 />
@@ -867,7 +741,7 @@ export default function ServiceRouterPage() {
                                   property="bg"
                                   label="Cor de Fundo"
                                   description=""
-                                  currentHex={extractHexFromAnyFormat(service.theme.bg)}
+                                  currentHex={tailwindToHex(service.theme.bg)}
                                   tailwindClass={service.theme.bg}
                                   onThemeChange={(_, hex) => handleServiceThemeChange(index, 'bg', hex)}
                                 />
@@ -876,16 +750,16 @@ export default function ServiceRouterPage() {
                                   property="border"
                                   label="Cor da Borda"
                                   description=""
-                                  currentHex={extractHexFromAnyFormat(service.theme.border)}
+                                  currentHex={tailwindToHex(service.theme.border)}
                                   tailwindClass={service.theme.border}
                                   onThemeChange={(_, hex) => handleServiceThemeChange(index, 'border', hex)}
                                 />
                                 
                                 <ThemePropertyInput
                                   property="btn"
-                                  label="Cor do Botão (hover)"
+                                  label="Cor do Botão"
                                   description=""
-                                  currentHex={extractHexFromAnyFormat(service.theme.btn.replace('hover:', ''))}
+                                  currentHex={tailwindToHex(service.theme.btn)}
                                   tailwindClass={service.theme.btn}
                                   onThemeChange={(_, hex) => handleServiceThemeChange(index, 'btn', hex)}
                                 />
@@ -1003,6 +877,7 @@ export default function ServiceRouterPage() {
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
+          completeCount={completion.completed}
           totalCount={completion.total}
           itemName="Serviços Router"
           icon={Layers}
