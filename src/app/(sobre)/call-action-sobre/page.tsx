@@ -22,7 +22,8 @@ import {
   ChevronUp,
   Palette,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Link as LinkIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -36,11 +37,13 @@ import { hexToTailwindBgClass, tailwindToHex } from "@/lib/colors";
 interface BadgeData {
   text?: string;
   icon?: string | null;
+  link?: string;
 }
 
 interface ButtonData {
   text?: string;
   icon?: string;
+  link?: string;
 }
 
 interface FooterData {
@@ -74,13 +77,15 @@ interface HeroData {
 const defaultHeroPageData: HeroPageData = {
   badge: {
     text: "",
-    icon: ""
+    icon: "",
+    link: ""
   },
   title: "",
   subtitle: "",
   button: {
     text: "",
-    icon: ""
+    icon: "",
+    link: ""
   },
   footer: {
     text: "",
@@ -101,13 +106,15 @@ const defaultHeroData: HeroData = {
   ecommerce: {
     badge: {
       text: "O próximo passo para sua escala",
-      icon: ""
+      icon: "",
+      link: ""
     },
     title: "O próximo case de sucesso <br /><span class='text-yellow-500'>será o seu.</span>",
     subtitle: "Trabalhamos com um <span class='text-white'>plano de guerra</span> desenhado para sua marca dominar o mercado e vender mais junto com a Tegbe.",
     button: {
       text: "SOLICITAR MEU DIAGNÓSTICO",
-      icon: "ph:arrow-right-bold"
+      icon: "ph:arrow-right-bold",
+      link: "/contato"
     },
     footer: {
       text: "Vagas limitadas para este mês",
@@ -126,13 +133,15 @@ const defaultHeroData: HeroData = {
   marketing: {
     badge: {
       text: "Próximo Passo Lógico",
-      icon: "mdi:lightning-bolt"
+      icon: "mdi:lightning-bolt",
+      link: ""
     },
     title: "Sua empresa tem um teto de crescimento. <br class='hidden md:block' /> <span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FF0F43] to-[#E31B63] drop-shadow-[0_0_20px_rgba(227,27,99,0.3)]'>Nós vamos quebrá-lo.</span>",
     subtitle: "Não entregamos 'tentativas'. Entregamos um <strong class='text-white'>plano de engenharia comercial</strong> desenhado para dominar seu nicho e gerar previsibilidade de caixa.",
     button: {
       text: "CONSTRUIR MINHA MÁQUINA DE VENDAS",
-      icon: "lucide:arrow-right"
+      icon: "lucide:arrow-right",
+      link: "/contato"
     },
     footer: {
       text: "Empresas escaladas este ano",
@@ -151,13 +160,15 @@ const defaultHeroData: HeroData = {
   sobre: {
     badge: {
       text: "Agenda Q1/2026: <span class='text-[#1d1d1f] font-bold'>Últimas Vagas</span>",
-      icon: ""
+      icon: "",
+      link: ""
     },
     title: "Sua operação está pronta <br /> para o <span class='text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-blue-600'>próximo nível?</span>",
     subtitle: "Não procuramos clientes, procuramos parceiros de crescimento. Se você tem produto validado e ambição de escala, <span class='text-[#1d1d1f] font-bold'> nós temos a engenharia.</span>",
     button: {
       text: "AGENDAR SESSÃO ESTRATÉGICA",
-      icon: "ph:arrow-right-bold"
+      icon: "ph:arrow-right-bold",
+      link: "/contato"
     },
     footer: {
       text: "",
@@ -190,12 +201,14 @@ const mergeWithDefaults = (apiData: any, defaultData: HeroData): HeroData => {
         badge: {
           text: apiData[themeKey].badge?.text || defaultData[themeKey]!.badge!.text,
           icon: apiData[themeKey].badge?.icon ?? defaultData[themeKey]!.badge!.icon,
+          link: apiData[themeKey].badge?.link || defaultData[themeKey]!.badge!.link,
         },
         title: apiData[themeKey].title || defaultData[themeKey]!.title,
         subtitle: apiData[themeKey].subtitle || defaultData[themeKey]!.subtitle,
         button: {
           text: apiData[themeKey].button?.text || defaultData[themeKey]!.button!.text,
           icon: apiData[themeKey].button?.icon || defaultData[themeKey]!.button!.icon,
+          link: apiData[themeKey].button?.link || defaultData[themeKey]!.button!.link,
         },
         footer: {
           text: apiData[themeKey].footer?.text || defaultData[themeKey]!.footer!.text,
@@ -302,9 +315,10 @@ export default function HeroPage() {
     let total = 0;
 
     // Badge
-    total += 2;
+    total += 3; // Aumentado para 3 para incluir o link
     if (currentThemeData.badge?.text?.trim()) completed++;
     if (currentThemeData.badge?.icon !== undefined) completed++;
+    if (currentThemeData.badge?.link?.trim()) completed++;
 
     // Title
     total += 1;
@@ -315,9 +329,10 @@ export default function HeroPage() {
     if (currentThemeData.subtitle?.trim()) completed++;
 
     // Button
-    total += 2;
+    total += 3;
     if (currentThemeData.button?.text?.trim()) completed++;
     if (currentThemeData.button?.icon?.trim()) completed++;
+    if (currentThemeData.button?.link?.trim()) completed++;
 
     // Footer
     total += 2;
@@ -404,7 +419,7 @@ export default function HeroPage() {
                   Badge
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="md:col-span-2">
+                  <div>
                     <IconSelector
                       value={currentThemeData.badge?.icon || ""}
                       onChange={(value) => handleThemeChange('badge.icon', value)}
@@ -412,6 +427,25 @@ export default function HeroPage() {
                     />
                     <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
                       Deixe vazio para não mostrar ícone
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <LinkIcon className="w-4 h-4 text-[var(--color-secondary)]" />
+                      <label className="text-sm font-medium text-[var(--color-secondary)]">
+                        Link do Badge
+                      </label>
+                    </div>
+                    <Input
+                      type="text"
+                      value={currentThemeData.badge?.link || ""}
+                      onChange={(e) => handleThemeChange('badge.link', e.target.value)}
+                      placeholder="/categoria ou https://exemplo.com"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Link opcional para o badge
                     </p>
                   </div>
 
@@ -526,13 +560,15 @@ export default function HeroPage() {
                   Botão de Ação
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Texto do Botão"
-                    value={currentThemeData.button?.text || ""}
-                    onChange={(e) => handleThemeChange('button.text', e.target.value)}
-                    placeholder="SOLICITAR MEU DIAGNÓSTICO"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Texto do Botão"
+                      value={currentThemeData.button?.text || ""}
+                      onChange={(e) => handleThemeChange('button.text', e.target.value)}
+                      placeholder="SOLICITAR MEU DIAGNÓSTICO"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
 
                   <div>
                     <IconSelector
@@ -540,6 +576,25 @@ export default function HeroPage() {
                       onChange={(value) => handleThemeChange('button.icon', value)}
                       label="Ícone do Botão"
                     />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <LinkIcon className="w-4 h-4 text-[var(--color-secondary)]" />
+                      <label className="text-sm font-medium text-[var(--color-secondary)]">
+                        Link do Botão
+                      </label>
+                    </div>
+                    <Input
+                      type="text"
+                      value={currentThemeData.button?.link || ""}
+                      onChange={(e) => handleThemeChange('button.link', e.target.value)}
+                      placeholder="/contato ou https://exemplo.com"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Use caminhos relativos (/contato) ou URLs completas
+                    </p>
                   </div>
                 </div>
               </div>

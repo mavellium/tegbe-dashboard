@@ -79,9 +79,13 @@
           "icon": "FileText",
           "children": [
             { "name": "Headline", "icon": "HelpCircle", "href": "/headline-marketing" },
+            { "name": "Agências falham", "icon": "HelpCircle", "href": "/agencias-falham-marketing" },
+            { "name": "Vídeo", "icon": "HelpCircle", "href": "/video-marketing" },
             { "name": "Cards Marketing", "icon": "HelpCircle", "href": "/cards-marketing" },
             { "name": "Explore Detalhes", "icon": "HelpCircle", "href": "/explore-detail-marketing" },
             { "name": "Empresas", "icon": "HelpCircle", "href": "/empresas-marketing" },
+            { "name": "Não é para você", "icon": "HelpCircle", "href": "/para-voce-marketing" },
+            { "name": "Experiência", "icon": "HelpCircle", "href": "/expertise-marketing" },
             { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-image-marketing" },
             { "name": "Equipe", "icon": "HelpCircle", "href": "/equipe-marketing" },
             { "name": "Empresa cases", "icon": "HelpCircle", "href": "/company-marketing" },

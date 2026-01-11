@@ -17,7 +17,11 @@ import {
   Trash2,
   XCircle,
   Search,
-  Target
+  Target,
+  Tag,
+  Type,
+  Sparkles,
+  Palette
 } from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -25,6 +29,8 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { ImageUpload } from "@/components/ImageUpload";
 import IconSelector from "@/components/IconSelector";
+import ColorPicker from "@/components/ColorPicker";
+import { extractHexFromTailwind } from "@/lib/colorUtils";
 import {
   DndContext,
   closestCenter,
@@ -46,11 +52,33 @@ import { CSS } from "@dnd-kit/utilities";
 interface ServiceItem {
   id?: string;
   title: string;
+  subtitle: string; // Novo campo: subtítulo/título secundário
+  badge: string; // Novo campo: badge/etiqueta
   description: string;
   file?: File | null;
   image?: string;
   icon: string;
+  color: string; // Nova: cor personalizada
+  badgeColor: string; // Nova: cor do badge
+  effect: "none" | "glow" | "pulse" | "shadow" | "gradient"; // Nova: efeito visual
 }
+
+
+const CustomCard = ({ style, children, className, ...props }: any) => {
+  return (
+    <div style={style} className={className}>
+      <Card {...props}>{children}</Card>
+    </div>
+  );
+};
+
+const effectOptions = [
+  { value: "none", label: "Sem Efeito" },
+  { value: "glow", label: "Brilho Suave" },
+  { value: "pulse", label: "Pulsação Leve" },
+  { value: "shadow", label: "Sombra Elevada" },
+  { value: "gradient", label: "Gradiente" },
+];
 
 function SortableServiceItem({
   service,
@@ -98,9 +126,16 @@ function SortableServiceItem({
   };
 
   const hasTitle = service.title.trim() !== "";
+  const hasSubtitle = service.subtitle.trim() !== "";
+  const hasBadge = service.badge.trim() !== "";
   const hasDescription = service.description.trim() !== "";
   const hasIcon = service.icon.trim() !== "";
   const hasImage = Boolean(service.image?.trim() !== "" || service.file);
+  const hasColor = service.color.trim() !== "";
+  const hasBadgeColor = service.badgeColor.trim() !== "";
+  
+  const colorHex = extractHexFromTailwind(service.color);
+  const badgeColorHex = extractHexFromTailwind(service.badgeColor);
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -113,17 +148,40 @@ function SortableServiceItem({
     [setNodeRef, isLastAndEmpty, setNewItemRef]
   );
 
+  const handleColorChange = (hexColor: string, type: "main" | "badge") => {
+    const field = type === "main" ? "color" : "badgeColor";
+    handleChange(originalIndex, field, hexColor);
+  };
+
+  const getEffectClasses = (effect: string) => {
+    switch (effect) {
+      case "glow":
+        return "shadow-lg shadow-current/20";
+      case "pulse":
+        return "animate-pulse";
+      case "shadow":
+        return "shadow-2xl";
+      case "gradient":
+        return "bg-gradient-to-r from-current to-transparent";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div
       ref={setRefs}
       style={style}
       className={`relative ${isDragging ? 'z-50' : ''}`}
     >
-      <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-        isLastInOriginalList && showValidation && (!hasTitle || !hasDescription || !hasIcon) 
-          ? 'ring-2 ring-[var(--color-danger)]' 
-          : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-primary)]`}>
+      <CustomCard
+        style={{ borderLeftColor: colorHex || '#3B82F6' }}
+        className={`mb-4 overflow-hidden transition-all duration-300 border-l-4 ${
+          isLastInOriginalList && showValidation && (!hasTitle || !hasDescription || !hasIcon) 
+            ? 'ring-2 ring-[var(--color-danger)]' 
+            : ''
+        } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)]`}
+      >
         <div className="p-6">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -151,11 +209,11 @@ function SortableServiceItem({
                     </h4>
                   )}
                   {hasTitle && hasDescription && hasIcon && hasImage ? (
-                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-300 rounded-full border border-[var(--color-success)]/30">
+                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-[var(--color-success)] rounded-full border border-[var(--color-success)]/30">
                       Completo
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-red rounded-full border border-[var(--color-warning)]/30">
+                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-[var(--color-warning)] rounded-full border border-[var(--color-warning)]/30">
                       Incompleto
                     </span>
                   )}
@@ -165,7 +223,7 @@ function SortableServiceItem({
             
             <Button
               type="button"
-              onClick={() => openDeleteSingleModal(originalIndex, service.title)}
+              onClick={() => openDeleteSingleModal(originalIndex, service.title || "Serviço sem título")}
               variant="danger"
               className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
               disabled={serviceList.length <= 1}
@@ -176,7 +234,7 @@ function SortableServiceItem({
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
                   <Target className="w-4 h-4" />
@@ -193,32 +251,123 @@ function SortableServiceItem({
                   previewHeight={150}
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Ícone do Serviço
+                </label>
+                <IconSelector
+                  value={service.icon}
+                  onChange={(value: string) => handleChange(originalIndex, "icon", value)}
+                  label="Selecione um ícone para o serviço"
+                />
+              </div>
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
                     Título do Serviço
                   </label>
                   <Input
                     type="text"
                     value={service.title}
-                    onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "title", e.target.value)}
                     placeholder="Ex: Aquisição Cirúrgica"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    Ícone do Serviço
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                    <Type className="w-4 h-4" />
+                    Subtítulo
                   </label>
-                  <IconSelector
-                    value={service.icon}
-                    onChange={(value) => handleChange(originalIndex, "icon", value)}
-                    label="Selecione um ícone para o serviço"
+                  <Input
+                    type="text"
+                    value={service.subtitle}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "subtitle", e.target.value)}
+                    placeholder="Ex: Tráfego pago de alta conversão"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    Badge/Etiqueta
+                  </label>
+                  <Input
+                    type="text"
+                    value={service.badge}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "badge", e.target.value)}
+                    placeholder="Ex: Popular, Novo, Destaque"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Efeito Visual
+                  </label>
+                  <select
+                    value={service.effect}
+                    onChange={(e) => handleChange(originalIndex, "effect", e.target.value)}
+                    className="w-full p-2 rounded-lg bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)]"
+                  >
+                    {effectOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Cor Principal
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      value={service.color}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        handleChange(originalIndex, "color", e.target.value);
+                      }}
+                      placeholder="Ex: #3B82F6"
+                      className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <ColorPicker
+                      color={colorHex}
+                      onChange={(hex: string) => handleColorChange(hex, "main")}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Cor do Badge
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="text"
+                      placeholder="Ex: #EF4444"
+                      value={service.badgeColor}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "badgeColor", e.target.value)}
+                      className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <ColorPicker
+                      color={badgeColorHex}
+                      onChange={(hex: string) => handleColorChange(hex, "badge")}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -237,7 +386,7 @@ function SortableServiceItem({
             </div>
           </div>
         </div>
-      </Card>
+      </CustomCard>
     </div>
   );
 }
@@ -251,10 +400,15 @@ export default function ServicesPage({
 }) {
   const defaultService = useMemo(() => ({ 
     title: "", 
+    subtitle: "",
+    badge: "",
     description: "",
     icon: "",
+    color: "#3B82F6",
+    badgeColor: "#EF4444",
+    effect: "none" as const,
     file: null, 
-    image: "" 
+    image: ""
   }), []);
 
   const [localServices, setLocalServices] = useState<ServiceItem[]>([]);
@@ -356,7 +510,15 @@ export default function ServicesPage({
       fd.append(
         "values",
         JSON.stringify(
-          filteredList.map(({ file, ...rest }) => rest)
+          filteredList.map(service => ({
+            ...service,
+            subtitle: service.subtitle || "",
+            badge: service.badge || "",
+            color: service.color || "#3B82F6",
+            badgeColor: service.badgeColor || "#EF4444",
+            effect: service.effect || "none",
+            file: undefined
+          }))
         )
       );
 
@@ -382,6 +544,11 @@ export default function ServicesPage({
 
       const normalized = saved.values.map((v: any, i: number) => ({
         ...v,
+        subtitle: v.subtitle || "",
+        badge: v.badge || "",
+        color: v.color || "#3B82F6",
+        badgeColor: v.badgeColor || "#EF4444",
+        effect: v.effect || "none",
         id: v.id || `service-${Date.now()}-${i}`,
         file: null,
       }));
@@ -439,8 +606,13 @@ export default function ServicesPage({
     
     filteredList.forEach((service, i) => {
       fd.append(`values[${i}][title]`, service.title || "");
+      fd.append(`values[${i}][subtitle]`, service.subtitle || "");
+      fd.append(`values[${i}][badge]`, service.badge || "");
       fd.append(`values[${i}][description]`, service.description || "");
       fd.append(`values[${i}][icon]`, service.icon || "");
+      fd.append(`values[${i}][color]`, service.color || "#3B82F6");
+      fd.append(`values[${i}][badgeColor]`, service.badgeColor || "#EF4444");
+      fd.append(`values[${i}][effect]`, service.effect || "none");
       fd.append(`values[${i}][image]`, service.image || "");
       
       if (service.file) {
@@ -473,8 +645,13 @@ export default function ServicesPage({
     
     const newItem: ServiceItem = {
       title: '',
+      subtitle: '',
+      badge: '',
       description: '',
       icon: '',
+      color: '#3B82F6',
+      badgeColor: '#EF4444',
+      effect: 'none',
       file: null,
       image: ''
     };
@@ -500,6 +677,8 @@ export default function ServicesPage({
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(service => 
         service.title.toLowerCase().includes(term) ||
+        service.subtitle.toLowerCase().includes(term) ||
+        service.badge.toLowerCase().includes(term) ||
         service.description.toLowerCase().includes(term) ||
         service.icon.toLowerCase().includes(term)
       );
@@ -526,12 +705,17 @@ export default function ServicesPage({
     let completed = 0;
     let total = 0;
 
-    // Cada serviço tem 4 campos (título, descrição, ícone, imagem)
-    total += localServices.length * 4;
+    // Cada serviço tem 9 campos (incluindo os novos)
+    total += localServices.length * 9;
     localServices.forEach(service => {
       if (service.title.trim()) completed++;
+      if (service.subtitle.trim()) completed++;
+      if (service.badge.trim()) completed++;
       if (service.description.trim()) completed++;
       if (service.icon.trim()) completed++;
+      if (service.color.trim()) completed++;
+      if (service.badgeColor.trim()) completed++;
+      if (service.effect.trim()) completed++;
       if (service.image?.trim() || service.file) completed++;
     });
 
@@ -570,7 +754,11 @@ export default function ServicesPage({
                 </div>
                 <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                 <span className="text-sm text-[var(--color-secondary)]/70">
-                  Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                  Campos: {completion.completed}/{completion.total}
+                </span>
+                <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  Limite: {currentPlanLimit} itens
                 </span>
               </div>
             </div>
@@ -585,9 +773,9 @@ export default function ServicesPage({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
               <Input
                 type="text"
-                placeholder="Buscar serviços por título, descrição ou ícone..."
+                placeholder="Buscar serviços por título, subtítulo, badge, descrição ou ícone..."
                 value={searchTerm}
-                onChange={(e: any) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
               />
             </div>
@@ -642,11 +830,15 @@ export default function ServicesPage({
                   {filteredServices.map((service, index) => {
                     const originalIndex = localServices.findIndex(s => s.id === service.id) || index;
                     const hasTitle = service.title.trim() !== "";
+                    const hasSubtitle = service.subtitle.trim() !== "";
+                    const hasBadge = service.badge.trim() !== "";
                     const hasDescription = service.description.trim() !== "";
                     const hasIcon = service.icon.trim() !== "";
                     const hasImage = Boolean(service.image?.trim() !== "" || service.file);
+                    const hasColor = service.color.trim() !== "";
+                    const hasBadgeColor = service.badgeColor.trim() !== "";
                     const isLastInOriginalList = originalIndex === localServices.length - 1;
-                    const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasDescription && !hasIcon && !hasImage;
+                    const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasSubtitle && !hasBadge && !hasDescription && !hasIcon && !hasImage && !hasColor && !hasBadgeColor;
 
                     return (
                       <SortableServiceItem
