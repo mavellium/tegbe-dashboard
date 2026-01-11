@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -18,9 +18,7 @@ import {
   Trophy,
   Trash2,
   TrendingUp,
-  Users,
   Settings,
-  Shield,
   Plus
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
@@ -80,7 +78,7 @@ const defaultAuthoritySectionData: AuthoritySectionData = {
     },
     stats_bento: [
       {
-        id: "gmv_managed",
+        id: "stat_01",
         type: "hero",
         value: 0,
         prefix: "",
@@ -94,7 +92,7 @@ const defaultAuthoritySectionData: AuthoritySectionData = {
     infrastructure: {
       label: "",
       partners: [
-        { id: "", alt: "", src: "" },
+        { id: "partner_01", alt: "", src: "" },
       ]
     }
   }
@@ -130,16 +128,14 @@ export default function AuthoritySectionPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
+    fileStates,
+    setFileState,
   } = useJsonManagement<AuthoritySectionData>({
-    apiPath: "/api/tegbe-institucional/json/metricas",
+    apiPath: "/api/tegbe-institucional/json/metricas-home",
     defaultData: defaultAuthoritySectionData,
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estados locais para as listas
-  const [localStats, setLocalStats] = useState<StatBento[]>([]);
-  const [localPartners, setLocalPartners] = useState<Partner[]>([]);
-  
   // Estados para drag & drop
   const [draggingStat, setDraggingStat] = useState<number | null>(null);
   const [draggingPartner, setDraggingPartner] = useState<number | null>(null);
@@ -154,29 +150,9 @@ export default function AuthoritySectionPage() {
     partners: false,
   });
 
-  // Sincroniza os dados quando carregam do banco
-  useEffect(() => {
-    if (pageData.authority_section.stats_bento && pageData.authority_section.stats_bento.length > 0) {
-      setLocalStats(pageData.authority_section.stats_bento);
-    } else {
-      setLocalStats(defaultAuthoritySectionData.authority_section.stats_bento);
-    }
-    
-    if (pageData.authority_section.infrastructure.partners && pageData.authority_section.infrastructure.partners.length > 0) {
-      setLocalPartners(pageData.authority_section.infrastructure.partners);
-    } else {
-      setLocalPartners(defaultAuthoritySectionData.authority_section.infrastructure.partners);
-    }
-  }, [pageData]);
-
-  // Funções para atualizar os dados no hook useJsonManagement
-  const updateStatsInPageData = (stats: StatBento[]) => {
-    updateNested('authority_section.stats_bento', stats);
-  };
-
-  const updatePartnersInPageData = (partners: Partner[]) => {
-    updateNested('authority_section.infrastructure.partners', partners);
-  };
+  // Funções para obter dados
+  const getStats = () => pageData.authority_section.stats_bento || [];
+  const getPartners = () => pageData.authority_section.infrastructure.partners || [];
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -186,13 +162,15 @@ export default function AuthoritySectionPage() {
   };
 
   // Funções para manipular a lista de stats
-  const addStat = () => {
-    if (localStats.length >= currentStatPlanLimit) {
+  const handleAddStat = () => {
+    const stats = getStats();
+    if (stats.length >= currentStatPlanLimit) {
       return false;
     }
     
+    const newId = `stat_${Date.now()}_${stats.length + 1}`;
     const newStat: StatBento = {
-      id: `stat_${Date.now()}`,
+      id: newId,
       type: 'standard',
       value: 0,
       prefix: '',
@@ -201,9 +179,8 @@ export default function AuthoritySectionPage() {
       theme: 'light'
     };
     
-    const updated = [...localStats, newStat];
-    setLocalStats(updated);
-    updateStatsInPageData(updated);
+    const updated = [...stats, newStat];
+    updateNested('authority_section.stats_bento', updated);
     
     // Scroll para o novo item
     setTimeout(() => {
@@ -216,23 +193,23 @@ export default function AuthoritySectionPage() {
     return true;
   };
 
-  const updateStat = (index: number, updates: Partial<StatBento>) => {
-    const updated = [...localStats];
+  const handleUpdateStat = (index: number, updates: Partial<StatBento>) => {
+    const stats = getStats();
+    const updated = [...stats];
     
     if (index >= 0 && index < updated.length) {
       updated[index] = { ...updated[index], ...updates };
-      setLocalStats(updated);
-      updateStatsInPageData(updated);
+      updateNested('authority_section.stats_bento', updated);
     }
   };
 
-  const removeStat = (index: number) => {
-    const updated = [...localStats];
+  const handleRemoveStat = (index: number) => {
+    const stats = getStats();
     
-    if (updated.length <= 1) {
+    if (stats.length <= 1) {
       // Mantém pelo menos um stat vazio
       const emptyStat: StatBento = {
-        id: `stat_${Date.now()}`,
+        id: "stat_01",
         type: 'standard',
         value: 0,
         prefix: '',
@@ -240,30 +217,29 @@ export default function AuthoritySectionPage() {
         label: '',
         theme: 'light'
       };
-      setLocalStats([emptyStat]);
-      updateStatsInPageData([emptyStat]);
+      updateNested('authority_section.stats_bento', [emptyStat]);
     } else {
-      updated.splice(index, 1);
-      setLocalStats(updated);
-      updateStatsInPageData(updated);
+      const updated = stats.filter((_, i) => i !== index);
+      updateNested('authority_section.stats_bento', updated);
     }
   };
 
   // Funções para manipular a lista de partners
-  const addPartner = () => {
-    if (localPartners.length >= currentPartnerPlanLimit) {
+  const handleAddPartner = () => {
+    const partners = getPartners();
+    if (partners.length >= currentPartnerPlanLimit) {
       return false;
     }
     
+    const newId = `partner_${Date.now()}_${partners.length + 1}`;
     const newPartner: Partner = {
-      id: `partner_${Date.now()}`,
+      id: newId,
       alt: "",
       src: ""
     };
     
-    const updated = [...localPartners, newPartner];
-    setLocalPartners(updated);
-    updatePartnersInPageData(updated);
+    const updated = [...partners, newPartner];
+    updateNested('authority_section.infrastructure.partners', updated);
     
     // Scroll para o novo item
     setTimeout(() => {
@@ -276,32 +252,30 @@ export default function AuthoritySectionPage() {
     return true;
   };
 
-  const updatePartner = (index: number, updates: Partial<Partner>) => {
-    const updated = [...localPartners];
+  const handleUpdatePartner = (index: number, updates: Partial<Partner>) => {
+    const partners = getPartners();
+    const updated = [...partners];
     
     if (index >= 0 && index < updated.length) {
       updated[index] = { ...updated[index], ...updates };
-      setLocalPartners(updated);
-      updatePartnersInPageData(updated);
+      updateNested('authority_section.infrastructure.partners', updated);
     }
   };
 
-  const removePartner = (index: number) => {
-    const updated = [...localPartners];
+  const handleRemovePartner = (index: number) => {
+    const partners = getPartners();
     
-    if (updated.length <= 1) {
+    if (partners.length <= 1) {
       // Mantém pelo menos um partner vazio
       const emptyPartner: Partner = {
-        id: `partner_${Date.now()}`,
+        id: "partner_01",
         alt: "",
         src: ""
       };
-      setLocalPartners([emptyPartner]);
-      updatePartnersInPageData([emptyPartner]);
+      updateNested('authority_section.infrastructure.partners', [emptyPartner]);
     } else {
-      updated.splice(index, 1);
-      setLocalPartners(updated);
-      updatePartnersInPageData(updated);
+      const updated = partners.filter((_, i) => i !== index);
+      updateNested('authority_section.infrastructure.partners', updated);
     }
   };
 
@@ -317,7 +291,8 @@ export default function AuthoritySectionPage() {
     
     if (draggingStat === null || draggingStat === index) return;
     
-    const updated = [...localStats];
+    const stats = getStats();
+    const updated = [...stats];
     const draggedStat = updated[draggingStat];
     
     // Remove o item arrastado
@@ -327,8 +302,7 @@ export default function AuthoritySectionPage() {
     const newIndex = index > draggingStat ? index : index;
     updated.splice(newIndex, 0, draggedStat);
     
-    setLocalStats(updated);
-    updateStatsInPageData(updated);
+    updateNested('authority_section.stats_bento', updated);
     setDraggingStat(index);
   };
 
@@ -349,7 +323,8 @@ export default function AuthoritySectionPage() {
     
     if (draggingPartner === null || draggingPartner === index) return;
     
-    const updated = [...localPartners];
+    const partners = getPartners();
+    const updated = [...partners];
     const draggedPartner = updated[draggingPartner];
     
     // Remove o item arrastado
@@ -359,8 +334,7 @@ export default function AuthoritySectionPage() {
     const newIndex = index > draggingPartner ? index : index;
     updated.splice(newIndex, 0, draggedPartner);
     
-    setLocalPartners(updated);
-    updatePartnersInPageData(updated);
+    updateNested('authority_section.infrastructure.partners', updated);
     setDraggingPartner(index);
   };
 
@@ -369,44 +343,18 @@ export default function AuthoritySectionPage() {
     setDraggingPartner(null);
   };
 
-  const handleAddStat = () => {
-    const success = addStat();
-    if (!success) {
-      console.warn(`Limite do plano ${currentPlanType} atingido (${currentStatPlanLimit} estatísticas)`);
-    }
-  };
-
-  const handleAddPartner = () => {
-    const success = addPartner();
-    if (!success) {
-      console.warn(`Limite do plano ${currentPlanType} atingido (${currentPartnerPlanLimit} parceiros)`);
-    }
-  };
-
-  // Função para lidar com upload de imagem do parceiro
-  const handlePartnerImageUpload = (index: number, file: File | null) => {
-    if (file) {
-      // Em uma implementação real, aqui você faria upload para um CDN/S3
-      // Por enquanto, vamos apenas simular com um objeto URL
-      const objectUrl = URL.createObjectURL(file);
-      updatePartner(index, { src: objectUrl });
-    } else {
-      updatePartner(index, { src: '' });
-    }
+  // Função auxiliar para obter File do fileStates
+  const getFileFromState = (key: string): File | null => {
+    const value = fileStates[key];
+    return value instanceof File ? value : null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
+    console.log('Salvando dados:', pageData);
+    
     try {
-      // Primeiro, garante que os dados locais estejam sincronizados
-      updateStatsInPageData(localStats);
-      updatePartnersInPageData(localPartners);
-      
-      // Aguarda um momento para garantir a atualização
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Salva no banco
       await save();
     } catch (err) {
       console.error("Erro ao salvar:", err);
@@ -418,7 +366,6 @@ export default function AuthoritySectionPage() {
     switch (type) {
       case 'hero': return Trophy;
       case 'standard': return TrendingUp;
-      case 'mini': return Shield;
       default: return TrendingUp;
     }
   };
@@ -442,17 +389,20 @@ export default function AuthoritySectionPage() {
     return partner.alt.trim() !== '' && partner.src.trim() !== '';
   };
   
-  const isStatLimitReached = localStats.length >= currentStatPlanLimit;
-  const isPartnerLimitReached = localPartners.length >= currentPartnerPlanLimit;
+  const stats = getStats();
+  const partners = getPartners();
+  
+  const isStatLimitReached = stats.length >= currentStatPlanLimit;
+  const isPartnerLimitReached = partners.length >= currentPartnerPlanLimit;
   
   const canAddNewStat = !isStatLimitReached;
   const canAddNewPartner = !isPartnerLimitReached;
   
-  const completeStatCount = localStats.filter(isStatValid).length;
-  const completePartnerCount = localPartners.filter(isPartnerValid).length;
+  const completeStatCount = stats.filter(isStatValid).length;
+  const completePartnerCount = partners.filter(isPartnerValid).length;
   
-  const totalStatCount = localStats.length;
-  const totalPartnerCount = localPartners.length;
+  const totalStatCount = stats.length;
+  const totalPartnerCount = partners.length;
   
   const statValidationError = isStatLimitReached 
     ? `Você chegou ao limite do plano ${currentPlanType} (${currentStatPlanLimit} estatísticas).`
@@ -474,8 +424,8 @@ export default function AuthoritySectionPage() {
     if (pageData.authority_section.header.live_data_label.trim()) completed++;
 
     // Stats Bento
-    total += localStats.length * 7;
-    localStats.forEach(stat => {
+    total += stats.length * 7;
+    stats.forEach(stat => {
       if (stat.label.trim()) completed++;
       if (stat.value !== undefined && stat.value !== null) completed++;
       if (stat.type.trim()) completed++;
@@ -490,8 +440,8 @@ export default function AuthoritySectionPage() {
     if (pageData.authority_section.infrastructure.label.trim()) completed++;
 
     // Partners
-    total += localPartners.length * 2; // alt e src
-    localPartners.forEach(partner => {
+    total += partners.length * 2; // alt e src
+    partners.forEach(partner => {
       if (partner.alt.trim()) completed++;
       if (partner.src.trim()) completed++;
     });
@@ -659,12 +609,12 @@ export default function AuthoritySectionPage() {
               )}
 
               <div className="space-y-4">
-                {localStats.map((stat, index) => {
+                {stats.map((stat, index) => {
                   const StatIcon = getStatTypeIcon(stat.type);
                   return (
                     <div 
                       key={stat.id}
-                      ref={index === localStats.length - 1 ? newStatRef : undefined}
+                      ref={index === stats.length - 1 ? newStatRef : undefined}
                       draggable
                       onDragStart={(e) => handleStatDragStart(e, index)}
                       onDragOver={(e) => handleStatDragOver(e, index)}
@@ -732,7 +682,7 @@ export default function AuthoritySectionPage() {
                                     </label>
                                     <select
                                       value={stat.type}
-                                      onChange={(e) => updateStat(index, { type: e.target.value as 'hero' | 'standard' | 'mini' })}
+                                      onChange={(e) => handleUpdateStat(index, { type: e.target.value as 'hero' | 'standard' | 'mini' })}
                                       className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
                                     >
                                       <option value="hero">Hero (Grande)</option>
@@ -745,7 +695,7 @@ export default function AuthoritySectionPage() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Tema</label>
                                     <select
                                       value={stat.theme}
-                                      onChange={(e) => updateStat(index, { theme: e.target.value as 'dark' | 'light' | 'accent' })}
+                                      onChange={(e) => handleUpdateStat(index, { theme: e.target.value as 'dark' | 'light' | 'accent' })}
                                       className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
                                     >
                                       <option value="dark">Dark (Escuro)</option>
@@ -761,7 +711,7 @@ export default function AuthoritySectionPage() {
                                     <Input
                                       type="number"
                                       value={stat.value}
-                                      onChange={(e) => updateStat(index, { value: parseFloat(e.target.value) || 0 })}
+                                      onChange={(e) => handleUpdateStat(index, { value: parseFloat(e.target.value) || 0 })}
                                       placeholder="Ex: 100"
                                       step="0.1"
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -773,7 +723,7 @@ export default function AuthoritySectionPage() {
                                       <label className="block text-sm font-medium text-[var(--color-secondary)]">Prefixo</label>
                                       <Input
                                         value={stat.prefix}
-                                        onChange={(e) => updateStat(index, { prefix: e.target.value })}
+                                        onChange={(e) => handleUpdateStat(index, { prefix: e.target.value })}
                                         placeholder="Ex: +"
                                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                       />
@@ -783,7 +733,7 @@ export default function AuthoritySectionPage() {
                                       <label className="block text-sm font-medium text-[var(--color-secondary)]">Sufixo</label>
                                       <Input
                                         value={stat.suffix}
-                                        onChange={(e) => updateStat(index, { suffix: e.target.value })}
+                                        onChange={(e) => handleUpdateStat(index, { suffix: e.target.value })}
                                         placeholder="Ex: M, k, x"
                                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                       />
@@ -796,7 +746,7 @@ export default function AuthoritySectionPage() {
                                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Label</label>
                                     <Input
                                       value={stat.label}
-                                      onChange={(e) => updateStat(index, { label: e.target.value })}
+                                      onChange={(e) => handleUpdateStat(index, { label: e.target.value })}
                                       placeholder="Ex: GMV (Faturamento) Gerenciado"
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                     />
@@ -807,7 +757,7 @@ export default function AuthoritySectionPage() {
                                       <label className="block text-sm font-medium text-[var(--color-secondary)]">Badge</label>
                                       <Input
                                         value={stat.badge || ''}
-                                        onChange={(e) => updateStat(index, { badge: e.target.value })}
+                                        onChange={(e) => handleUpdateStat(index, { badge: e.target.value })}
                                         placeholder="Ex: Recorde Anual"
                                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                       />
@@ -824,7 +774,7 @@ export default function AuthoritySectionPage() {
                                   </label>
                                   <IconSelector
                                     value={stat.icon || ''}
-                                    onChange={(value) => updateStat(index, { icon: value })}
+                                    onChange={(value) => handleUpdateStat(index, { icon: value })}
                                     placeholder="solar:wad-of-money-bold-duotone"
                                   />
                                   <p className="text-xs text-[var(--color-secondary)]/50">
@@ -839,7 +789,7 @@ export default function AuthoritySectionPage() {
                         <div className="flex flex-col gap-2">
                           <Button
                             type="button"
-                            onClick={() => removeStat(index)}
+                            onClick={() => handleRemoveStat(index)}
                             variant="danger"
                             className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                           >
@@ -944,10 +894,10 @@ export default function AuthoritySectionPage() {
                 )}
 
                 <div className="space-y-4">
-                  {localPartners.map((partner, index) => (
+                  {partners.map((partner, index) => (
                     <div 
                       key={partner.id}
-                      ref={index === localPartners.length - 1 ? newPartnerRef : undefined}
+                      ref={index === partners.length - 1 ? newPartnerRef : undefined}
                       draggable
                       onDragStart={(e) => handlePartnerDragStart(e, index)}
                       onDragOver={(e) => handlePartnerDragOver(e, index)}
@@ -1002,7 +952,7 @@ export default function AuthoritySectionPage() {
                                   </label>
                                   <Input
                                     value={partner.alt}
-                                    onChange={(e) => updatePartner(index, { alt: e.target.value })}
+                                    onChange={(e) => handleUpdatePartner(index, { alt: e.target.value })}
                                     placeholder="Ex: Mercado Livre"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
@@ -1014,7 +964,7 @@ export default function AuthoritySectionPage() {
                                   </label>
                                   <Input
                                     value={partner.src}
-                                    onChange={(e) => updatePartner(index, { src: e.target.value })}
+                                    onChange={(e) => handleUpdatePartner(index, { src: e.target.value })}
                                     placeholder="https://exemplo.com/logo.svg"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
@@ -1025,8 +975,8 @@ export default function AuthoritySectionPage() {
                                 <ImageUpload
                                   label="Logo do Parceiro"
                                   currentImage={partner.src}
-                                  selectedFile={null}
-                                  onFileChange={(file) => handlePartnerImageUpload(index, file)}
+                                  selectedFile={getFileFromState(`authority_section.infrastructure.partners.${index}.src`)}
+                                  onFileChange={(file) => setFileState(`authority_section.infrastructure.partners.${index}.src`, file)}
                                   description="Faça upload ou cole a URL do logo do parceiro"
                                   aspectRatio="aspect-square"
                                   previewWidth={150}
@@ -1040,7 +990,7 @@ export default function AuthoritySectionPage() {
                         <div className="flex flex-col gap-2">
                           <Button
                             type="button"
-                            onClick={() => removePartner(index)}
+                            onClick={() => handleRemovePartner(index)}
                             variant="danger"
                             className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
                           >
