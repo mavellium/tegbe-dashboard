@@ -1,36 +1,36 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { Button } from "@/components/Button";
-import ColorPicker from "@/components/ColorPicker";
+import { TextArea } from "@/components/TextArea";
 import { 
   Crown,
   Target,
-  Image as ImageIcon,
+  ImageIcon,
   Type,
   Tag,
-  ChevronDown, 
-  ChevronUp,
   Palette,
   Sparkles,
   ArrowRight,
   Layers,
   FileText,
   Settings,
-  Upload,
-  Trash2
+  CheckCircle2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
+import { Button } from "@/components/Button";
+import { ImageUpload } from "@/components/ImageUpload";
+import ColorPicker from "@/components/ColorPicker";
 import IconSelector from "@/components/IconSelector";
-import Image from "next/image";
 
 interface ThemeData {
   accentColor: string;
@@ -67,16 +67,20 @@ interface CTAData {
 }
 
 interface MethodData {
-  id?: string;
+  id: string;
+  type: string;
+  subtype: string;
   theme: ThemeData;
   header: HeaderData;
   visual: VisualData;
   content: ContentData;
   cta: CTAData;
-  [key: string]: any;
 }
 
 const defaultMethodData: MethodData = {
+  id: "metodo-tegpro",
+  type: "",
+  subtype: "",
   theme: {
     accentColor: "#FFD700",
     secondaryColor: "#B8860B"
@@ -106,314 +110,50 @@ const defaultMethodData: MethodData = {
   }
 };
 
-interface SectionHeaderProps {
-  title: string;
-  section: any;
-  icon: any;
-  isExpanded: boolean;
-  onToggle: (section: any) => void;
-}
-
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <div
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </div>
-);
-
-// Componente ColorPropertyInput para campos de cor
-interface ColorPropertyInputProps {
-  label: string;
-  value: string;
-  onChange: (color: string) => void;
-  description?: string;
-}
-
-const ColorPropertyInput = ({ 
-  label, 
-  value, 
-  onChange, 
-  description 
-}: ColorPropertyInputProps) => {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          {label}
-        </label>
-      </div>
-      {description && (
-        <p className="text-xs text-zinc-500">{description}</p>
-      )}
-      <div className="flex gap-2">
-        <Input
-          type="text"
-          value={value}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            onChange(e.target.value)
-          }
-          placeholder="#FFD700"
-          className="flex-1 font-mono"
-        />
-        <ColorPicker
-          color={value}
-          onChange={onChange}
-        />
-        <div 
-          className="w-10 h-10 rounded-lg border border-zinc-300 dark:border-zinc-600"
-          style={{ backgroundColor: value }}
-        />
-      </div>
-    </div>
-  );
-};
-
-// Componente ImageUpload
-interface ImageUploadProps {
-  label: string;
-  currentImage: string;
-  selectedFile: File | null;
-  onFileChange: (file: File | null) => void;
-  aspectRatio?: string;
-}
-
-const ImageUpload = ({ label, currentImage, selectedFile, onFileChange, aspectRatio = "aspect-video" }: ImageUploadProps) => {
-  const [previewUrl, setPreviewUrl] = useState<string>("");
-
-  useEffect(() => {
-    // Se houver um arquivo selecionado, criar uma URL temporária
-    if (selectedFile) {
-      const objectUrl = URL.createObjectURL(selectedFile);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPreviewUrl(objectUrl);
-      
-      // Limpar a URL quando o componente for desmontado
-      return () => {
-        URL.revokeObjectURL(objectUrl);
-      };
-    } else if (currentImage) {
-      // Se não houver arquivo mas houver uma imagem salva, usar ela
-      setPreviewUrl(currentImage);
-    } else {
-      // Se não houver nada, limpar a preview
-      setPreviewUrl("");
-    }
-  }, [selectedFile, currentImage]);
-
-  return (
-    <div className="space-y-4">
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {label}
-      </label>
-      
-      <div className="flex flex-col md:flex-row gap-4 items-start">
-        {previewUrl ? (
-          <div className={`relative w-full ${aspectRatio} rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-900`}>
-            <Image
-              src={previewUrl}
-              alt="Image preview"
-              fill
-              className="object-cover"
-              onError={(e) => {
-                const target = e.currentTarget;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  parent.innerHTML = `
-                    <div class="w-full h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
-                      <svg class="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  `;
-                }
-              }}
-            />
-          </div>
-        ) : (
-          <div className={`w-full ${aspectRatio} flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600`}>
-            <ImageIcon className="w-12 h-12 text-zinc-400" />
-          </div>
-        )}
-        
-        <div className="w-full md:w-auto space-y-4">
-          <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-4">
-            <div className="flex flex-col items-center justify-center">
-              {previewUrl ? (
-                <>
-                  <div className="flex gap-3 mb-3">
-                    <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                      <Upload className="w-4 h-4" />
-                      Trocar Imagem
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          onFileChange(file);
-                        }}
-                      />
-                    </label>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      onClick={() => onFileChange(null)}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Clique em &quot;Trocar Imagem&quot; para substituir
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                    <ImageIcon className="w-8 h-8 text-zinc-400" />
-                  </div>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 text-center">
-                    Upload recomendado: JPG, PNG ou WebP<br/>
-                    Tamanho ideal: 1200x800px
-                  </p>
-                  <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    Selecionar Imagem
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        onFileChange(file);
-                      }}
-                    />
-                  </label>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+const mergeWithDefaults = (apiData: any, defaultData: MethodData): MethodData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    id: apiData.id || defaultData.id,
+    type: apiData.type || defaultData.type,
+    subtype: apiData.subtype || defaultData.subtype,
+    theme: apiData.theme || defaultData.theme,
+    header: apiData.header || defaultData.header,
+    visual: apiData.visual || defaultData.visual,
+    content: apiData.content || defaultData.content,
+    cta: apiData.cta || defaultData.cta,
+  };
 };
 
 export default function MethodPage() {
   const {
-    data: methodData,
-    setData: setMethodData,
-    updateNested,
+    data: pageData,
+    exists,
     loading,
     success,
     errorMsg,
+    deleteModal,
+    updateNested,
     save,
-    exists,
-    reload
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
+    fileStates,
+    setFileState,
   } = useJsonManagement<MethodData>({
     apiPath: "/api/tegbe-institucional/json/expertise-curso",
     defaultData: defaultMethodData,
+    mergeFunction: mergeWithDefaults,
   });
 
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [expandedSections, setExpandedSections] = useState({
-    theme: true,
-    header: true,
-    visual: true,
-    content: true,
-    cta: true
+    basic: true,
+    theme: false,
+    header: false,
+    visual: false,
+    content: false,
+    cta: false
   });
-
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  // Processar os dados para mesclar propriedades
-  const [processedData, setProcessedData] = useState<MethodData>(defaultMethodData);
-
-  useEffect(() => {
-    if (methodData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProcessedData(methodData);
-    }
-  }, [methodData]);
-
-  // Calcular campos completos
-  const calculateCompleteCount = useCallback(() => {
-    let count = 0;
-    
-    if (!processedData) return 0;
-    
-    // Verificar tema
-    if (
-      processedData.theme.accentColor.trim() !== "" &&
-      processedData.theme.secondaryColor.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar header
-    if (
-      processedData.header.badgeIcon.trim() !== "" &&
-      processedData.header.badgeText.trim() !== "" &&
-      processedData.header.titleLine1.trim() !== "" &&
-      processedData.header.titleHighlight.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar visual
-    if (
-      processedData.visual.imageSrc.trim() !== "" &&
-      processedData.visual.imageAlt.trim() !== "" &&
-      processedData.visual.floatingCard.icon.trim() !== "" &&
-      processedData.visual.floatingCard.title.trim() !== "" &&
-      processedData.visual.floatingCard.subtitle.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar content
-    if (
-      processedData.content.paragraph1.trim() !== "" &&
-      processedData.content.paragraph2.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar cta
-    if (
-      processedData.cta.text.trim() !== "" &&
-      processedData.cta.link.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    return count;
-  }, [processedData]);
-
-  const completeCount = calculateCompleteCount();
-  const totalCount = 5; // theme, header, visual, content, cta
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -422,302 +162,69 @@ export default function MethodPage() {
     }));
   };
 
-  const handleChange = (path: string, value: any) => {
-    updateNested(path, value);
-  };
-
-  const handleImageFileChange = (file: File | null) => {
-    setSelectedImageFile(file);
-  };
-
-  const handleSubmitWrapper = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  };
-
-  const handleSubmit = async () => {
-    const fd = new FormData();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
-    // Adicionar os dados JSON
-    fd.append("values", JSON.stringify(processedData));
-
-    // Processar arquivo de imagem se existir
-    if (selectedImageFile) {
-      fd.append("file:visual.imageSrc", selectedImageFile, selectedImageFile.name);
-    }
-
     try {
-      save();
-      await reload();
-      
-      // Limpar o arquivo local após o envio
-      setSelectedImageFile(null);
-    } catch (error) {
-      console.error("Erro ao enviar dados:", error);
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
     }
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS CONTEÚDOS DO MÉTODO"
-    });
+  // Função auxiliar para obter File do fileStates
+  const getFileFromState = (key: string): File | null => {
+    const value = fileStates[key];
+    return value instanceof File ? value : null;
   };
 
-  const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/expertise-curso", {
-      method: "DELETE",
-    });
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
 
-    setMethodData(defaultMethodData);
-    setProcessedData(defaultMethodData);
-    setSelectedImageFile(null);
-    closeDeleteModal();
+    // Informações básicas
+    total += 2; // type e subtype
+    if (pageData.type.trim()) completed++;
+    if (pageData.subtype.trim()) completed++;
+
+    // Tema
+    total += 2;
+    if (pageData.theme.accentColor.trim()) completed++;
+    if (pageData.theme.secondaryColor.trim()) completed++;
+
+    // Header
+    total += 4;
+    if (pageData.header.badgeIcon.trim()) completed++;
+    if (pageData.header.badgeText.trim()) completed++;
+    if (pageData.header.titleLine1.trim()) completed++;
+    if (pageData.header.titleHighlight.trim()) completed++;
+
+    // Visual
+    total += 5;
+    if (pageData.visual.imageSrc.trim()) completed++;
+    if (pageData.visual.imageAlt.trim()) completed++;
+    if (pageData.visual.floatingCard.icon.trim()) completed++;
+    if (pageData.visual.floatingCard.title.trim()) completed++;
+    if (pageData.visual.floatingCard.subtitle.trim()) completed++;
+
+    // Content
+    total += 2;
+    if (pageData.content.paragraph1.trim()) completed++;
+    if (pageData.content.paragraph2.trim()) completed++;
+
+    // CTA
+    total += 2;
+    if (pageData.cta.text.trim()) completed++;
+    if (pageData.cta.link.trim()) completed++;
+
+    return { completed, total };
   };
 
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
+  const completion = calculateCompletion();
 
-  const renderThemeSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ColorPropertyInput
-            label="Cor de Destaque (Acentuação)"
-            value={processedData.theme.accentColor}
-            onChange={(color) => handleChange("theme.accentColor", color)}
-            description="Cor principal para destaques e elementos importantes"
-          />
-
-          <ColorPropertyInput
-            label="Cor Secundária"
-            value={processedData.theme.secondaryColor}
-            onChange={(color) => handleChange("theme.secondaryColor", color)}
-            description="Cor de apoio e elementos complementares"
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderHeaderSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <IconSelector
-              value={processedData.header.badgeIcon}
-              onChange={(value) => handleChange("header.badgeIcon", value)}
-              label="Ícone do Badge"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Texto do Badge
-            </label>
-            <Input
-              type="text"
-              value={processedData.header.badgeText}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("header.badgeText", e.target.value)
-              }
-              placeholder="Método Proprietário"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Linha 1 do Título
-            </label>
-            <Input
-              type="text"
-              value={processedData.header.titleLine1}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("header.titleLine1", e.target.value)
-              }
-              placeholder="Não é sorte. É engenharia."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Destaque do Título
-            </label>
-            <Input
-              type="text"
-              value={processedData.header.titleHighlight}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("header.titleHighlight", e.target.value)
-              }
-              placeholder="Processos que replicam sucesso."
-              className="font-semibold"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderVisualSection = () => {
-    return (
-      <div className="space-y-6">
-        <ImageUpload
-          label="Imagem Principal"
-          currentImage={processedData.visual.imageSrc}
-          selectedFile={selectedImageFile}
-          onFileChange={handleImageFileChange}
-          aspectRatio="aspect-video"
-        />
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Texto Alternativo da Imagem
-          </label>
-          <Input
-            type="text"
-            value={processedData.visual.imageAlt}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleChange("visual.imageAlt", e.target.value)
-            }
-            placeholder="Dashboards de Alunos TegPro"
-          />
-          <p className="text-xs text-zinc-500 mt-2">
-            Descrição da imagem para acessibilidade e SEO
-          </p>
-        </div>
-
-        {/* Floating Card */}
-        <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
-          <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-4 flex items-center gap-2">
-            <Crown className="w-5 h-5" />
-            Card Flutuante
-          </h4>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <IconSelector
-                value={processedData.visual.floatingCard.icon}
-                onChange={(value) => handleChange("visual.floatingCard.icon", value)}
-                label="Ícone do Card"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Título do Card
-              </label>
-              <Input
-                type="text"
-                value={processedData.visual.floatingCard.title}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  handleChange("visual.floatingCard.title", e.target.value)
-                }
-                placeholder="Protocolo Validado"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Subtítulo do Card
-              </label>
-              <Input
-                type="text"
-                value={processedData.visual.floatingCard.subtitle}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  handleChange("visual.floatingCard.subtitle", e.target.value)
-                }
-                placeholder="Aplicado em +1.200 negócios"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderContentSection = () => {
-    return (
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Parágrafo 1 (HTML permitido)
-          </label>
-          <textarea
-            value={processedData.content.paragraph1}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              handleChange("content.paragraph1", e.target.value)
-            }
-            rows={4}
-            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-sm"
-            placeholder="Você acabou de ver os resultados acima. Nenhum deles aconteceu por acaso..."
-          />
-          <p className="text-xs text-zinc-500 mt-2">
-            Use tags HTML como &lt;strong&gt; para texto em negrito
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Parágrafo 2 (HTML permitido)
-          </label>
-          <textarea
-            value={processedData.content.paragraph2}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              handleChange("content.paragraph2", e.target.value)
-            }
-            rows={4}
-            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-sm"
-            placeholder="Não vendemos 'hacks' que param de funcionar na próxima atualização..."
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderCTASection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Texto do CTA
-            </label>
-            <Input
-              type="text"
-              value={processedData.cta.text}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("cta.text", e.target.value)
-              }
-              placeholder="Acessar o Protocolo"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Link do CTA
-            </label>
-            <Input
-              type="text"
-              value={processedData.cta.link}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("cta.link", e.target.value)
-              }
-              placeholder="#planos"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
+  if (loading && !exists) {
+    return <Loading layout={Layers} exists={!!exists} />;
+  }
 
   return (
     <ManageLayout
@@ -727,7 +234,46 @@ export default function MethodPage() {
       exists={!!exists}
       itemName="Método"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Seção Básica */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Configurações da Seção"
+            section="basic"
+            icon={Settings}
+            isExpanded={expandedSections.basic}
+            onToggle={() => toggleSection("basic")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.basic ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Tipo de Conteúdo"
+                    value={pageData.type}
+                    onChange={(e) => updateNested('type', e.target.value)}
+                    placeholder="Tipo de conteúdo"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <Input
+                    label="Subtipo/Categoria"
+                    value={pageData.subtype}
+                    onChange={(e) => updateNested('subtype', e.target.value)}
+                    placeholder="Subtipo/categoria"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         {/* Seção Tema */}
         <div className="space-y-4">
           <SectionHeader
@@ -738,20 +284,61 @@ export default function MethodPage() {
             onToggle={() => toggleSection("theme")}
           />
 
-          <AnimatePresence>
-            {expandedSections.theme && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderThemeSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.theme ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Cor de Destaque (Acentuação)
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={pageData.theme.accentColor}
+                        onChange={(e) => updateNested('theme.accentColor', e.target.value)}
+                        placeholder="#FFD700"
+                        className="flex-1 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                      />
+                      <ColorPicker
+                        color={pageData.theme.accentColor}
+                        onChange={(color) => updateNested('theme.accentColor', color)}
+                      />
+                    </div>
+                    <p className="text-xs text-[var(--color-secondary)]/70">
+                      Cor principal para destaques e elementos importantes
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Cor Secundária
+                    </label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        value={pageData.theme.secondaryColor}
+                        onChange={(e) => updateNested('theme.secondaryColor', e.target.value)}
+                        placeholder="#B8860B"
+                        className="flex-1 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                      />
+                      <ColorPicker
+                        color={pageData.theme.secondaryColor}
+                        onChange={(color) => updateNested('theme.secondaryColor', color)}
+                      />
+                    </div>
+                    <p className="text-xs text-[var(--color-secondary)]/70">
+                      Cor de apoio e elementos complementares
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Header */}
@@ -764,20 +351,65 @@ export default function MethodPage() {
             onToggle={() => toggleSection("header")}
           />
 
-          <AnimatePresence>
-            {expandedSections.header && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderHeaderSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.header ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Ícone do Badge
+                    </label>
+                    <IconSelector
+                      value={pageData.header.badgeIcon}
+                      onChange={(value) => updateNested('header.badgeIcon', value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Texto do Badge
+                    </label>
+                    <Input
+                      value={pageData.header.badgeText}
+                      onChange={(e) => updateNested('header.badgeText', e.target.value)}
+                      placeholder="Método Proprietário"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Linha 1 do Título
+                    </label>
+                    <Input
+                      value={pageData.header.titleLine1}
+                      onChange={(e) => updateNested('header.titleLine1', e.target.value)}
+                      placeholder="Não é sorte. É engenharia."
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Destaque do Título
+                    </label>
+                    <Input
+                      value={pageData.header.titleHighlight}
+                      onChange={(e) => updateNested('header.titleHighlight', e.target.value)}
+                      placeholder="Processos que replicam sucesso."
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-semibold"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Visual */}
@@ -790,20 +422,90 @@ export default function MethodPage() {
             onToggle={() => toggleSection("visual")}
           />
 
-          <AnimatePresence>
-            {expandedSections.visual && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderVisualSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.visual ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Imagem Principal
+                  </label>
+                  <ImageUpload
+                    label=""
+                    currentImage={pageData.visual.imageSrc || ''}
+                    selectedFile={getFileFromState('visual.imageSrc')}
+                    onFileChange={(file) => setFileState('visual.imageSrc', file)}
+                    aspectRatio="aspect-video"
+                    previewWidth={600}
+                    previewHeight={400}
+                    description="Imagem principal da seção (formato recomendado: 3:2)"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Texto Alternativo da Imagem
+                  </label>
+                  <Input
+                    value={pageData.visual.imageAlt}
+                    onChange={(e) => updateNested('visual.imageAlt', e.target.value)}
+                    placeholder="Dashboards de Alunos TegPro"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70">
+                    Descrição da imagem para acessibilidade e SEO
+                  </p>
+                </div>
+
+                {/* Floating Card */}
+                <div className="border border-[var(--color-border)] rounded-lg p-6">
+                  <h4 className="font-medium text-[var(--color-secondary)] mb-4 flex items-center gap-2">
+                    <Crown className="w-5 h-5" />
+                    Card Flutuante
+                  </h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Ícone do Card
+                      </label>
+                      <IconSelector
+                        value={pageData.visual.floatingCard.icon}
+                        onChange={(value) => updateNested('visual.floatingCard.icon', value)}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Título do Card
+                      </label>
+                      <Input
+                        value={pageData.visual.floatingCard.title}
+                        onChange={(e) => updateNested('visual.floatingCard.title', e.target.value)}
+                        placeholder="Protocolo Validado"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Subtítulo do Card
+                      </label>
+                      <Input
+                        value={pageData.visual.floatingCard.subtitle}
+                        onChange={(e) => updateNested('visual.floatingCard.subtitle', e.target.value)}
+                        placeholder="Aplicado em +1.200 negócios"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Conteúdo */}
@@ -816,20 +518,44 @@ export default function MethodPage() {
             onToggle={() => toggleSection("content")}
           />
 
-          <AnimatePresence>
-            {expandedSections.content && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderContentSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.content ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Parágrafo 1 (HTML permitido)
+                  </label>
+                  <TextArea
+                    value={pageData.content.paragraph1}
+                    onChange={(e) => updateNested('content.paragraph1', e.target.value)}
+                    placeholder="Você acabou de ver os resultados acima. Nenhum deles aconteceu por acaso..."
+                    rows={4}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70">
+                    Use tags HTML como &lt;strong&gt; para texto em negrito
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Parágrafo 2 (HTML permitido)
+                  </label>
+                  <TextArea
+                    value={pageData.content.paragraph2}
+                    onChange={(e) => updateNested('content.paragraph2', e.target.value)}
+                    placeholder="Não vendemos 'hacks' que param de funcionar na próxima atualização..."
+                    rows={4}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção CTA */}
@@ -842,31 +568,51 @@ export default function MethodPage() {
             onToggle={() => toggleSection("cta")}
           />
 
-          <AnimatePresence>
-            {expandedSections.cta && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderCTASection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cta ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Texto do CTA
+                    </label>
+                    <Input
+                      value={pageData.cta.text}
+                      onChange={(e) => updateNested('cta.text', e.target.value)}
+                      placeholder="Acessar o Protocolo"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Link do CTA
+                    </label>
+                    <Input
+                      value={pageData.cta.link}
+                      onChange={(e) => updateNested('cta.link', e.target.value)}
+                      placeholder="#planos"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Fixed Action Bar */}
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completeCount}
-          totalCount={totalCount}
+          completeCount={completion.completed}
+          totalCount={completion.total}
           itemName="Método"
           icon={Layers}
         />
@@ -882,7 +628,10 @@ export default function MethodPage() {
         itemName="Método"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }

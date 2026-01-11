@@ -1,27 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   HelpCircle,
-  ChevronDown, 
-  ChevronUp,
-  Plus,
-  Trash2,
-  Sparkles,
   MessageCircleQuestion,
   List,
-  CheckCircle,
-  ArrowRight
+  Plus,
+  Trash2,
+  FileText,
+  Settings,
+  Type,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  GripVertical,
+  Sparkles
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 
 interface QuestionItem {
@@ -29,19 +35,22 @@ interface QuestionItem {
   answer: string;
 }
 
-interface Header {
+interface HeaderData {
   title: string;
   subtitle: string;
 }
 
 interface FAQData {
   id?: string;
-  header: Header;
+  type: string;
+  subtype: string;
+  header: HeaderData;
   questions: QuestionItem[];
-  [key: string]: any;
 }
 
 const defaultFAQData: FAQData = {
+  type: "faq",
+  subtype: "curso",
   header: {
     title: "Perguntas Frequentes",
     subtitle: "Tudo o que você precisa saber antes de entrar."
@@ -66,178 +75,185 @@ const defaultFAQData: FAQData = {
   ]
 };
 
-// Componente SectionHeader
-interface SectionHeaderProps {
-  title: string;
-  section: any;
-  icon: any;
-  isExpanded: boolean;
-  onToggle: (section: any) => void;
-}
+const mergeWithDefaults = (apiData: any, defaultData: FAQData): FAQData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    id: apiData.id || defaultData.id,
+    type: apiData.type || defaultData.type,
+    subtype: apiData.subtype || defaultData.subtype,
+    header: apiData.header || defaultData.header,
+    questions: apiData.questions || defaultData.questions,
+  };
+};
 
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <div
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </div>
-);
-
-// Componente QuestionEditor
+// Componente para editar cada pergunta
 interface QuestionEditorProps {
   questionItem: QuestionItem;
   index: number;
   onChange: (question: QuestionItem) => void;
   onRemove: () => void;
+  onDragStart: (e: React.DragEvent, index: number) => void;
+  onDragOver: (e: React.DragEvent, index: number) => void;
+  onDragEnd: (e: React.DragEvent) => void;
+  draggingItem: number | null;
+  dragEnter: (e: React.DragEvent) => void;
+  dragLeave: (e: React.DragEvent) => void;
+  drop: (e: React.DragEvent) => void;
+  isLastItem?: boolean;
 }
 
-const QuestionEditor = ({ questionItem, index, onChange, onRemove }: QuestionEditorProps) => {
-  const updateQuestion = (field: keyof QuestionItem, value: string) => {
+const QuestionEditor = ({ 
+  questionItem, 
+  index, 
+  onChange, 
+  onRemove,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  draggingItem,
+  dragEnter,
+  dragLeave,
+  drop,
+  isLastItem = false
+}: QuestionEditorProps) => {
+  const updateField = (field: keyof QuestionItem, value: string) => {
     onChange({ ...questionItem, [field]: value });
   };
 
+  const isQuestionValid = (): boolean => {
+    return questionItem.question.trim() !== '' && questionItem.answer.trim() !== '';
+  };
+
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
-            <MessageCircleQuestion className="w-6 h-6" />
+    <div 
+      key={`question-${index}`}
+      draggable
+      onDragStart={(e) => onDragStart(e, index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDragEnter={dragEnter}
+      onDragLeave={dragLeave}
+      onDragEnd={onDragEnd}
+      onDrop={drop}
+      className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+        draggingItem === index 
+          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+          : 'hover:border-[var(--color-primary)]/50'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3 flex-1">
+          {/* Handle para drag & drop */}
+          <div 
+            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+            draggable
+            onDragStart={(e) => onDragStart(e, index)}
+          >
+            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
           </div>
-          <div>
-            <h4 className="font-bold text-zinc-800 dark:text-zinc-200 text-lg">
-              Pergunta {index + 1}
-            </h4>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {questionItem.question.substring(0, 50)}...
-            </p>
+          
+          {/* Indicador de posição */}
+          <div className="flex flex-col items-center">
+            <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+              {index + 1}
+            </span>
+            <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+          </div>
+          
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400">
+                  <MessageCircleQuestion className="w-4 h-4" />
+                </div>
+                <h4 className="font-semibold text-[var(--color-secondary)]">
+                  Pergunta #{index + 1}
+                </h4>
+              </div>
+              {isQuestionValid() ? (
+                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                  Completa
+                </span>
+              ) : (
+                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                  Incompleta
+                </span>
+              )}
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Pergunta
+                </label>
+                <Input
+                  value={questionItem.question}
+                  onChange={(e) => updateField("question", e.target.value)}
+                  placeholder="Digite a pergunta"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Resposta
+                </label>
+                <TextArea
+                  value={questionItem.answer}
+                  onChange={(e) => updateField("answer", e.target.value)}
+                  placeholder="Digite a resposta detalhada"
+                  rows={4}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+            </div>
           </div>
         </div>
-        <Button
-          type="button"
-          variant="danger"
-          onClick={onRemove}
-          className="flex items-center gap-2"
-        >
-          <Trash2 className="w-4 h-4" />
-          Remover
-        </Button>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Pergunta
-          </label>
-          <Input
-            type="text"
-            value={questionItem.question}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              updateQuestion("question", e.target.value)
-            }
-            placeholder="Digite a pergunta"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Resposta
-          </label>
-          <textarea
-            value={questionItem.answer}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              updateQuestion("answer", e.target.value)
-            }
-            placeholder="Digite a resposta detalhada"
-            className="w-full h-40 px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          />
+        
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            onClick={onRemove}
+            variant="danger"
+            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Remover
+          </Button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
 export default function FAQPage() {
   const {
-    data: faqData,
-    setData: setFAQData,
-    updateNested,
+    data: pageData,
+    exists,
     loading,
     success,
     errorMsg,
+    deleteModal,
+    updateNested,
     save,
-    exists,
-    reload
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
   } = useJsonManagement<FAQData>({
     apiPath: "/api/tegbe-institucional/json/faq-curso",
     defaultData: defaultFAQData,
+    mergeFunction: mergeWithDefaults,
   });
 
+  // Estados para drag & drop
+  const [draggingItem, setDraggingItem] = useState<number | null>(null);
+  const newQuestionRef = useRef<HTMLDivElement>(null);
+
   const [expandedSections, setExpandedSections] = useState({
+    basic: true,
     header: true,
     questions: true
   });
-
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  // Processar os dados para mesclar propriedades
-  const [processedData, setProcessedData] = useState<FAQData>(defaultFAQData);
-
-  useEffect(() => {
-    if (faqData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProcessedData(faqData);
-    }
-  }, [faqData]);
-
-  // Calcular campos completos
-  const calculateCompleteCount = useCallback(() => {
-    let count = 0;
-    
-    if (!processedData) return 0;
-    
-    // Verificar header
-    if (
-      processedData.header.title.trim() !== "" &&
-      processedData.header.subtitle.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar questions
-    if (processedData.questions.length > 0) {
-      const hasValidQuestions = processedData.questions.some(question => 
-        question.question.trim() !== "" && 
-        question.answer.trim() !== ""
-      );
-      if (hasValidQuestions) count++;
-    }
-    
-    return count;
-  }, [processedData]);
-
-  const completeCount = calculateCompleteCount();
-  const totalCount = 2; // header, questions
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -246,117 +262,144 @@ export default function FAQPage() {
     }));
   };
 
-  const handleChange = (path: string, value: any) => {
-    updateNested(path, value);
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
   };
 
-  const handleQuestionChange = (index: number, question: QuestionItem) => {
-    const newQuestions = [...processedData.questions];
-    newQuestions[index] = question;
-    handleChange("questions", newQuestions);
-  };
-
-  const addQuestion = () => {
+  // Funções para gerenciar a lista de perguntas
+  const handleAddQuestion = () => {
+    const questions = pageData.questions;
     const newQuestion: QuestionItem = {
       question: "Nova pergunta frequente?",
       answer: "Resposta para a nova pergunta frequente."
     };
-    handleChange("questions", [...processedData.questions, newQuestion]);
+    
+    const updated = [...questions, newQuestion];
+    updateNested("questions", updated);
+    
+    // Scroll para a nova pergunta
+    setTimeout(() => {
+      newQuestionRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
   };
 
-  const removeQuestion = (index: number) => {
-    const newQuestions = processedData.questions.filter((_, i) => i !== index);
-    handleChange("questions", newQuestions);
-  };
-
-  const handleSubmitWrapper = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  };
-
-  const handleSubmit = async () => {
-    try {
-      save();
-      await reload();
-      await reload();
-    } catch (error) {
-      console.error("Erro ao enviar dados:", error);
+  const handleUpdateQuestion = (index: number, updates: Partial<QuestionItem>) => {
+    const questions = pageData.questions;
+    const updated = [...questions];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      updateNested("questions", updated);
     }
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODAS AS PERGUNTAS FREQUENTES"
+  const handleRemoveQuestion = (index: number) => {
+    const questions = pageData.questions;
+    
+    if (questions.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyItem: QuestionItem = {
+        question: "",
+        answer: ""
+      };
+      updateNested("questions", [emptyItem]);
+    } else {
+      const updated = questions.filter((_, i) => i !== index);
+      updateNested("questions", updated);
+    }
+  };
+
+  // Funções de drag & drop
+  const handleQuestionDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingItem(index);
+  };
+
+  const handleQuestionDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingItem === null || draggingItem === index) return;
+    
+    const questions = pageData.questions;
+    const updated = [...questions];
+    const draggedItem = updated[draggingItem];
+    
+    // Remove o item arrastado
+    updated.splice(draggingItem, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingItem ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    updateNested('questions', updated);
+    setDraggingItem(index);
+  };
+
+  const handleQuestionDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingItem(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  // Validações
+  const isQuestionValid = (item: QuestionItem): boolean => {
+    return item.question.trim() !== '' && item.answer.trim() !== '';
+  };
+
+  const questions = pageData.questions;
+  const questionsCompleteCount = questions.filter(isQuestionValid).length;
+  const questionsTotalCount = questions.length;
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Informações básicas
+    total += 2;
+    if (pageData.type.trim()) completed++;
+    if (pageData.subtype.trim()) completed++;
+
+    // Header
+    total += 2;
+    if (pageData.header.title.trim()) completed++;
+    if (pageData.header.subtitle.trim()) completed++;
+
+    // Questions (cada pergunta tem 2 campos: question e answer)
+    total += questions.length * 2;
+    questions.forEach(item => {
+      if (item.question.trim()) completed++;
+      if (item.answer.trim()) completed++;
     });
+
+    return { completed, total };
   };
 
-  const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/faq-curso", {
-      method: "DELETE",
-    });
+  const completion = calculateCompletion();
 
-    setFAQData(defaultFAQData);
-    setProcessedData(defaultFAQData);
-    closeDeleteModal();
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
-
-  const renderHeaderSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Título
-            </label>
-            <Input
-              type="text"
-              value={processedData.header.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("header.title", e.target.value)
-              }
-              placeholder="Perguntas Frequentes"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Subtítulo
-            </label>
-            <Input
-              type="text"
-              value={processedData.header.subtitle}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("header.subtitle", e.target.value)
-              }
-              placeholder="Tudo o que você precisa saber antes de entrar."
-            />
-          </div>
-        </div>
-
-        <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg border border-zinc-200 dark:border-zinc-700">
-          <h4 className="font-medium text-zinc-800 dark:text-zinc-200 mb-2">Pré-visualização:</h4>
-          <div className="space-y-3">
-            <h3 className="text-2xl font-bold text-zinc-800 dark:text-zinc-200">
-              {processedData.header.title || "Perguntas Frequentes"}
-            </h3>
-            <p className="text-zinc-600 dark:text-zinc-400">
-              {processedData.header.subtitle || "Subtítulo do FAQ..."}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  if (loading && !exists) {
+    return <Loading layout={HelpCircle} exists={!!exists} />;
+  }
 
   return (
     <ManageLayout
@@ -366,108 +409,199 @@ export default function FAQPage() {
       exists={!!exists}
       itemName="FAQ"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Seção Básica */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Configurações da Seção"
+            section="basic"
+            icon={Settings}
+            isExpanded={expandedSections.basic}
+            onToggle={() => toggleSection("basic")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.basic ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Tipo de Conteúdo"
+                    value={pageData.type}
+                    onChange={(e) => updateNested('type', e.target.value)}
+                    placeholder="faq"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <Input
+                    label="Subtipo/Categoria"
+                    value={pageData.subtype}
+                    onChange={(e) => updateNested('subtype', e.target.value)}
+                    placeholder="curso"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
             title="Cabeçalho"
             section="header"
-            icon={List}
+            icon={Type}
             isExpanded={expandedSections.header}
             onToggle={() => toggleSection("header")}
           />
 
-          <AnimatePresence>
-            {expandedSections.header && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderHeaderSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.header ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Título Principal
+                    </label>
+                    <Input
+                      value={pageData.header.title}
+                      onChange={(e) => updateNested('header.title', e.target.value)}
+                      placeholder="Perguntas Frequentes"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Subtítulo
+                    </label>
+                    <Input
+                      value={pageData.header.subtitle}
+                      onChange={(e) => updateNested('header.subtitle', e.target.value)}
+                      placeholder="Tudo o que você precisa saber antes de entrar."
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Perguntas */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <SectionHeader
-              title={`Perguntas (${processedData.questions.length} disponíveis)`}
+              title={`Perguntas (${questions.length} disponíveis)`}
               section="questions"
               icon={MessageCircleQuestion}
               isExpanded={expandedSections.questions}
               onToggle={() => toggleSection("questions")}
             />
-            <Button
-              type="button"
-              onClick={addQuestion}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Pergunta
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <Button
+                type="button"
+                onClick={handleAddQuestion}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Adicionar Pergunta
+              </Button>
+            </div>
           </div>
 
-          <AnimatePresence>
-            {expandedSections.questions && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {processedData.questions.length === 0 ? (
-                    <div className="text-center py-12">
-                      <MessageCircleQuestion className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Nenhuma pergunta adicionada
-                      </h4>
-                      <p className="text-zinc-600 dark:text-zinc-400 mb-6 max-w-md mx-auto">
-                        Adicione perguntas frequentes para ajudar seus clientes
-                      </p>
-                      <Button
-                        type="button"
-                        onClick={addQuestion}
-                        className="flex items-center gap-2 mx-auto"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Adicionar Primeira Pergunta
-                      </Button>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.questions ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                      Configure as Perguntas Frequentes
+                    </h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {questionsCompleteCount} de {questionsTotalCount} completas
+                        </span>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {processedData.questions.map((question, index) => (
-                        <QuestionEditor
-                          key={index}
-                          questionItem={question}
-                          index={index}
-                          onChange={(updatedQuestion) => handleQuestionChange(index, updatedQuestion)}
-                          onRemove={() => removeQuestion(index)}
-                        />
-                      ))}
+                  </div>
+                </div>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Arraste e solte para reordenar as perguntas. Cada pergunta deve ter texto e resposta.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {questions.length === 0 ? (
+                  <div className="text-center py-12">
+                    <MessageCircleQuestion className="w-16 h-16 text-[var(--color-secondary)]/40 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                      Nenhuma pergunta adicionada
+                    </h4>
+                    <p className="text-[var(--color-secondary)]/70 mb-6 max-w-md mx-auto">
+                      Adicione perguntas frequentes para ajudar seus clientes
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={handleAddQuestion}
+                      className="flex items-center gap-2 mx-auto"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar Primeira Pergunta
+                    </Button>
+                  </div>
+                ) : (
+                  questions.map((question, index) => (
+                    <div
+                      key={index}
+                      ref={index === questions.length - 1 ? newQuestionRef : undefined}
+                    >
+                      <QuestionEditor
+                        questionItem={question}
+                        index={index}
+                        onChange={(updatedQuestion) => {
+                          handleUpdateQuestion(index, updatedQuestion);
+                        }}
+                        onRemove={() => handleRemoveQuestion(index)}
+                        onDragStart={handleQuestionDragStart}
+                        onDragOver={handleQuestionDragOver}
+                        onDragEnd={handleQuestionDragEnd}
+                        draggingItem={draggingItem}
+                        dragEnter={handleDragEnter}
+                        dragLeave={handleDragLeave}
+                        drop={handleDrop}
+                        isLastItem={index === questions.length - 1}
+                      />
                     </div>
-                  )}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  ))
+                )}
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Fixed Action Bar */}
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completeCount}
-          totalCount={totalCount}
+          completeCount={completion.completed}
+          totalCount={completion.total}
           itemName="FAQ"
           icon={HelpCircle}
         />
@@ -479,11 +613,14 @@ export default function FAQPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={processedData.questions.length}
+        totalItems={questions.length}
         itemName="Pergunta"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }

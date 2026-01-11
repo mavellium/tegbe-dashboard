@@ -7,7 +7,7 @@ import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import ColorPicker from "@/components/ColorPicker";
+import { Switch } from "@/components/Switch";
 import { 
   Video,
   PlayCircle,
@@ -24,7 +24,10 @@ import {
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
+import { ThemePropertyInput } from "@/components/ThemePropertyInput";
+import { hexToTailwindBgClass, tailwindToHex } from "@/lib/colors";
 
 interface ContentData {
   badge: string;
@@ -55,167 +58,75 @@ const defaultBehindScenesData: BehindScenesData = {
     videoSrc: "https://www.youtube.com/watch?v=hfJMWlZ0GhY&t=3s"
   },
   style: {
-    backgroundColor: "#020202",
-    textColor: "#FFFFFF",
-    badgeBg: "rgba(255, 215, 0, 0.05)",
-    badgeBorder: "rgba(255, 215, 0, 0.2)",
-    badgeText: "#FFD700",
-    accentColor: "#FFD700"
+    backgroundColor: "bg-gray-900",
+    textColor: "text-white",
+    badgeBg: "bg-yellow-500/5",
+    badgeBorder: "border-yellow-500/20",
+    badgeText: "text-yellow-500",
+    accentColor: "bg-yellow-500"
   }
 };
 
-// Componente SectionHeader
-interface SectionHeaderProps {
-  title: string;
-  section: any;
-  icon: any;
-  isExpanded: boolean;
-  onToggle: (section: any) => void;
-}
+const mergeWithDefaults = (apiData: any, defaultData: BehindScenesData): BehindScenesData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    id: apiData.id,
+    content: {
+      badge: apiData.content?.badge || defaultData.content.badge,
+      title: apiData.content?.title || defaultData.content.title,
+      videoSrc: apiData.content?.videoSrc || defaultData.content.videoSrc,
+    },
+    style: {
+      backgroundColor: apiData.style?.backgroundColor || defaultData.style.backgroundColor,
+      textColor: apiData.style?.textColor || defaultData.style.textColor,
+      badgeBg: apiData.style?.badgeBg || defaultData.style.badgeBg,
+      badgeBorder: apiData.style?.badgeBorder || defaultData.style.badgeBorder,
+      badgeText: apiData.style?.badgeText || defaultData.style.badgeText,
+      accentColor: apiData.style?.accentColor || defaultData.style.accentColor,
+    },
+  };
+};
 
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <div
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </div>
-);
-
-// Componente ColorPropertyInput para campos de cor
-interface ColorPropertyInputProps {
-  label: string;
-  value: string;
-  onChange: (color: string) => void;
-  description?: string;
-  isRgba?: boolean;
-}
-
-const ColorPropertyInput = ({ 
-  label, 
-  value, 
-  onChange, 
-  description,
-  isRgba = false 
-}: ColorPropertyInputProps) => {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          {label}
-        </label>
-      </div>
-      {description && (
-        <p className="text-xs text-zinc-500">{description}</p>
-      )}
-      <div className="flex gap-2">
-        <Input
-          type="text"
-          value={value}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-            onChange(e.target.value)
-          }
-          placeholder={isRgba ? "rgba(255, 215, 0, 0.05)" : "#FFD700"}
-          className="flex-1 font-mono"
-        />
-        <ColorPicker
-          color={value}
-          onChange={onChange}
-        />
-        <div 
-          className="w-10 h-10 rounded-lg border border-zinc-300 dark:border-zinc-600"
-          style={{ backgroundColor: value }}
-        />
-      </div>
-    </div>
-  );
+// Helper function to extract Tailwind class from style properties
+const getTailwindClass = (value: string, defaultClass: string): string => {
+  if (!value) return defaultClass;
+  
+  // If it's already a Tailwind class, return it
+  if (value.includes('-')) return value;
+  
+  // If it's a hex color, convert to Tailwind
+  if (value.startsWith('#') || value.startsWith('rgb') || value.startsWith('rgba')) {
+    const tailwindClass = hexToTailwindBgClass(value);
+    return tailwindClass.replace('bg-', '');
+  }
+  
+  return defaultClass;
 };
 
 export default function BehindScenesPage() {
   const {
     data: behindScenesData,
-    setData: setBehindScenesData,
-    updateNested,
+    exists,
     loading,
     success,
     errorMsg,
+    deleteModal,
+    updateNested,
     save,
-    exists,
-    reload
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
   } = useJsonManagement<BehindScenesData>({
     apiPath: "/api/tegbe-institucional/json/video-curso",
     defaultData: defaultBehindScenesData,
+    mergeFunction: mergeWithDefaults,
   });
 
   const [expandedSections, setExpandedSections] = useState({
     content: true,
     style: true
   });
-
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  // Processar os dados para mesclar propriedades
-  const [processedData, setProcessedData] = useState<BehindScenesData>(defaultBehindScenesData);
-
-  useEffect(() => {
-    if (behindScenesData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProcessedData(behindScenesData);
-    }
-  }, [behindScenesData]);
-
-  // Calcular campos completos
-  const calculateCompleteCount = useCallback(() => {
-    let count = 0;
-    
-    if (!processedData) return 0;
-    
-    // Verificar conteúdo
-    if (
-      processedData.content.badge.trim() !== "" &&
-      processedData.content.title.trim() !== "" &&
-      processedData.content.videoSrc.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar estilo
-    if (
-      processedData.style.backgroundColor.trim() !== "" &&
-      processedData.style.textColor.trim() !== "" &&
-      processedData.style.badgeBg.trim() !== "" &&
-      processedData.style.badgeBorder.trim() !== "" &&
-      processedData.style.badgeText.trim() !== "" &&
-      processedData.style.accentColor.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    return count;
-  }, [processedData]);
-
-  const completeCount = calculateCompleteCount();
-  const totalCount = 2; // content, style
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -224,158 +135,61 @@ export default function BehindScenesPage() {
     }));
   };
 
-  const handleChange = (path: string, value: any) => {
-    updateNested(path, value);
-  };
-
-  const handleSubmitWrapper = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  };
-
-  const handleSubmit = async () => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
     try {
-      const fd = new FormData();
-      fd.append("values", JSON.stringify(processedData));
-      save();
-      await reload();
-    } catch (error) {
-      console.error("Erro ao enviar dados:", error);
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
     }
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS CONTEÚDOS"
-    });
-  };
+  const calculateCompleteCount = useCallback(() => {
+    let count = 0;
+    
+    if (!behindScenesData) return 0;
+    
+    // Verificar conteúdo
+    if (
+      behindScenesData.content.badge.trim() !== "" &&
+      behindScenesData.content.title.trim() !== "" &&
+      behindScenesData.content.videoSrc.trim() !== ""
+    ) {
+      count++;
+    }
+    
+    // Verificar estilo
+    if (
+      behindScenesData.style.backgroundColor.trim() !== "" &&
+      behindScenesData.style.textColor.trim() !== "" &&
+      behindScenesData.style.badgeBg.trim() !== "" &&
+      behindScenesData.style.badgeBorder.trim() !== "" &&
+      behindScenesData.style.badgeText.trim() !== "" &&
+      behindScenesData.style.accentColor.trim() !== ""
+    ) {
+      count++;
+    }
+    
+    return count;
+  }, [behindScenesData]);
 
-  const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/video-curso", {
-      method: "DELETE",
-    });
+  const completeCount = calculateCompleteCount();
+  const totalCount = 2; // content, style
 
-    setBehindScenesData(defaultBehindScenesData);
-    setProcessedData(defaultBehindScenesData);
-    closeDeleteModal();
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
-
-  const renderContentSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Badge
-            </label>
-            <Input
-              type="text"
-              value={processedData.content.badge}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("content.badge", e.target.value)
-              }
-              placeholder="Bastidores da Operação"
-            />
-            <p className="text-xs text-zinc-500 mt-2">
-              Texto do selo/badge acima do título
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Título
-            </label>
-            <Input
-              type="text"
-              value={processedData.content.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("content.title", e.target.value)
-              }
-              placeholder="A Rotina de Quem Escala"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            URL do Vídeo (YouTube)
-          </label>
-          <Input
-            type="text"
-            value={processedData.content.videoSrc}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleChange("content.videoSrc", e.target.value)
-            }
-            placeholder="https://www.youtube.com/watch?v=hfJMWlZ0GhY&t=3s"
-          />
-          <p className="text-xs text-zinc-500 mt-2">
-            Cole a URL completa do vídeo do YouTube
-          </p>
-        </div>
-      </div>
-    );
-  };
-
-  const renderStyleSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ColorPropertyInput
-            label="Cor de Fundo"
-            value={processedData.style.backgroundColor}
-            onChange={(color) => handleChange("style.backgroundColor", color)}
-            description="Cor de fundo da seção completa"
-          />
-
-          <ColorPropertyInput
-            label="Cor do Texto"
-            value={processedData.style.textColor}
-            onChange={(color) => handleChange("style.textColor", color)}
-            description="Cor principal do texto"
-          />
-
-          <ColorPropertyInput
-            label="Fundo do Badge"
-            value={processedData.style.badgeBg}
-            onChange={(color) => handleChange("style.badgeBg", color)}
-            description="Cor de fundo do badge (recomendado usar RGBA com transparência)"
-            isRgba={true}
-          />
-
-          <ColorPropertyInput
-            label="Borda do Badge"
-            value={processedData.style.badgeBorder}
-            onChange={(color) => handleChange("style.badgeBorder", color)}
-            description="Cor da borda do badge (recomendado usar RGBA com transparência)"
-            isRgba={true}
-          />
-
-          <ColorPropertyInput
-            label="Texto do Badge"
-            value={processedData.style.badgeText}
-            onChange={(color) => handleChange("style.badgeText", color)}
-            description="Cor do texto do badge"
-          />
-
-          <ColorPropertyInput
-            label="Cor de Destaque"
-            value={processedData.style.accentColor}
-            onChange={(color) => handleChange("style.accentColor", color)}
-            description="Cor para elementos de destaque (ícones, botões, etc.)"
-          />
-        </div>
-      </div>
-    );
+  // Helper function to handle color changes
+  const handleColorChange = (path: string, hexColor: string) => {
+    const tailwindClass = hexToTailwindBgClass(hexColor);
+    // Remove the prefix based on the property type
+    let finalValue = tailwindClass;
+    if (path.includes('backgroundColor') || path.includes('badgeBg') || path.includes('accentColor')) {
+      finalValue = tailwindClass.replace('bg-', '');
+    } else if (path.includes('textColor') || path.includes('badgeText')) {
+      finalValue = tailwindClass.replace('text-', '');
+    } else if (path.includes('badgeBorder')) {
+      finalValue = tailwindClass.replace('border-', '');
+    }
+    updateNested(path, finalValue);
   };
 
   return (
@@ -386,7 +200,7 @@ export default function BehindScenesPage() {
       exists={!!exists}
       itemName="Bastidores"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Seção Conteúdo */}
         <div className="space-y-4">
           <SectionHeader
@@ -405,8 +219,39 @@ export default function BehindScenesPage() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <Card className="p-6 space-y-6">
-                  {renderContentSection()}
+                <Card className="p-6 bg-[var(--color-background)]">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Input
+                        label="Badge"
+                        value={behindScenesData.content.badge}
+                        onChange={(e) => updateNested('content.badge', e.target.value)}
+                        placeholder="Bastidores da Operação"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+
+                      <Input
+                        label="Título"
+                        value={behindScenesData.content.title}
+                        onChange={(e) => updateNested('content.title', e.target.value)}
+                        placeholder="A Rotina de Quem Escala"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+
+                    <div>
+                      <Input
+                        label="URL do Vídeo (YouTube)"
+                        value={behindScenesData.content.videoSrc}
+                        onChange={(e) => updateNested('content.videoSrc', e.target.value)}
+                        placeholder="https://www.youtube.com/watch?v=hfJMWlZ0GhY&t=3s"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-2">
+                        Cole a URL completa do vídeo do YouTube
+                      </p>
+                    </div>
+                  </div>
                 </Card>
               </motion.div>
             )}
@@ -431,15 +276,70 @@ export default function BehindScenesPage() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <Card className="p-6 space-y-6">
-                  {renderStyleSection()}
+                <Card className="p-6 bg-[var(--color-background)]">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <ThemePropertyInput
+                        property="bg"
+                        label="Cor de Fundo"
+                        description="Cor de fundo da seção completa"
+                        currentHex={tailwindToHex(`bg-${getTailwindClass(behindScenesData.style.backgroundColor, 'gray-900')}`)}
+                        tailwindClass={`bg-${getTailwindClass(behindScenesData.style.backgroundColor, 'gray-900')}`}
+                        onThemeChange={(_, hex) => handleColorChange('style.backgroundColor', hex)}
+                      />
+
+                      <ThemePropertyInput
+                        property="text"
+                        label="Cor do Texto"
+                        description="Cor principal do texto"
+                        currentHex={tailwindToHex(`text-${getTailwindClass(behindScenesData.style.textColor, 'white')}`)}
+                        tailwindClass={`text-${getTailwindClass(behindScenesData.style.textColor, 'white')}`}
+                        onThemeChange={(_, hex) => handleColorChange('style.textColor', hex)}
+                      />
+
+                      <ThemePropertyInput
+                        property="bg"
+                        label="Fundo do Badge"
+                        description="Cor de fundo do badge"
+                        currentHex={tailwindToHex(`bg-${getTailwindClass(behindScenesData.style.badgeBg, 'yellow-500/5')}`)}
+                        tailwindClass={`bg-${getTailwindClass(behindScenesData.style.badgeBg, 'yellow-500/5')}`}
+                        onThemeChange={(_, hex) => handleColorChange('style.badgeBg', hex)}
+                      />
+
+                      <ThemePropertyInput
+                        property="border"
+                        label="Borda do Badge"
+                        description="Cor da borda do badge"
+                        currentHex={tailwindToHex(`border-${getTailwindClass(behindScenesData.style.badgeBorder, 'yellow-500/20')}`)}
+                        tailwindClass={`border-${getTailwindClass(behindScenesData.style.badgeBorder, 'yellow-500/20')}`}
+                        onThemeChange={(_, hex) => handleColorChange('style.badgeBorder', hex)}
+                      />
+
+                      <ThemePropertyInput
+                        property="text"
+                        label="Texto do Badge"
+                        description="Cor do texto do badge"
+                        currentHex={tailwindToHex(`text-${getTailwindClass(behindScenesData.style.badgeText, 'yellow-500')}`)}
+                        tailwindClass={`text-${getTailwindClass(behindScenesData.style.badgeText, 'yellow-500')}`}
+                        onThemeChange={(_, hex) => handleColorChange('style.badgeText', hex)}
+                      />
+
+                      <ThemePropertyInput
+                        property="bg"
+                        label="Cor de Destaque"
+                        description="Cor para elementos de destaque (ícones, botões, etc.)"
+                        currentHex={tailwindToHex(`bg-${getTailwindClass(behindScenesData.style.accentColor, 'yellow-500')}`)}
+                        tailwindClass={`bg-${getTailwindClass(behindScenesData.style.accentColor, 'yellow-500')}`}
+                        onThemeChange={(_, hex) => handleColorChange('style.accentColor', hex)}
+                      />
+                    </div>
+                  </div>
                 </Card>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Fixed Action Bar */}
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}

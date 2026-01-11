@@ -1,18 +1,19 @@
-/* eslint-disable react-hooks/static-components */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import { Button } from "@/components/Button";
 import { 
   Layers,
   Tag,
   Type,
-  ChevronDown, 
+  ChevronDown,
   ChevronUp,
   Plus,
   Trash2,
@@ -25,11 +26,18 @@ import {
   Wrench,
   Target,
   Users,
-  Bot
+  Bot,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  GripVertical,
+  Zap
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import IconSelector from "@/components/IconSelector";
 
@@ -58,7 +66,6 @@ interface TegProData {
   header: Header;
   modules: Module[];
   cta: CTA;
-  [key: string]: any;
 }
 
 const defaultTegProData: TegProData = {
@@ -107,39 +114,23 @@ const defaultTegProData: TegProData = {
   }
 };
 
-// Componente SectionHeader
-interface SectionHeaderProps {
-  title: string;
-  section: any;
-  icon: any;
-  isExpanded: boolean;
-  onToggle: (section: any) => void;
-}
-
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <div
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </div>
-);
+const mergeWithDefaults = (apiData: any, defaultData: TegProData): TegProData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    id: apiData.id,
+    header: {
+      badge: apiData.header?.badge || defaultData.header.badge,
+      title: apiData.header?.title || defaultData.header.title,
+      subtitle: apiData.header?.subtitle || defaultData.header.subtitle,
+    },
+    modules: apiData.modules || defaultData.modules,
+    cta: {
+      text: apiData.cta?.text || defaultData.cta.text,
+      link: apiData.cta?.link || defaultData.cta.link,
+    },
+  };
+};
 
 // Componente para editar Tags
 interface TagsEditorProps {
@@ -172,7 +163,7 @@ const TagsEditor = ({ tags, onChange, label = "Tags" }: TagsEditorProps) => {
 
   return (
     <div className="space-y-3">
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label className="block text-sm font-medium text-[var(--color-secondary)]">
         {label}
       </label>
       
@@ -183,10 +174,12 @@ const TagsEditor = ({ tags, onChange, label = "Tags" }: TagsEditorProps) => {
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewTag(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Digite uma tag e pressione Enter"
+          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
         />
         <Button
           type="button"
           onClick={addTag}
+          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
         >
           Adicionar
         </Button>
@@ -197,13 +190,13 @@ const TagsEditor = ({ tags, onChange, label = "Tags" }: TagsEditorProps) => {
           {tags.map((tag, index) => (
             <div
               key={index}
-              className="inline-flex items-center gap-1 px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-full text-sm"
+              className="inline-flex items-center gap-1 px-3 py-1 bg-[var(--color-background-body)] rounded-full text-sm border border-[var(--color-border)]"
             >
-              <span className="text-zinc-700 dark:text-zinc-300">{tag}</span>
+              <span className="text-[var(--color-secondary)]">{tag}</span>
               <button
                 type="button"
                 onClick={() => removeTag(index)}
-                className="text-zinc-500 hover:text-red-500"
+                className="text-[var(--color-secondary)]/50 hover:text-red-500"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -211,24 +204,111 @@ const TagsEditor = ({ tags, onChange, label = "Tags" }: TagsEditorProps) => {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-zinc-500">Nenhuma tag adicionada</p>
+        <p className="text-sm text-[var(--color-secondary)]/70">Nenhuma tag adicionada</p>
       )}
     </div>
   );
 };
 
-// Componente ModuleEditor
-interface ModuleEditorProps {
-  module: Module;
-  index: number;
-  onChange: (module: Module) => void;
-  onRemove: () => void;
-}
+export default function TegProProtocolPage() {
+  const {
+    data: tegProData,
+    exists,
+    loading,
+    success,
+    errorMsg,
+    deleteModal,
+    updateNested,
+    save,
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
+  } = useJsonManagement<TegProData>({
+    apiPath: "/api/tegbe-institucional/json/cursos",
+    defaultData: defaultTegProData,
+    mergeFunction: mergeWithDefaults,
+  });
 
-const ModuleEditor = ({ module, index, onChange, onRemove }: ModuleEditorProps) => {
-  const updateModule = (field: keyof Module, value: any) => {
-    onChange({ ...module, [field]: value });
+  const [expandedSections, setExpandedSections] = useState({
+    header: true,
+    modules: true,
+    cta: true
+  });
+
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
   };
+
+  const handleAddModule = () => {
+    const newModule: Module = {
+      id: `${tegProData.modules.length + 1}`.padStart(2, '0'),
+      phase: "",
+      title: "",
+      description: "",
+      tags: [],
+      icon: "ph:rocket-bold"
+    };
+    const updatedModules = [...tegProData.modules, newModule];
+    updateNested('modules', updatedModules);
+  };
+
+  const handleUpdateModule = (index: number, updates: Partial<Module>) => {
+    const updatedModules = [...tegProData.modules];
+    updatedModules[index] = { ...updatedModules[index], ...updates };
+    updateNested('modules', updatedModules);
+  };
+
+  const handleRemoveModule = (index: number) => {
+    const updatedModules = tegProData.modules.filter((_, i) => i !== index);
+    updateNested('modules', updatedModules);
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Header
+    total += 3;
+    if (tegProData.header.badge.trim()) completed++;
+    if (tegProData.header.title.trim()) completed++;
+    if (tegProData.header.subtitle.trim()) completed++;
+
+    // Modules
+    total += tegProData.modules.length * 5;
+    tegProData.modules.forEach(module => {
+      if (module.id.trim()) completed++;
+      if (module.phase.trim()) completed++;
+      if (module.title.trim()) completed++;
+      if (module.description.trim()) completed++;
+      if (module.icon.trim()) completed++;
+    });
+
+    // CTA
+    total += 2;
+    if (tegProData.cta.text.trim()) completed++;
+    if (tegProData.cta.link.trim()) completed++;
+
+    return { completed, total };
+  };
+
+  const completion = calculateCompletion();
+
+  if (loading && !exists) {
+    return <Loading layout={Layers} exists={!!exists} />;
+  }
 
   const getModuleIcon = (index: number) => {
     switch (index) {
@@ -240,359 +320,6 @@ const ModuleEditor = ({ module, index, onChange, onRemove }: ModuleEditorProps) 
     }
   };
 
-  const ModuleIcon = getModuleIcon(index);
-
-  return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-            <ModuleIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-zinc-800 dark:text-zinc-200">
-              Módulo {module.id}: {module.title || "Sem título"}
-            </h4>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              {module.phase || "Sem fase definida"}
-            </p>
-          </div>
-        </div>
-        <Button
-          type="button"
-          variant="danger"
-          onClick={onRemove}
-          className="flex items-center gap-2"
-        >
-          <Trash2 className="w-4 h-4" />
-          Remover
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Coluna 1: Informações básicas */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                ID do Módulo
-              </label>
-              <Input
-                type="text"
-                value={module.id}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  updateModule("id", e.target.value)
-                }
-                placeholder="01"
-              />
-            </div>
-
-            <div>
-              <IconSelector
-                value={module.icon}
-                onChange={(value) => updateModule("icon", value)}
-                label="Ícone do Módulo"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Fase
-            </label>
-            <Input
-              type="text"
-              value={module.phase}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                updateModule("phase", e.target.value)
-              }
-              placeholder="FASE DE FUNDAÇÃO"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Título
-            </label>
-            <Input
-              type="text"
-              value={module.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                updateModule("title", e.target.value)
-              }
-              placeholder="Setup da Máquina"
-            />
-          </div>
-        </div>
-
-        {/* Coluna 2: Descrição e Tags */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Descrição
-            </label>
-            <textarea
-              value={module.description}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                updateModule("description", e.target.value)
-              }
-              rows={4}
-              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-              placeholder="Descreva detalhadamente o módulo..."
-            />
-          </div>
-
-          <TagsEditor
-            tags={module.tags}
-            onChange={(tags) => updateModule("tags", tags)}
-            label="Tags do Módulo"
-          />
-        </div>
-      </div>
-    </Card>
-  );
-};
-
-export default function TegProProtocolPage() {
-  const {
-    data: tegProData,
-    setData: setTegProData,
-    updateNested,
-    loading,
-    success,
-    errorMsg,
-    save,
-    exists,
-    reload
-  } = useJsonManagement<TegProData>({
-    apiPath: "/api/tegbe-institucional/json/cursos",
-    defaultData: defaultTegProData,
-  });
-
-  const [expandedSections, setExpandedSections] = useState({
-    header: true,
-    modules: true,
-    cta: true
-  });
-
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  // Processar os dados para mesclar propriedades
-  const [processedData, setProcessedData] = useState<TegProData>(defaultTegProData);
-
-  useEffect(() => {
-    if (tegProData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProcessedData(tegProData);
-    }
-  }, [tegProData]);
-
-  // Calcular campos completos
-  const calculateCompleteCount = useCallback(() => {
-    let count = 0;
-    
-    if (!processedData) return 0;
-    
-    // Verificar header
-    if (
-      processedData.header.badge.trim() !== "" &&
-      processedData.header.title.trim() !== "" &&
-      processedData.header.subtitle.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar modules
-    if (processedData.modules.length > 0) {
-      const hasValidModules = processedData.modules.some(module => 
-        module.id.trim() !== "" && 
-        module.phase.trim() !== "" &&
-        module.title.trim() !== "" &&
-        module.description.trim() !== ""
-      );
-      if (hasValidModules) count++;
-    }
-    
-    // Verificar cta
-    if (
-      processedData.cta.text.trim() !== "" &&
-      processedData.cta.link.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    return count;
-  }, [processedData]);
-
-  const completeCount = calculateCompleteCount();
-  const totalCount = 3; // header, modules, cta
-
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  };
-
-  const handleChange = (path: string, value: any) => {
-    updateNested(path, value);
-  };
-
-  const handleModuleChange = (index: number, module: Module) => {
-    const newModules = [...processedData.modules];
-    newModules[index] = module;
-    handleChange("modules", newModules);
-  };
-
-  const addModule = () => {
-    const newId = (processedData.modules.length + 1).toString().padStart(2, '0');
-    const newModule: Module = {
-      id: newId,
-      phase: "",
-      title: "",
-      description: "",
-      tags: [],
-      icon: "ph:rocket-bold"
-    };
-    handleChange("modules", [...processedData.modules, newModule]);
-  };
-
-  const removeModule = (index: number) => {
-    const newModules = processedData.modules.filter((_, i) => i !== index);
-    handleChange("modules", newModules);
-  };
-
-  const handleSubmitWrapper = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  };
-
-  const handleSubmit = async () => {
-    try {
-      await save();
-      await reload();
-    } catch (error) {
-      console.error("Erro ao enviar dados:", error);
-    }
-  };
-
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS CONTEÚDOS DO PROTOCOLO"
-    });
-  };
-
-  const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/cursos", {
-      method: "DELETE",
-    });
-
-    setTegProData(defaultTegProData);
-    setProcessedData(defaultTegProData);
-    closeDeleteModal();
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
-
-  const renderHeaderSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Badge
-            </label>
-            <Input
-              type="text"
-              value={processedData.header.badge}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("header.badge", e.target.value)
-              }
-              placeholder="O Protocolo TegPro"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Título
-            </label>
-            <Input
-              type="text"
-              value={processedData.header.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("header.title", e.target.value)
-              }
-              placeholder="Engenharia Reversa da Venda"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Subtítulo
-          </label>
-          <textarea
-            value={processedData.header.subtitle}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              handleChange("header.subtitle", e.target.value)
-            }
-            rows={3}
-            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-            placeholder="Não é um curso. É a instalação do nosso sistema operacional dentro da sua empresa..."
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderCTASection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Texto do CTA
-            </label>
-            <Input
-              type="text"
-              value={processedData.cta.text}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("cta.text", e.target.value)
-              }
-              placeholder="Ver Grade Detalhada"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Link do CTA
-            </label>
-            <Input
-              type="text"
-              value={processedData.cta.link}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("cta.link", e.target.value)
-              }
-              placeholder="#grade"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <ManageLayout
       headerIcon={Layers}
@@ -601,7 +328,7 @@ export default function TegProProtocolPage() {
       exists={!!exists}
       itemName="Cursos TegPro"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
@@ -612,86 +339,208 @@ export default function TegProProtocolPage() {
             onToggle={() => toggleSection("header")}
           />
 
-          <AnimatePresence>
-            {expandedSections.header && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderHeaderSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.header ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="Badge"
+                  value={tegProData.header.badge}
+                  onChange={(e) => updateNested('header.badge', e.target.value)}
+                  placeholder="O Protocolo TegPro"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+
+                <Input
+                  label="Título"
+                  value={tegProData.header.title}
+                  onChange={(e) => updateNested('header.title', e.target.value)}
+                  placeholder="Engenharia Reversa da Venda"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+
+                <div className="md:col-span-2">
+                  <TextArea
+                    label="Subtítulo"
+                    value={tegProData.header.subtitle}
+                    onChange={(e) => updateNested('header.subtitle', e.target.value)}
+                    placeholder="Não é um curso. É a instalação do nosso sistema operacional dentro da sua empresa..."
+                    rows={3}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Módulos */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <SectionHeader
-              title={`Módulos (${processedData.modules.length} fases)`}
+              title={`Módulos (${tegProData.modules.length} fases)`}
               section="modules"
               icon={Grid}
               isExpanded={expandedSections.modules}
               onToggle={() => toggleSection("modules")}
             />
-            <Button
-              type="button"
-              onClick={addModule}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Módulo
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  {tegProData.modules.filter(m => m.title && m.description && m.icon).length} de {tegProData.modules.length} completos
+                </span>
+              </div>
+              <Button
+                type="button"
+                onClick={handleAddModule}
+                variant="primary"
+                className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Módulo
+              </Button>
+            </div>
           </div>
 
-          <AnimatePresence>
-            {expandedSections.modules && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {processedData.modules.length === 0 ? (
-                    <div className="text-center py-12">
-                      <Grid className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Nenhum módulo adicionado
-                      </h4>
-                      <p className="text-zinc-600 dark:text-zinc-400 mb-6 max-w-md mx-auto">
-                        Adicione os módulos que compõem o protocolo TegPro
-                      </p>
-                      <Button
-                        type="button"
-                        onClick={addModule}
-                        className="flex items-center gap-2 mx-auto"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Adicionar Primeiro Módulo
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {processedData.modules.map((module, index) => (
-                        <ModuleEditor
-                          key={index}
-                          module={module}
-                          index={index}
-                          onChange={(updatedModule) => handleModuleChange(index, updatedModule)}
-                          onRemove={() => removeModule(index)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </motion.div>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.modules ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            {tegProData.modules.length === 0 ? (
+              <Card className="p-6 bg-[var(--color-background)]">
+                <div className="text-center py-12">
+                  <Grid className="w-16 h-16 text-[var(--color-secondary)]/30 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                    Nenhum módulo adicionado
+                  </h4>
+                  <p className="text-[var(--color-secondary)]/70 mb-6 max-w-md mx-auto">
+                    Adicione os módulos que compõem o protocolo TegPro
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={handleAddModule}
+                    variant="primary"
+                    className="mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Primeiro Módulo
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {tegProData.modules.map((module, index) => {
+                  const ModuleIcon = getModuleIcon(index);
+                  return (
+                    <Card key={index} className="p-6 bg-[var(--color-background)]">
+                      <div className="flex items-start justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center">
+                            <ModuleIcon className="w-5 h-5 text-[var(--color-primary)]" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-[var(--color-secondary)]">
+                              Módulo {module.id}: {module.title || "Sem título"}
+                            </h4>
+                            <p className="text-sm text-[var(--color-secondary)]/70">
+                              {module.phase || "Sem fase definida"}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          onClick={() => handleRemoveModule(index)}
+                          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 border-none"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remover
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Coluna 1: Informações básicas */}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                                ID do Módulo
+                              </label>
+                              <Input
+                                value={module.id}
+                                onChange={(e) => handleUpdateModule(index, { id: e.target.value })}
+                                placeholder="01"
+                                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                              />
+                            </div>
+
+                            <div>
+                              <IconSelector
+                                value={module.icon}
+                                onChange={(value) => handleUpdateModule(index, { icon: value })}
+                                label="Ícone do Módulo"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                              Fase
+                            </label>
+                            <Input
+                              value={module.phase}
+                              onChange={(e) => handleUpdateModule(index, { phase: e.target.value })}
+                              placeholder="FASE DE FUNDAÇÃO"
+                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                              Título
+                            </label>
+                            <Input
+                              value={module.title}
+                              onChange={(e) => handleUpdateModule(index, { title: e.target.value })}
+                              placeholder="Setup da Máquina"
+                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Coluna 2: Descrição e Tags */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                              Descrição
+                            </label>
+                            <TextArea
+                              value={module.description}
+                              onChange={(e) => handleUpdateModule(index, { description: e.target.value })}
+                              placeholder="Descreva detalhadamente o módulo..."
+                              rows={4}
+                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                            />
+                          </div>
+
+                          <TagsEditor
+                            tags={module.tags}
+                            onChange={(tags) => handleUpdateModule(index, { tags })}
+                            label="Tags do Módulo"
+                          />
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
             )}
-          </AnimatePresence>
+          </motion.div>
         </div>
 
         {/* Seção CTA */}
@@ -704,31 +553,41 @@ export default function TegProProtocolPage() {
             onToggle={() => toggleSection("cta")}
           />
 
-          <AnimatePresence>
-            {expandedSections.cta && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderCTASection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cta ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="Texto do CTA"
+                  value={tegProData.cta.text}
+                  onChange={(e) => updateNested('cta.text', e.target.value)}
+                  placeholder="Ver Grade Detalhada"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+
+                <Input
+                  label="Link do CTA"
+                  value={tegProData.cta.link}
+                  onChange={(e) => updateNested('cta.link', e.target.value)}
+                  placeholder="#grade"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Fixed Action Bar */}
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completeCount}
-          totalCount={totalCount}
+          completeCount={completion.completed}
+          totalCount={completion.total}
           itemName="Protocolo TegPro"
           icon={Layers}
         />
@@ -740,11 +599,14 @@ export default function TegProProtocolPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={processedData.modules.length}
+        totalItems={tegProData.modules.length}
         itemName="Módulo"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }

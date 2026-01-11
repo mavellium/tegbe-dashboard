@@ -1,39 +1,44 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import { Button } from "@/components/Button";
-import ColorPicker from "@/components/ColorPicker";
 import { 
   MessageCircle,
   Video,
   Image as ImageIcon,
   FileText,
-  ChevronDown, 
+  ChevronDown,
   ChevronUp,
   Plus,
   Trash2,
   Upload,
   Settings,
-  Sparkles,
-  User,
-  Briefcase,
-  TrendingUp,
-  Check,
-  Play,
-  Eye,
-  Volume2,
-  VolumeX
+  CheckCircle2,
+  ArrowUp,
+  ArrowDown,
+  Zap,
+  Tag,
+  Palette
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
+import ColorPicker from "@/components/ColorPicker";
 import Image from "next/image";
+
+// Importar componentes de upload da página de exemplo
+import { ImageUpload } from "@/components/ImageUpload";
+import { VideoUpload } from "@/components/VideoUpload";
 
 interface TestimonialStats {
   value: string;
@@ -71,63 +76,43 @@ const defaultTestimonialsData: TestimonialsData = {
   testimonials: []
 };
 
-interface MediaFiles {
-  [testimonialId: string]: {
-    video?: File | null;
-    image?: File | null;
-    poster?: File | null;
+const mergeWithDefaults = (apiData: any, defaultData: TestimonialsData): TestimonialsData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    id: apiData.id || defaultData.id,
+    titulo: apiData.titulo || defaultData.titulo,
+    subtitulo: apiData.subtitulo || defaultData.subtitulo,
+    backgroundColor: apiData.backgroundColor || defaultData.backgroundColor,
+    textColor: apiData.textColor || defaultData.textColor,
+    showStats: apiData.showStats ?? defaultData.showStats,
+    testimonials: apiData.testimonials || defaultData.testimonials,
   };
-}
+};
 
-const SectionHeader = ({
-  title,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: {
-  title: string;
-  icon: any;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) => (
-  <div
-    onClick={onToggle}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </div>
-);
+// Componente ColorPropertyInput ajustado
+interface ColorPropertyInputProps {
+  label: string;
+  value: string;
+  onChange: (color: string) => void;
+  description?: string;
+}
 
 const ColorPropertyInput = ({ 
   label, 
   value, 
   onChange, 
   description 
-}: { 
-  label: string; 
-  value: string; 
-  onChange: (color: string) => void; 
-  description?: string;
-}) => {
+}: ColorPropertyInputProps) => {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+        <label className="text-sm font-medium text-[var(--color-secondary)]">
           {label}
         </label>
       </div>
       {description && (
-        <p className="text-xs text-zinc-500">{description}</p>
+        <p className="text-xs text-[var(--color-secondary)]/70">{description}</p>
       )}
       <div className="flex gap-2">
         <Input
@@ -137,14 +122,14 @@ const ColorPropertyInput = ({
             onChange(e.target.value)
           }
           placeholder="#000000"
-          className="flex-1 font-mono"
+          className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
         />
         <ColorPicker
           color={value}
           onChange={onChange}
         />
         <div 
-          className="w-10 h-10 rounded-lg border border-zinc-300 dark:border-zinc-600"
+          className="w-10 h-10 rounded-lg border border-[var(--color-border)]"
           style={{ backgroundColor: value }}
         />
       </div>
@@ -152,163 +137,7 @@ const ColorPropertyInput = ({
   );
 };
 
-const MediaUpload = ({ 
-  label, 
-  currentFile, 
-  selectedFile, 
-  onFileChange, 
-  accept,
-  type = "image",
-  aspectRatio = "aspect-video"
-}: { 
-  label: string; 
-  currentFile: string;
-  selectedFile: File | null;
-  onFileChange: (file: File | null) => void;
-  accept: string;
-  type?: "image" | "video";
-  aspectRatio?: string;
-}) => {
-  const [previewUrl, setPreviewUrl] = useState<string>("");
-
-  useEffect(() => {
-    if (selectedFile) {
-      const objectUrl = URL.createObjectURL(selectedFile);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPreviewUrl(objectUrl);
-      
-      return () => {
-        URL.revokeObjectURL(objectUrl);
-      };
-    } else if (currentFile) {
-      setPreviewUrl(currentFile);
-    } else {
-      setPreviewUrl("");
-    }
-  }, [selectedFile, currentFile]);
-
-  const getIcon = () => {
-    if (type === "video") return <Play className="w-12 h-12 text-zinc-400" />;
-    return <ImageIcon className="w-12 h-12 text-zinc-400" />;
-  };
-
-  return (
-    <div className="space-y-4">
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-        {label}
-      </label>
-      
-      <div className="flex flex-col md:flex-row gap-4 items-start">
-        {previewUrl ? (
-          <div className={`relative w-full ${aspectRatio} rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-black`}>
-            {type === "video" ? (
-              <video
-                src={previewUrl}
-                className="w-full h-full object-cover"
-                controls={false}
-                muted
-                loop
-              />
-            ) : (
-              <Image
-                src={previewUrl}
-                alt="Preview"
-                fill
-                className="object-cover"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    parent.innerHTML = `
-                      <div class="w-full h-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800">
-                        <div class="w-16 h-16 flex items-center justify-center">
-                        </div>
-                      </div>
-                    `;
-                  }
-                }}
-              />
-            )}
-            {type === "video" && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-16 h-16 bg-black/50 rounded-full flex items-center justify-center">
-                  <Play className="w-8 h-8 text-white" />
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className={`w-full ${aspectRatio} flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600`}>
-            {getIcon()}
-          </div>
-        )}
-        
-        <div className="w-full md:w-auto space-y-4">
-          <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg p-4">
-            <div className="flex flex-col items-center justify-center">
-              {previewUrl ? (
-                <>
-                  <div className="flex gap-3 mb-3">
-                    <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                      <Upload className="w-4 h-4" />
-                      Trocar {type === "video" ? "Vídeo" : "Imagem"}
-                      <input
-                        type="file"
-                        accept={accept}
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          onFileChange(file);
-                        }}
-                      />
-                    </label>
-                    <Button
-                      type="button"
-                      variant="danger"
-                      onClick={() => onFileChange(null)}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                    Clique em &quot;Trocar&quot; para substituir
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-                    {getIcon()}
-                  </div>
-                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4 text-center">
-                    {type === "video" 
-                      ? "Upload recomendado: MP4 ou WebM\nTamanho máximo: 50MB"
-                      : "Upload recomendado: JPG, PNG ou WebP\nTamanho ideal: 800x600px"
-                    }
-                  </p>
-                  <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
-                    Selecionar {type === "video" ? "Vídeo" : "Imagem"}
-                    <input
-                      type="file"
-                      accept={accept}
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] || null;
-                        onFileChange(file);
-                      }}
-                    />
-                  </label>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
+// Função para obter ícone e cor baseado no tipo
 const getTypeIcon = (type: Testimonial["type"]) => {
   switch (type) {
     case "video": return Video;
@@ -320,40 +149,39 @@ const getTypeIcon = (type: Testimonial["type"]) => {
 
 const getTypeColor = (type: Testimonial["type"]) => {
   switch (type) {
-    case "video": return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
-    case "image": return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-    case "text": return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200";
-    default: return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+    case "video": return "bg-blue-500/10 text-blue-500";
+    case "image": return "bg-green-500/10 text-green-500";
+    case "text": return "bg-purple-500/10 text-purple-500";
+    default: return "bg-[var(--color-background-body)] text-[var(--color-secondary)]";
   }
 };
 
 export default function TestimonialsPage() {
-  const [files, setFiles] = useState<MediaFiles>({});
+  const {
+    data: testimonialsData,
+    exists,
+    loading,
+    success,
+    errorMsg,
+    deleteModal,
+    updateNested,
+    save,
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
+    fileStates,
+    setFileState,
+  } = useJsonManagement<TestimonialsData>({
+    apiPath: "/api/tegbe-institucional/json/alunos",
+    defaultData: defaultTestimonialsData,
+    mergeFunction: mergeWithDefaults,
+  });
+
   const [expandedSections, setExpandedSections] = useState({
     geral: true,
     testimonials: true
   });
   const [expandedTestimonials, setExpandedTestimonials] = useState<string[]>([]);
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  const {
-    data: testimonialsData,
-    setData: setTestimonialsData,
-    updateNested,
-    loading,
-    success,
-    errorMsg,
-    save,
-    exists,
-    reload
-  } = useJsonManagement<TestimonialsData>({
-    apiPath: "/api/tegbe-institucional/json/alunos",
-    defaultData: defaultTestimonialsData,
-  });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -370,26 +198,8 @@ export default function TestimonialsPage() {
     );
   };
 
-  const handleChange = (path: string, value: any) => {
-    updateNested(path, value);
-  };
-
-  const handleTestimonialChange = (index: number, path: string, value: any) => {
-    updateNested(`testimonials.${index}.${path}`, value);
-  };
-
-  const handleFileChange = (testimonialId: string, field: "video" | "image" | "poster", file: File | null) => {
-    setFiles(prev => ({
-      ...prev,
-      [testimonialId]: {
-        ...prev[testimonialId],
-        [field]: file
-      }
-    }));
-  };
-
-  const addTestimonial = () => {
-    const currentTestimonials = [...testimonialsData.testimonials];
+  // Funções para gerenciar testimonials - similares às da página de exemplo
+  const handleAddTestimonial = () => {
     const newId = Date.now().toString();
     const newTestimonial: Testimonial = {
       id: newId,
@@ -400,22 +210,21 @@ export default function TestimonialsPage() {
       src: "",
       poster: ""
     };
-
-    handleChange("testimonials", [...currentTestimonials, newTestimonial]);
+    const updatedTestimonials = [...testimonialsData.testimonials, newTestimonial];
+    updateNested('testimonials', updatedTestimonials);
     setExpandedTestimonials(prev => [...prev, newId]);
   };
 
-  const removeTestimonial = (index: number) => {
-    const currentTestimonials = [...testimonialsData.testimonials];
-    const testimonialId = currentTestimonials[index].id;
-    currentTestimonials.splice(index, 1);
-    handleChange("testimonials", currentTestimonials);
-    
-    setFiles(prev => {
-      const newFiles = { ...prev };
-      delete newFiles[testimonialId];
-      return newFiles;
-    });
+  const handleUpdateTestimonial = (index: number, updates: Partial<Testimonial>) => {
+    const updatedTestimonials = [...testimonialsData.testimonials];
+    updatedTestimonials[index] = { ...updatedTestimonials[index], ...updates };
+    updateNested('testimonials', updatedTestimonials);
+  };
+
+  const handleRemoveTestimonial = (index: number) => {
+    const updatedTestimonials = testimonialsData.testimonials.filter((_, i) => i !== index);
+    updateNested('testimonials', updatedTestimonials);
+    setExpandedTestimonials(prev => prev.filter(id => id !== testimonialsData.testimonials[index].id));
   };
 
   const moveTestimonial = (index: number, direction: "up" | "down") => {
@@ -431,179 +240,56 @@ export default function TestimonialsPage() {
     const [movedTestimonial] = currentTestimonials.splice(index, 1);
     currentTestimonials.splice(newIndex, 0, movedTestimonial);
     
-    handleChange("testimonials", currentTestimonials);
+    updateNested('testimonials', currentTestimonials);
   };
 
-  const handleSubmit = async () => {
-
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
     try {
-      save();
-      await reload();
-      
-      // Limpar os arquivos locais após o envio
-      setFiles({});
-    } catch (error) {
-      console.error("Erro ao enviar dados:", error);
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
     }
   };
 
-  const handleSubmitWrapper = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit();
+  // Função auxiliar para obter File do fileStates - igual à página de exemplo
+  const getFileFromState = (key: string): File | null => {
+    const value = fileStates[key];
+    return value instanceof File ? value : null;
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS CASOS DE SUCESSO"
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Configurações gerais
+    total += 5;
+    if (testimonialsData.id.trim()) completed++;
+    if (testimonialsData.titulo.trim()) completed++;
+    if (testimonialsData.subtitulo.trim()) completed++;
+    if (testimonialsData.backgroundColor.trim()) completed++;
+    if (testimonialsData.textColor.trim()) completed++;
+
+    // Testimonials
+    total += testimonialsData.testimonials.length * 4;
+    testimonialsData.testimonials.forEach(testimonial => {
+      if (testimonial.clientName.trim()) completed++;
+      if (testimonial.clientRole.trim()) completed++;
+      if (testimonial.description.trim()) completed++;
+      if (testimonial.type) completed++;
     });
+
+    return { completed, total };
   };
 
-  const confirmDelete = async () => {
-    try {
-      await fetch("/api/tegbe-institucional/json/alunos", {
-        method: "DELETE",
-      });
+  const completion = calculateCompletion();
 
-      setTestimonialsData(defaultTestimonialsData);
-      setFiles({});
-      setExpandedTestimonials([]);
-    } catch (error) {
-      console.error("Erro ao deletar:", error);
-    } finally {
-      closeDeleteModal();
-    }
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
-
-  const calculateCompleteCount = useCallback(() => {
-    let count = 0;
-    
-    // Verificar seção geral
-    if (
-      testimonialsData.id.trim() !== "" &&
-      testimonialsData.titulo.trim() !== "" &&
-      testimonialsData.subtitulo.trim() !== "" &&
-      testimonialsData.backgroundColor.trim() !== "" &&
-      testimonialsData.textColor.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar depoimentos
-    if (testimonialsData.testimonials.length > 0) {
-      const hasValidTestimonials = testimonialsData.testimonials.some(testimonial => 
-        testimonial.clientName.trim() !== "" && 
-        testimonial.clientRole.trim() !== "" &&
-        testimonial.description.trim() !== "" &&
-        (testimonial.type === "text" || (testimonial.src && testimonial.src.trim() !== ""))
-      );
-      if (hasValidTestimonials) count++;
-    }
-    
-    return count;
-  }, [testimonialsData]);
-
-  const completeCount = calculateCompleteCount();
-  const totalCount = 2;
-
-  const renderGeralSection = () => {
-    return (
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            ID da Seção
-          </label>
-          <Input
-            type="text"
-            value={testimonialsData.id}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleChange("id", e.target.value)
-            }
-            placeholder="testimonials-section"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Título
-            </label>
-            <Input
-              type="text"
-              value={testimonialsData.titulo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("titulo", e.target.value)
-              }
-              placeholder="Casos de Sucesso"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Subtítulo
-            </label>
-            <Input
-              type="text"
-              value={testimonialsData.subtitulo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("subtitulo", e.target.value)
-              }
-              placeholder="Veja o que nossos alunos e clientes estão conquistando"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ColorPropertyInput
-            label="Cor de Fundo"
-            value={testimonialsData.backgroundColor}
-            onChange={(color) => handleChange("backgroundColor", color)}
-            description="Cor de fundo da seção"
-          />
-
-          <ColorPropertyInput
-            label="Cor do Texto"
-            value={testimonialsData.textColor}
-            onChange={(color) => handleChange("textColor", color)}
-            description="Cor principal do texto"
-          />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="font-medium text-zinc-800 dark:text-zinc-200">
-              Exibir Estatísticas
-            </h4>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Mostrar os números de resultado nos depoimentos
-            </p>
-          </div>
-          <div
-            onClick={() => handleChange("showStats", !testimonialsData.showStats)}
-            className={`w-10 h-5 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
-              testimonialsData.showStats ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-700"
-            }`}
-          >
-            <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${
-              testimonialsData.showStats ? "translate-x-5" : ""
-            }`} />
-          </div>
-        </div>
-      </div>
-    );
-  };
+  if (loading && !exists) {
+    return <Loading layout={MessageCircle} exists={!!exists} />;
+  }
 
   const renderTestimonial = (testimonial: Testimonial, index: number) => {
-    const testimonialFiles = files[testimonial.id] || {};
     const isExpanded = expandedTestimonials.includes(testimonial.id);
     const TypeIcon = getTypeIcon(testimonial.type);
 
@@ -611,25 +297,25 @@ export default function TestimonialsPage() {
       <div key={testimonial.id} className="space-y-4">
         <div
           onClick={() => toggleTestimonial(testimonial.id)}
-          className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+          className="w-full flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg hover:bg-[var(--color-background-body)]/80 transition-colors cursor-pointer border border-[var(--color-border)]"
         >
           <div className="flex items-center gap-3">
-            <TypeIcon className="w-5 h-5" />
+            <TypeIcon className="w-5 h-5 text-[var(--color-secondary)]" />
             <div>
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-1 text-xs rounded-full ${getTypeColor(testimonial.type)}`}>
                   {testimonial.type.toUpperCase()}
                 </span>
                 {testimonial.stats && (
-                  <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                  <span className="px-2 py-1 text-xs rounded-full bg-yellow-500/10 text-yellow-500">
                     COM ESTATÍSTICA
                   </span>
                 )}
               </div>
-              <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 mt-1">
+              <h3 className="text-lg font-semibold text-[var(--color-secondary)] mt-1">
                 {testimonial.clientName || "Cliente sem nome"}
               </h3>
-              <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">
+              <p className="text-sm text-[var(--color-secondary)]/70 line-clamp-1">
                 {testimonial.description || "Sem descrição"}
               </p>
             </div>
@@ -644,8 +330,9 @@ export default function TestimonialsPage() {
                   moveTestimonial(index, "up");
                 }}
                 disabled={index === 0}
+                className="bg-[var(--color-background-body)] hover:bg-[var(--color-background-body)]/80 border-[var(--color-border)]"
               >
-                ↑
+                <ArrowUp className="w-3 h-3" />
               </Button>
               <Button
                 type="button"
@@ -655,8 +342,9 @@ export default function TestimonialsPage() {
                   moveTestimonial(index, "down");
                 }}
                 disabled={index === testimonialsData.testimonials.length - 1}
+                className="bg-[var(--color-background-body)] hover:bg-[var(--color-background-body)]/80 border-[var(--color-border)]"
               >
-                ↓
+                <ArrowDown className="w-3 h-3" />
               </Button>
             </div>
             <Button
@@ -664,249 +352,244 @@ export default function TestimonialsPage() {
               variant="danger"
               onClick={(e) => {
                 e.stopPropagation();
-                removeTestimonial(index);
+                handleRemoveTestimonial(index);
               }}
+              className="bg-red-600 hover:bg-red-700 border-none"
             >
               <Trash2 className="w-4 h-4" />
             </Button>
             {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+              <ChevronUp className="w-5 h-5 text-[var(--color-secondary)]" />
             ) : (
-              <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+              <ChevronDown className="w-5 h-5 text-[var(--color-secondary)]" />
             )}
           </div>
         </div>
 
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <Card className="p-6 space-y-8">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  {/* Coluna 1: Informações básicas */}
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Tipo de Depoimento
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(["video", "image", "text"] as const).map((type) => {
-                          const Icon = getTypeIcon(type);
-                          return (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => {
-                                handleTestimonialChange(index, "type", type);
-                                // Limpar arquivos ao mudar tipo
-                                if (type !== testimonial.type) {
-                                  setFiles(prev => ({
-                                    ...prev,
-                                    [testimonial.id]: {}
-                                  }));
-                                }
-                              }}
-                              className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors ${
-                                testimonial.type === type
-                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                                  : "border-zinc-300 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-                              }`}
-                            >
-                              <Icon className={`w-5 h-5 ${
-                                testimonial.type === type
-                                  ? "text-blue-600 dark:text-blue-400"
-                                  : "text-zinc-500"
-                              }`} />
-                              <span className="text-xs font-medium capitalize">{type}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                          Nome do Cliente
-                        </label>
-                        <Input
-                          type="text"
-                          value={testimonial.clientName}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleTestimonialChange(index, "clientName", e.target.value)
-                          }
-                          placeholder="Ex: Lucas Martins"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                          Cargo/Função
-                        </label>
-                        <Input
-                          type="text"
-                          value={testimonial.clientRole}
-                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleTestimonialChange(index, "clientRole", e.target.value)
-                          }
-                          placeholder="Ex: Aluno - Dropshipping"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Depoimento
-                      </label>
-                      <textarea
-                        value={testimonial.description}
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                          handleTestimonialChange(index, "description", e.target.value)
-                        }
-                        className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[120px]"
-                        rows={4}
-                        placeholder="Digite o depoimento do cliente..."
-                      />
-                    </div>
-
-                    {/* Estatísticas */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium text-zinc-800 dark:text-zinc-200">
-                            Estatística do Resultado
-                          </h4>
-                          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                            Mostra um número chave do resultado
-                          </p>
-                        </div>
-                        <div
+        <motion.div
+          initial={false}
+          animate={{ height: isExpanded ? "auto" : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)] space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Coluna 1: Informações básicas */}
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Tipo de Depoimento
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["video", "image", "text"] as const).map((type) => {
+                      const Icon = getTypeIcon(type);
+                      return (
+                        <button
+                          key={type}
+                          type="button"
                           onClick={() => {
-                            if (testimonial.stats) {
-                              handleTestimonialChange(index, "stats", undefined);
-                            } else {
-                              handleTestimonialChange(index, "stats", {
-                                value: "",
-                                label: ""
-                              });
-                            }
+                            handleUpdateTestimonial(index, { type });
                           }}
-                          className={`w-10 h-5 rounded-full flex items-center px-1 transition-colors cursor-pointer ${
-                            testimonial.stats ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-700"
+                          className={`flex flex-col items-center gap-2 p-3 rounded-lg border transition-colors ${
+                            testimonial.type === type
+                              ? "border-[var(--color-primary)] bg-[var(--color-primary)]/10"
+                              : "border-[var(--color-border)] hover:bg-[var(--color-background-body)]"
                           }`}
                         >
-                          <div className={`w-3 h-3 rounded-full bg-white transform transition-transform ${
-                            testimonial.stats ? "translate-x-5" : ""
+                          <Icon className={`w-5 h-5 ${
+                            testimonial.type === type
+                              ? "text-[var(--color-primary)]"
+                              : "text-[var(--color-secondary)]/70"
                           }`} />
-                        </div>
-                      </div>
-
-                      {testimonial.stats && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                              Valor
-                            </label>
-                            <Input
-                              type="text"
-                              value={testimonial.stats.value}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleTestimonialChange(index, "stats", {
-                                  ...testimonial.stats!,
-                                  value: e.target.value
-                                })
-                              }
-                              placeholder="Ex: R$ 15k, +20%, -50%"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                              Rótulo
-                            </label>
-                            <Input
-                              type="text"
-                              value={testimonial.stats.label}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleTestimonialChange(index, "stats", {
-                                  ...testimonial.stats!,
-                                  label: e.target.value
-                                })
-                              }
-                              placeholder="Ex: Em 48h, Recuperação, CAC"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Coluna 2: Mídia */}
-                  <div className="space-y-6">
-                    {testimonial.type === "video" && (
-                      <>
-                        <MediaUpload
-                          label="Vídeo do Depoimento"
-                          currentFile={testimonial.src || ""}
-                          selectedFile={testimonialFiles.video || null}
-                          onFileChange={(file) => handleFileChange(testimonial.id, "video", file)}
-                          accept="video/*,.mp4,.webm"
-                          type="video"
-                          aspectRatio="aspect-video"
-                        />
-                        
-                        <MediaUpload
-                          label="Thumbnail do Vídeo (Poster)"
-                          currentFile={testimonial.poster || ""}
-                          selectedFile={testimonialFiles.poster || null}
-                          onFileChange={(file) => handleFileChange(testimonial.id, "poster", file)}
-                          accept="image/*"
-                          type="image"
-                          aspectRatio="aspect-video"
-                        />
-                      </>
-                    )}
-
-                    {testimonial.type === "image" && (
-                      <MediaUpload
-                        label="Imagem do Depoimento"
-                        currentFile={testimonial.src || ""}
-                        selectedFile={testimonialFiles.image || null}
-                        onFileChange={(file) => handleFileChange(testimonial.id, "image", file)}
-                        accept="image/*"
-                        type="image"
-                        aspectRatio="aspect-video"
-                      />
-                    )}
-
-                    {testimonial.type === "text" && (
-                      <div className={`w-full aspect-video flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-300 dark:border-zinc-600`}>
-                        <div className="text-center p-8">
-                          <FileText className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-                          <p className="text-zinc-600 dark:text-zinc-400">
-                            Depoimento em formato de texto
-                          </p>
-                          <p className="text-sm text-zinc-500 mt-2">
-                            Apenas o texto será exibido
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="text-xs text-zinc-500 space-y-1">
-                      <p>• Para vídeos: envie o arquivo .mp4 ou .webm</p>
-                      <p>• A thumbnail será gerada automaticamente ou você pode enviar uma imagem personalizada</p>
-                      <p>• Para imagens: JPG, PNG ou WebP (recomendado 800x600px)</p>
-                    </div>
+                          <span className={`text-xs font-medium capitalize ${
+                            testimonial.type === type
+                              ? "text-[var(--color-primary)]"
+                              : "text-[var(--color-secondary)]/70"
+                          }`}>{type}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Nome do Cliente
+                    </label>
+                    <Input
+                      type="text"
+                      value={testimonial.clientName}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleUpdateTestimonial(index, { clientName: e.target.value })
+                      }
+                      placeholder="Ex: Lucas Martins"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Cargo/Função
+                    </label>
+                    <Input
+                      type="text"
+                      value={testimonial.clientRole}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleUpdateTestimonial(index, { clientRole: e.target.value })
+                      }
+                      placeholder="Ex: Aluno - Dropshipping"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Depoimento
+                  </label>
+                  <TextArea
+                    value={testimonial.description}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                      handleUpdateTestimonial(index, { description: e.target.value })
+                    }
+                    placeholder="Digite o depoimento do cliente..."
+                    rows={4}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                {/* Estatísticas */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 border border-[var(--color-border)] rounded-lg">
+                    <div>
+                      <h4 className="font-medium text-[var(--color-secondary)]">Estatística do Resultado</h4>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        Mostra um número chave do resultado
+                      </p>
+                    </div>
+                    <Switch
+                      checked={!!testimonial.stats}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          handleUpdateTestimonial(index, { 
+                            stats: { value: "", label: "" }
+                          });
+                        } else {
+                          handleUpdateTestimonial(index, { stats: undefined });
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {testimonial.stats && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                          Valor
+                        </label>
+                        <Input
+                          type="text"
+                          value={testimonial.stats.value}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleUpdateTestimonial(index, {
+                              stats: {
+                                ...testimonial.stats!,
+                                value: e.target.value
+                              }
+                            })
+                          }
+                          placeholder="Ex: R$ 15k, +20%, -50%"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                          Rótulo
+                        </label>
+                        <Input
+                          type="text"
+                          value={testimonial.stats.label}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleUpdateTestimonial(index, {
+                              stats: {
+                                ...testimonial.stats!,
+                                label: e.target.value
+                              }
+                            })
+                          }
+                          placeholder="Ex: Em 48h, Recuperação, CAC"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Coluna 2: Mídia - USANDO OS COMPONENTES DA PÁGINA DE EXEMPLO */}
+              <div className="space-y-6">
+                {testimonial.type === "video" && (
+                  <>
+                    <VideoUpload
+                      label="Vídeo do Depoimento"
+                      currentVideo={testimonial.src || ''}
+                      selectedFile={getFileFromState(`testimonials.${index}.src`)}
+                      onFileChange={(file) => setFileState(`testimonials.${index}.src`, file)}
+                      aspectRatio="aspect-video"
+                      previewWidth={800}
+                      previewHeight={450}
+                      description="Vídeo do depoimento do cliente"
+                    />
+                    
+                    <ImageUpload
+                      label="Thumbnail do Vídeo (Poster)"
+                      currentImage={testimonial.poster || ''}
+                      selectedFile={getFileFromState(`testimonials.${index}.poster`)}
+                      onFileChange={(file) => setFileState(`testimonials.${index}.poster`, file)}
+                      aspectRatio="aspect-video"
+                      previewWidth={800}
+                      previewHeight={450}
+                      description="Imagem de capa para o vídeo (opcional)"
+                    />
+                  </>
+                )}
+
+                {testimonial.type === "image" && (
+                  <ImageUpload
+                    label="Imagem do Depoimento"
+                    currentImage={testimonial.src || ''}
+                    selectedFile={getFileFromState(`testimonials.${index}.src`)}
+                    onFileChange={(file) => setFileState(`testimonials.${index}.src`, file)}
+                    aspectRatio="aspect-video"
+                    previewWidth={800}
+                    previewHeight={450}
+                    description="Imagem do cliente ou do resultado"
+                  />
+                )}
+
+                {testimonial.type === "text" && (
+                  <div className={`w-full aspect-video flex items-center justify-center bg-[var(--color-background-body)] rounded-lg border-2 border-dashed border-[var(--color-border)]`}>
+                    <div className="text-center p-8">
+                      <FileText className="w-16 h-16 text-[var(--color-secondary)]/30 mx-auto mb-4" />
+                      <p className="text-[var(--color-secondary)]/70">
+                        Depoimento em formato de texto
+                      </p>
+                      <p className="text-sm text-[var(--color-secondary)]/50 mt-2">
+                        Apenas o texto será exibido
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-xs text-[var(--color-secondary)]/50 space-y-1">
+                  <p>• Para vídeos: envie o arquivo .mp4 ou .webm</p>
+                  <p>• A thumbnail será gerada automaticamente ou você pode enviar uma imagem personalizada</p>
+                  <p>• Para imagens: JPG, PNG ou WebP (recomendado 800x600px)</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
       </div>
     );
   };
@@ -919,100 +602,159 @@ export default function TestimonialsPage() {
       exists={!!exists}
       itemName="Casos de Sucesso"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
-        {/* Seção Geral */}
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Seção Configurações Gerais */}
         <div className="space-y-4">
           <SectionHeader
             title="Configurações Gerais"
+            section="geral"
             icon={Settings}
             isExpanded={expandedSections.geral}
             onToggle={() => toggleSection("geral")}
           />
 
-          <AnimatePresence>
-            {expandedSections.geral && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderGeralSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.geral ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="ID da Seção"
+                  value={testimonialsData.id}
+                  onChange={(e) => updateNested('id', e.target.value)}
+                  placeholder="testimonials-section"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+
+                <div className="md:col-span-2">
+                  <Input
+                    label="Título"
+                    value={testimonialsData.titulo}
+                    onChange={(e) => updateNested('titulo', e.target.value)}
+                    placeholder="Casos de Sucesso"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <TextArea
+                    label="Subtítulo"
+                    value={testimonialsData.subtitulo}
+                    onChange={(e) => updateNested('subtitulo', e.target.value)}
+                    placeholder="Veja o que nossos alunos e clientes estão conquistando"
+                    rows={2}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <ColorPropertyInput
+                  label="Cor de Fundo"
+                  value={testimonialsData.backgroundColor}
+                  onChange={(color) => updateNested('backgroundColor', color)}
+                  description="Cor de fundo da seção"
+                />
+
+                <ColorPropertyInput
+                  label="Cor do Texto"
+                  value={testimonialsData.textColor}
+                  onChange={(color) => updateNested('textColor', color)}
+                  description="Cor principal do texto"
+                />
+
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
+                    <div>
+                      <h4 className="font-medium text-[var(--color-secondary)]">Exibir Estatísticas</h4>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        Mostrar os números de resultado nos depoimentos
+                      </p>
+                    </div>
+                    <Switch
+                      checked={testimonialsData.showStats}
+                      onCheckedChange={(checked) => updateNested('showStats', checked)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Depoimentos */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <SectionHeader
               title={`Casos de Sucesso (${testimonialsData.testimonials.length})`}
+              section="testimonials"
               icon={MessageCircle}
               isExpanded={expandedSections.testimonials}
               onToggle={() => toggleSection("testimonials")}
             />
-            <Button
-              type="button"
-              onClick={addTestimonial}
-              className="flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Caso
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  {testimonialsData.testimonials.filter(t => t.clientName && t.description).length} de {testimonialsData.testimonials.length} completos
+                </span>
+              </div>
+              <Button
+                type="button"
+                onClick={handleAddTestimonial}
+                variant="primary"
+                className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Caso
+              </Button>
+            </div>
           </div>
 
-          <AnimatePresence>
-            {expandedSections.testimonials && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {testimonialsData.testimonials.length === 0 ? (
-                    <div className="text-center py-12">
-                      <MessageCircle className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        Nenhum caso de sucesso adicionado
-                      </h4>
-                      <p className="text-zinc-600 dark:text-zinc-400 mb-6 max-w-md mx-auto">
-                        Comece adicionando depoimentos em vídeo, imagem ou texto dos seus clientes
-                      </p>
-                      <Button
-                        type="button"
-                        onClick={addTestimonial}
-                        className="flex items-center gap-2 mx-auto"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Adicionar Primeiro Caso
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {testimonialsData.testimonials.map((testimonial, index) => 
-                        renderTestimonial(testimonial, index)
-                      )}
-                    </div>
-                  )}
-                </Card>
-              </motion.div>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.testimonials ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            {testimonialsData.testimonials.length === 0 ? (
+              <Card className="p-6 bg-[var(--color-background)]">
+                <div className="text-center py-12">
+                  <MessageCircle className="w-16 h-16 text-[var(--color-secondary)]/30 mx-auto mb-4" />
+                  <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                    Nenhum caso de sucesso adicionado
+                  </h4>
+                  <p className="text-[var(--color-secondary)]/70 mb-6 max-w-md mx-auto">
+                    Comece adicionando depoimentos em vídeo, imagem ou texto dos seus clientes
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={handleAddTestimonial}
+                    variant="primary"
+                    className="mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Primeiro Caso
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {testimonialsData.testimonials.map((testimonial, index) => 
+                  renderTestimonial(testimonial, index)
+                )}
+              </div>
             )}
-          </AnimatePresence>
+          </motion.div>
         </div>
 
-        {/* Fixed Action Bar */}
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completeCount}
-          totalCount={totalCount}
+          completeCount={completion.completed}
+          totalCount={completion.total}
           itemName="Casos de Sucesso"
           icon={MessageCircle}
         />
@@ -1028,7 +770,10 @@ export default function TestimonialsPage() {
         itemName="Caso de Sucesso"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }

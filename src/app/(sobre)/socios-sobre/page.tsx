@@ -1,335 +1,147 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { Button } from "@/components/Button";
+import { TextArea } from "@/components/TextArea";
+import IconSelector from "@/components/IconSelector";
 import { 
-  Dna,
-  Handshake,
-  Atom,
-  Rocket,
-  Type,
-  ChevronDown, 
-  ChevronUp,
-  Plus,
-  Trash2,
-  Sparkles,
-  Palette,
-  LucideIcon,
-  Target,
-  TrendingUp,
-  Brain,
+  Layout, 
   Users,
-  Shield,
-  Zap,
-  Star,
-  Trophy,
-  Award
+  GripVertical,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  Brain,
+  Diamond,
+  UserStar,
+  Trash2,
+  Plus,
+  Heading,
+  Palette,
+  Sparkles
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import IconSelector from "@/components/IconSelector";
+import { Button } from "@/components/Button";
+import { ThemePropertyInput } from "@/components/ThemePropertyInput";
+import { tailwindToHex, hexToTailwindTextClass } from "@/lib/colors";
 
-interface Badge {
-  text: string;
-  icon: string;
-}
-
-interface Valor {
-  titulo: string;
-  descricao: string;
-  icone: string;
-  cor: string;
-}
-
-interface DnaData {
-  badge: Badge;
-  titulo: string;
-  subtitulo: string;
-  valores: Valor[];
-}
-
-interface DnaOnlyData {
-  dna: DnaData;
-}
-
-const defaultDnaData: DnaOnlyData = {
-  dna: {
-    badge: {
-      text: "Nosso DNA",
-      icon: "ph:dna-bold"
-    },
-    titulo: "Cultura de alta performance,<br/>não de agência.",
-    subtitulo: "Somos um time de engenheiros, ex-fundadores e estrategistas obcecados por resolver problemas complexos de negócio.",
-    valores: [
-      {
-        titulo: "Skin in the Game",
-        descricao: "Não somos prestadores de serviço. Somos sócios na dor e na vitória. Nossa remuneração está atrelada aos seus resultados.",
-        icone: "ph:handshake-bold",
-        cor: "green"
-      },
-      {
-        titulo: "Método Científico",
-        descricao: "Testamos, medimos, iteramos. Rejeitamos achismos e apostamos em dados para cada decisão.",
-        icone: "ph:atom-bold",
-        cor: "blue"
-      },
-      {
-        titulo: "Long-Term Play",
-        descricao: "Construímos para durar. Nossas soluções são pensadas para escalar e gerar valor por anos, não para entregas pontuais.",
-        icone: "ph:rocket-launch-bold",
-        cor: "purple"
-      }
-    ]
-  }
-};
-
-// Ícones disponíveis para valores
-const availableIcons = [
-  { value: "ph:dna-bold", label: "DNA", icon: Dna },
-  { value: "ph:handshake-bold", label: "Aperto de Mãos", icon: Handshake },
-  { value: "ph:atom-bold", label: "Átomo", icon: Atom },
-  { value: "ph:rocket-launch-bold", label: "Foguete", icon: Rocket },
-  { value: "ph:target-bold", label: "Alvo", icon: Target },
-  { value: "ph:chart-line-up-bold", label: "Gráfico Crescente", icon: TrendingUp },
-  { value: "ph:brain-bold", label: "Cérebro", icon: Brain },
-  { value: "ph:users-bold", label: "Usuários", icon: Users },
-  { value: "ph:shield-check-bold", label: "Escudo com Check", icon: Shield },
-  { value: "ph:zap-bold", label: "Raio", icon: Zap },
-  { value: "ph:star-bold", label: "Estrela", icon: Star },
-  { value: "ph:trophy-bold", label: "Troféu", icon: Trophy },
-  { value: "ph:award-bold", label: "Prêmio", icon: Award },
-  { value: "ph:crown-simple-bold", label: "Coroa", icon: Award },
-  { value: "ph:trend-up-bold", label: "Trending Up", icon: TrendingUp },
-  { value: "ph:lightbulb-bold", label: "Lâmpada", icon: Brain },
-  { value: "ph:gear-six-bold", label: "Engrenagem", icon: Target },
-  { value: "ph:globe-bold", label: "Globo", icon: Target },
-  { value: "ph:clock-bold", label: "Relógio", icon: Target },
-  { value: "ph:chart-pie-bold", label: "Gráfico de Pizza", icon: TrendingUp },
-  { value: "ph:check-circle-bold", label: "Check em Círculo", icon: Shield }
-];
-
-// Cores disponíveis
-const availableColors = [
-  { value: "green", label: "Verde", class: "from-green-500 to-green-400" },
-  { value: "blue", label: "Azul", class: "from-blue-500 to-blue-400" },
-  { value: "purple", label: "Roxo", class: "from-purple-500 to-purple-400" },
-  { value: "red", label: "Vermelho", class: "from-red-500 to-red-400" },
-  { value: "orange", label: "Laranja", class: "from-orange-500 to-orange-400" },
-  { value: "pink", label: "Rosa", class: "from-pink-500 to-pink-400" },
-  { value: "indigo", label: "Índigo", class: "from-indigo-500 to-indigo-400" },
-  { value: "teal", label: "Verde Água", class: "from-teal-500 to-teal-400" },
-  { value: "amber", label: "Âmbar", class: "from-amber-500 to-amber-400" },
-  { value: "cyan", label: "Ciano", class: "from-cyan-500 to-cyan-400" }
-];
-
-// Componente SectionHeader
-interface SectionHeaderProps {
+interface Value {
   title: string;
-  section: "badge" | "titulo" | "valores";
-  icon: LucideIcon;
-  isExpanded: boolean;
-  onToggle: (section: "badge" | "titulo" | "valores") => void;
+  description: string;
+  icon: string;
+  color: string; // Mantém como string para compatibilidade, mas agora usamos ThemePropertyInput
 }
 
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <button
-    type="button"
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </button>
-);
-
-// Componente ValorItemEditor
-interface ValorItemEditorProps {
-  valor: Valor;
-  index: number;
-  onValorChange: (index: number, field: keyof Valor, value: any) => void;
-  onRemove: (index: number) => void;
+interface Header {
+  preTitle: string;
+  title: string;
+  subtitle: string;
 }
 
-const ValorItemEditor = ({
-  valor,
-  index,
-  onValorChange,
-  onRemove
-}: ValorItemEditorProps) => {
-  // Encontrar o ícone correspondente na lista de availableIcons
-  const iconData = availableIcons.find(icon => icon.value === valor.icone);
+interface SociosPageData {
+  header: Header;
+  content: string | null;
+  values: Value[];
+  layout: "grid" | "list" | "carousel";
+}
 
-  return (
-    <Card className="p-4">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-${valor.cor}-100 dark:bg-${valor.cor}-900/30`}>
-            {iconData?.icon ? (
-              <iconData.icon className={`w-5 h-5 text-${valor.cor}-600 dark:text-${valor.cor}-400`} />
-            ) : (
-              <Sparkles className={`w-5 h-5 text-${valor.cor}-600 dark:text-${valor.cor}-400`} />
-            )}
-          </div>
-          <div>
-            <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">
-              {valor.titulo || "Novo Valor"}
-            </h4>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 line-clamp-1">
-              {valor.descricao || "Sem descrição"}
-            </p>
-          </div>
-        </div>
-        
-        <Button
-          type="button"
-          variant="danger"
-          onClick={() => onRemove(index)}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-            Título do Valor
-          </label>
-          <Input
-            type="text"
-            value={valor.titulo}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              onValorChange(index, "titulo", e.target.value)
-            }
-            placeholder="Ex: Skin in the Game"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-            Cor
-          </label>
-          <select
-            value={valor.cor}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-              onValorChange(index, "cor", e.target.value)
-            }
-            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-          >
-            {availableColors.map((color) => (
-              <option key={color.value} value={color.value}>
-                {color.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <IconSelector
-          value={valor.icone}
-          onChange={(newIcon) => onValorChange(index, "icone", newIcon)}
-          label="Ícone do Valor"
-        />
-      </div>
-
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-          Descrição
-        </label>
-        <textarea
-          value={valor.descricao}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-            onValorChange(index, "descricao", e.target.value)
-          }
-          className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[100px]"
-          rows={3}
-          placeholder="Descreva este valor em detalhes..."
-        />
-      </div>
-    </Card>
-  );
+const defaultSociosData: SociosPageData = {
+  header: {
+    preTitle: "Nossa Essência",
+    title: "Não fundamos uma agência.<br /><span class='text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-blue-400 to-white'>Criamos um padrão de excelência.</span>",
+    subtitle: "A Tegbe nasceu de uma inquietação: o mercado aceitava o 'bom' como suficiente. Nós não. Somos um time de mentes analíticas obcecadas por elevar a barra do que é possível em performance digital."
+  },
+  content: null,
+  values: [
+    {
+      title: "Inteligência Estratégica",
+      description: "Antes de apertar qualquer botão, nós pensamos. Nossa cultura valoriza o planejamento profundo e a visão de longo prazo em detrimento de hacks imediatistas.",
+      icon: "ph:brain-bold",
+      color: "blue-500" // Atualizado para formato Tailwind completo
+    },
+    {
+      title: "Mentes de Dono",
+      description: "Aqui dentro, ninguém é apenas funcionário. Atuamos com 'Skin in the Game'. Sentimos a dor e a vitória do cliente como se fosse nossa própria operação.",
+      icon: "ph:users-three-bold",
+      color: "blue-500" // Atualizado para formato Tailwind completo
+    },
+    {
+      title: "Rigor Técnico",
+      description: "Rejeitamos o amadorismo. Nossos processos são auditáveis, nossa tecnologia é de ponta e nossa busca por precisão é inegociável.",
+      icon: "ph:diamond-bold",
+      color: "blue-500" // Atualizado para formato Tailwind completo
+    }
+  ],
+  layout: "grid"
 };
 
-export default function DnaPage() {
+const mergeWithDefaults = (apiData: any, defaultData: SociosPageData): SociosPageData => {
+  if (!apiData) return defaultData;
+  
+  // Migração: converter cores antigas para formato Tailwind completo
+  const migrateColor = (color: string) => {
+    if (!color) return "blue-500";
+    if (color.includes('-')) return color; // Já está no formato correto
+    return `${color}-500`; // Adiciona o tom padrão
+  };
+  
+  return {
+    header: {
+      preTitle: apiData.header?.preTitle || defaultData.header.preTitle,
+      title: apiData.header?.title || defaultData.header.title,
+      subtitle: apiData.header?.subtitle || defaultData.header.subtitle,
+    },
+    content: apiData.content || defaultData.content,
+    values: apiData.values?.length 
+      ? apiData.values.map((value: any, index: number) => ({
+          title: value.title || defaultData.values[index]?.title || `Valor ${index + 1}`,
+          description: value.description || defaultData.values[index]?.description || "",
+          icon: value.icon || defaultData.values[index]?.icon || "ph:star-bold",
+          color: migrateColor(value.color || defaultData.values[index]?.color)
+        }))
+      : defaultData.values,
+    layout: apiData.layout || defaultData.layout
+  };
+};
+
+export default function Page() {
   const {
-    data: dnaData,
-    setData: setDnaData,
-    updateNested,
+    data: pageData,
+    exists,
     loading,
     success,
     errorMsg,
+    deleteModal,
+    updateNested,
     save,
-    exists,
-    reload
-  } = useJsonManagement<DnaOnlyData>({
-    apiPath: "/api/tegbe-institucional/json/dna",
-    defaultData: defaultDnaData,
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
+  } = useJsonManagement<SociosPageData>({
+    apiPath: "/api/tegbe-institucional/json/socios",
+    defaultData: defaultSociosData,
+    mergeFunction: mergeWithDefaults,
   });
 
   const [expandedSections, setExpandedSections] = useState({
-    badge: true,
-    titulo: true,
-    valores: true
+    header: true,
+    values: false,
+    layout: false,
+    content: false,
   });
 
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  // Calcular campos completos
-  const calculateCompleteCount = useCallback(() => {
-    const data = dnaData?.dna;
-    let count = 0;
-    
-    // Verificar badge
-    if (data?.badge.text.trim() !== "" && data?.badge.icon.trim() !== "") {
-      count++;
-    }
-    
-    // Verificar título
-    if (data?.titulo.trim() !== "") {
-      count++;
-    }
-    
-    // Verificar valores
-    if (data?.valores.length > 0) {
-      const hasValidValores = data?.valores.some(valor => 
-        valor.titulo.trim() !== "" && valor.descricao.trim() !== ""
-      );
-      if (hasValidValores) count++;
-    }
-    
-    return count;
-  }, [dnaData]);
-
-  const completeCount = calculateCompleteCount();
-  const totalCount = 3; // badge, titulo, valores
-  const canAddNewItem = true;
-  const isLimitReached = dnaData?.dna?.valores.length >= 6;
+  // Controle de planos
+  const currentPlanType = 'pro';
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -338,325 +150,550 @@ export default function DnaPage() {
     }));
   };
 
-  const handleChange = (path: string, value: any) => {
-    updateNested(`dna.${path}`, value);
-  };
-
-  const handleValorChange = (index: number, field: keyof Valor, value: any) => {
-    updateNested(`dna.valores.${index}.${field}`, value);
-  };
-
-  const addValor = () => {
-    const currentValores = [...dnaData?.dna?.valores];
+  // Funções para valores
+  const handleAddValue = () => {
+    const values = pageData.values;
+    if (values.length >= currentPlanLimit) {
+      return false;
+    }
     
-    const newValor: Valor = {
-      titulo: "",
-      descricao: "",
-      icone: "ph:star-bold",
-      cor: "blue"
+    const newItem: Value = {
+      title: `Valor ${values.length + 1}`,
+      description: "",
+      icon: "ph:star-bold",
+      color: "blue-500"
     };
-
-    updateNested("dna.valores", [...currentValores, newValor]);
+    
+    const updated = [...values, newItem];
+    updateNested('values', updated);
+    
+    return true;
   };
 
-  const removeValor = (index: number) => {
-    const currentValores = [...dnaData?.dna?.valores];
-    currentValores.splice(index, 1);
-    updateNested("dna.valores", currentValores);
+  const handleUpdateValue = (index: number, updates: Partial<Value>) => {
+    const values = pageData.values;
+    const updated = [...values];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      updateNested('values', updated);
+    }
   };
 
-  const handleSubmit = async () => {
-    const fd = new FormData();
-    fd.append("values", JSON.stringify(dnaData));
-    save();
-    await reload();
+  const handleRemoveValue = (index: number) => {
+    const values = pageData.values;
+    
+    if (values.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyItem: Value = {
+        title: "Valor",
+        description: "",
+        icon: "ph:star-bold",
+        color: "blue-500"
+      };
+      updateNested('values', [emptyItem]);
+    } else {
+      const updated = values.filter((_, i) => i !== index);
+      updateNested('values', updated);
+    }
   };
 
-  const handleSubmitWrapper = (e: React.FormEvent) => {
+  // Função para atualizar cor de valor
+  const handleValueColorChange = (index: number, hexColor: string) => {
+    const tailwindClass = hexToTailwindTextClass(hexColor);
+    const colorValue = tailwindClass.replace('text-', '');
+    handleUpdateValue(index, { color: colorValue });
+  };
+
+  // Funções de drag & drop para valores
+  const [draggingValue, setDraggingValue] = useState<number | null>(null);
+
+  const handleValueDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingValue(index);
+  };
+
+  const handleValueDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    handleSubmit();
+    
+    if (draggingValue === null || draggingValue === index) return;
+    
+    const values = pageData.values;
+    const updated = [...values];
+    const draggedItem = updated[draggingValue];
+    
+    // Remove o item arrastado
+    updated.splice(draggingValue, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingValue ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    updateNested('values', updated);
+    setDraggingValue(index);
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS DADOS DA SEÇÃO DNA"
+  const handleValueDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingValue(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
+  // Validações
+  const isValueValid = (item: Value): boolean => {
+    return item.title.trim() !== '' && 
+           item.description.trim() !== '' && 
+           item.icon.trim() !== '' &&
+           item.color.trim() !== '';
+  };
+
+  const values = pageData.values;
+  
+  const isValuesLimitReached = values.length >= currentPlanLimit;
+  const canAddNewValue = !isValuesLimitReached;
+  const valuesCompleteCount = values.filter(isValueValid).length;
+  const valuesTotalCount = values.length;
+
+  const valuesValidationError = isValuesLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Header (3 campos)
+    total += 3;
+    if (pageData.header.preTitle?.trim()) completed++;
+    if (pageData.header.title?.trim()) completed++;
+    if (pageData.header.subtitle?.trim()) completed++;
+
+    // Content (1 campo)
+    total += 1;
+    if (pageData.content?.trim()) completed++;
+
+    // Values (cada um com 4 campos)
+    total += values.length * 4;
+    values.forEach(item => {
+      if (item.title.trim()) completed++;
+      if (item.description.trim()) completed++;
+      if (item.icon.trim()) completed++;
+      if (item.color.trim()) completed++;
     });
+
+    // Layout (1 campo)
+    total += 1;
+    if (pageData.layout.trim()) completed++;
+
+    return { completed, total };
   };
 
-  const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/dna", {
-      method: "DELETE",
-    });
+  const completion = calculateCompletion();
 
-    setDnaData(defaultDnaData);
-    closeDeleteModal();
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
-
-  const renderBadgeSection = () => {
-    const badge = dnaData?.dna?.badge;
-
-    return (
-      <div className="space-y-6">
-        {/* Texto do Badge */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Texto do Badge
-          </label>
-          <Input
-            type="text"
-            value={badge?.text}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleChange("badge.text", e.target.value)
-            }
-            placeholder="Ex: Nosso DNA"
-          />
-        </div>
-
-        {/* Ícone do Badge */}
-        <div>
-          <IconSelector
-            value={badge?.icon}
-            onChange={(value) => handleChange("badge.icon", value)}
-            label="Ícone do Badge"
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderTituloSection = () => {
-    const data = dnaData?.dna;
-
-    return (
-      <div className="space-y-6">
-        {/* Título com HTML */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Título (HTML permitido)
-          </label>
-          <textarea
-            value={data?.titulo}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              handleChange("titulo", e.target.value)
-            }
-            placeholder="Cultura de alta performance,<br/>não de agência."
-            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[100px]"
-            rows={3}
-          />
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Use HTML para estilização, como &lt;br/&gt; para quebras de linha
-          </p>
-        </div>
-
-        {/* Subtítulo */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Subtítulo
-          </label>
-          <textarea
-            value={data?.subtitulo}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              handleChange("subtitulo", e.target.value)
-            }
-            placeholder="Somos um time de engenheiros, ex-fundadores e estrategistas obcecados por resolver problemas complexos de negócio."
-            className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[80px]"
-            rows={3}
-          />
-        </div>
-      </div>
-    );
-  };
-
-  const renderValoresSection = () => {
-    const valores = dnaData?.dna?.valores;
-
-    return (
-      <div className="space-y-6">
-        {/* Contador */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Estatísticas
-          </label>
-          <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg">
-            <p className="text-sm text-zinc-700 dark:text-zinc-300">
-              <span className="font-semibold">{valores?.length}</span> valores cadastrados
-            </p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              {isLimitReached ? "Limite de 6 valores atingido" : "Máximo de 6 valores recomendado"}
-            </p>
-          </div>
-        </div>
-
-        {/* Lista de Valores */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-              Valores ({valores?.length})
-            </h4>
-            <Button
-              type="button"
-              onClick={addValor}
-              className="flex items-center gap-2"
-              disabled={isLimitReached}
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Valor
-            </Button>
-          </div>
-
-          {valores?.length === 0 ? (
-            <Card className="p-8 text-center">
-              <Dna className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Nenhum valor adicionado
-              </h4>
-              <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-                Comece definindo os valores do DNA da empresa
-              </p>
-              <Button
-                type="button"
-                onClick={addValor}
-                className="flex items-center gap-2 mx-auto"
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar Primeiro Valor
-              </Button>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {valores?.map((valor, index) => (
-                <ValorItemEditor
-                  key={index}
-                  valor={valor}
-                  index={index}
-                  onValorChange={handleValorChange}
-                  onRemove={removeValor}
-                />
-              ))}
-            </div>
-          )}
-
-          {isLimitReached && (
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-              <p className="text-sm text-amber-800 dark:text-amber-300">
-                <span className="font-semibold">Limite atingido:</span> Você atingiu o máximo de 6 valores. 
-                Remova algum valor antes de adicionar novos para manter a seção limpa e eficiente.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
+  if (loading && !exists) {
+    return <Loading layout={Layout} exists={!!exists} />;
+  }
 
   return (
     <ManageLayout
-      headerIcon={Dna}
-      title="DNA da Empresa"
-      description="Gerencie os valores e princípios que definem o DNA da Tegbe"
+      headerIcon={Users}
+      title="Gerenciar Sócios e Valores"
+      description="Configure o conteúdo da seção sobre sócios e valores da empresa"
       exists={!!exists}
-      itemName="Seção DNA"
+      itemName="Sócios"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
-        {/* Seção Badge */}
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
-            title="Badge"
-            section="badge"
-            icon={Dna}
-            isExpanded={expandedSections.badge}
-            onToggle={toggleSection}
+            title="Cabeçalho"
+            section="header"
+            icon={Heading}
+            isExpanded={expandedSections.header}
+            onToggle={() => toggleSection("header")}
           />
 
-          <AnimatePresence>
-            {expandedSections.badge && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderBadgeSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.header ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Sparkles className="w-4 h-4" />
+                      Pré-título
+                    </label>
+                    <Input
+                      value={pageData.header.preTitle}
+                      onChange={(e) => updateNested('header.preTitle', e.target.value)}
+                      placeholder="Ex: Nossa Essência"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Subtítulo</label>
+                    <Input
+                      value={pageData.header.subtitle}
+                      onChange={(e) => updateNested('header.subtitle', e.target.value)}
+                      placeholder="Ex: A Tegbe nasceu de uma inquietação..."
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Título Principal</label>
+                  <TextArea
+                    value={pageData.header.title}
+                    onChange={(e) => updateNested('header.title', e.target.value)}
+                    placeholder="Pode conter HTML, ex: &lt;span class='...'&gt;texto&lt;/span&gt;"
+                    rows={3}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono text-sm"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/50">
+                    Pode incluir HTML para estilização. Use classes Tailwind para gradientes.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Seção Título */}
+        {/* Seção Content */}
         <div className="space-y-4">
           <SectionHeader
-            title="Título e Introdução"
-            section="titulo"
-            icon={Type}
-            isExpanded={expandedSections.titulo}
-            onToggle={toggleSection}
+            title="Conteúdo Principal"
+            section="content"
+            icon={Sparkles}
+            isExpanded={expandedSections.content}
+            onToggle={() => toggleSection("content")}
           />
 
-          <AnimatePresence>
-            {expandedSections.titulo && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderTituloSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.content ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Conteúdo Adicional (Opcional)
+                  </label>
+                  <TextArea
+                    value={pageData.content || ''}
+                    onChange={(e) => updateNested('content', e.target.value)}
+                    placeholder="Texto adicional sobre os sócios e cultura da empresa..."
+                    rows={4}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/50">
+                    Deixe vazio para não exibir conteúdo adicional.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Valores */}
         <div className="space-y-4">
           <SectionHeader
-            title="Valores do DNA"
-            section="valores"
-            icon={Palette}
-            isExpanded={expandedSections.valores}
-            onToggle={toggleSection}
+            title="Valores da Empresa"
+            section="values"
+            icon={UserStar}
+            isExpanded={expandedSections.values}
+            onToggle={() => toggleSection("values")}
           />
 
-          <AnimatePresence>
-            {expandedSections.valores && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderValoresSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.values ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                      Valores e Princípios
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {valuesCompleteCount} de {valuesTotalCount} completos
+                        </span>
+                      </div>
+                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleAddValue}
+                      variant="primary"
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewValue}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar Valor
+                    </Button>
+                    {isValuesLimitReached && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Limite do plano atingido
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mensagem de erro */}
+                {valuesValidationError && (
+                  <div className={`p-3 rounded-lg ${isValuesLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                    <div className="flex items-start gap-2">
+                      {isValuesLimitReached ? (
+                        <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      )}
+                      <p className={`text-sm ${isValuesLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {valuesValidationError}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {values.map((value, index) => (
+                    <div 
+                      key={`value-${index}`}
+                      draggable
+                      onDragStart={(e) => handleValueDragStart(e, index)}
+                      onDragOver={(e) => handleValueDragOver(e, index)}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDragEnd={handleValueDragEnd}
+                      onDrop={handleDrop}
+                      className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+                        draggingValue === index 
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                          : 'hover:border-[var(--color-primary)]/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          {/* Handle para drag & drop */}
+                          <div 
+                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                            draggable
+                            onDragStart={(e) => handleValueDragStart(e, index)}
+                          >
+                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                          </div>
+                          
+                          {/* Indicador de posição */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+                              {index + 1}
+                            </span>
+                            <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-medium text-[var(--color-secondary)]">
+                                Valor #{index + 1}
+                              </h4>
+                              {isValueValid(value) ? (
+                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                  Completo
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                  Incompleto
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Título</label>
+                                  <Input
+                                    value={value.title}
+                                    onChange={(e) => handleUpdateValue(index, { title: e.target.value })}
+                                    placeholder="Ex: Inteligência Estratégica"
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone</label>
+                                  <IconSelector
+                                    value={value.icon}
+                                    onChange={(value) => handleUpdateValue(index, { icon: value })}
+                                    placeholder="ph:brain-bold"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
+                                  <TextArea
+                                    value={value.description}
+                                    onChange={(e) => handleUpdateValue(index, { description: e.target.value })}
+                                    placeholder="Descrição detalhada do valor..."
+                                    rows={4}
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                                    <Palette className="w-4 h-4" />
+                                    Cor do Valor
+                                  </label>
+                                  <ThemePropertyInput
+                                    property="text"
+                                    label=""
+                                    description=""
+                                    currentHex={tailwindToHex(`text-${value.color}`)}
+                                    tailwindClass={`text-${value.color}`}
+                                    onThemeChange={(_, hex) => handleValueColorChange(index, hex)}
+                                  />
+                                  <p className="text-xs text-[var(--color-secondary)]/50 mt-2">
+                                    Cor associada a este valor específico
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => handleRemoveValue(index)}
+                            variant="danger"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Fixed Action Bar */}
+        {/* Seção Layout */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Layout"
+            section="layout"
+            icon={Layout}
+            isExpanded={expandedSections.layout}
+            onToggle={() => toggleSection("layout")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.layout ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Tipo de Layout
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {[
+                      { value: "grid", label: "Grid", icon: Layout, description: "Exibição em grade responsiva" },
+                      { value: "list", label: "Lista", icon: Users, description: "Exibição em lista vertical" },
+                      { value: "carousel", label: "Carrossel", icon: Sparkles, description: "Exibição em carrossel interativo" },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => updateNested('layout', option.value)}
+                        className={`p-4 border rounded-lg text-left transition-all duration-200 ${
+                          pageData.layout === option.value
+                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
+                            : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className={`p-2 rounded ${
+                            pageData.layout === option.value
+                              ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
+                              : 'bg-[var(--color-background-body)] text-[var(--color-secondary)]'
+                          }`}>
+                            <option.icon className="w-5 h-5" />
+                          </div>
+                          <span className="font-medium text-[var(--color-secondary)]">
+                            {option.label}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[var(--color-secondary)]/70">
+                          {option.description}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
-          isAddDisabled={!canAddNewItem || isLimitReached}
+          isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completeCount}
-          totalCount={totalCount}
-          itemName="Seção"
-          icon={Dna}
+          completeCount={completion.completed}
+          totalCount={completion.total}
+          itemName="Sócios"
+          icon={Users}
         />
       </form>
 
@@ -666,11 +703,14 @@ export default function DnaPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={dnaData?.dna?.valores.length}
-        itemName="Valor"
+        totalItems={1}
+        itemName="Configuração de Sócios"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }

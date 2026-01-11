@@ -1,18 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useCallback, useId } from "react";
+import { useMemo, useState, useCallback, useId, useEffect, useRef } from "react";
 import { AnimatePresence } from "framer-motion";
 import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { BarChart3, GripVertical, ArrowUpDown, DollarSign, TrendingUp, Wallet, Handshake } from "lucide-react";
+import { TextArea } from "@/components/TextArea";
+import { Button } from "@/components/Button";
+import { 
+  BarChart3, 
+  GripVertical, 
+  ArrowUpDown, 
+  DollarSign, 
+  TrendingUp, 
+  Wallet, 
+  Handshake,
+  AlertCircle, 
+  CheckCircle2, 
+  Trash2,
+  XCircle,
+  Search
+} from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
-import { SearchSortBar } from "@/components/Manage/SearchSortBar";
-import { ItemHeader } from "@/components/Manage/ItemHeader";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
+import { extractHexFromTailwind } from "@/lib/colorUtils";
 import IconSelector from "@/components/IconSelector";
 import ColorPicker from "@/components/ColorPicker";
 import {
@@ -32,7 +46,6 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import ClientOnly from "@/components/ClientOnly";
 
 interface StatsItem {
   id?: string;
@@ -65,161 +78,8 @@ const IconDisplay = ({ icon, className = "w-5 h-5" }: { icon: string, className?
   );
 };
 
-// Função para extrair hex de Tailwind
-const extractHexFromTailwind = (tailwindClass: string): string => {
-  if (!tailwindClass) return "#0071E3";
-
-  // Se já for hexadecimal
-  if (tailwindClass.startsWith('#')) {
-    return tailwindClass;
-  }
-
-  // Extrair hex de formatos bg-[#HEX], text-[#HEX], etc.
-  const hexMatch = tailwindClass.match(/#([0-9A-Fa-f]{6})/);
-  if (hexMatch) {
-    return `#${hexMatch[1]}`;
-  }
-
-  // Extrair RGB de shadow
-  const shadowMatch = tailwindClass.match(/rgba\((\d+),\s*(\d+),\s*(\d+)/);
-  if (shadowMatch) {
-    const r = shadowMatch[1];
-    const g = shadowMatch[2];
-    const b = shadowMatch[3];
-    return `#${parseInt(r).toString(16).padStart(2, "0")}${parseInt(g)
-      .toString(16)
-      .padStart(2, "0")}${parseInt(b).toString(16).padStart(2, "0")}`;
-  }
-
-  // Mapear cores básicas do Tailwind
-  const tailwindColors: Record<string, string> = {
-    'text-red-500': '#EF4444',
-    'text-red-600': '#DC2626',
-    'text-green-500': '#10B981',
-    'text-green-600': '#059669',
-    'text-blue-500': '#3B82F6',
-    'text-blue-600': '#2563EB',
-    'text-yellow-500': '#F59E0B',
-    'text-yellow-600': '#D97706',
-    'text-purple-500': '#8B5CF6',
-    'text-purple-600': '#7C3AED',
-    'text-pink-500': '#EC4899',
-    'text-pink-600': '#DB2777',
-    'text-indigo-500': '#6366F1',
-    'text-indigo-600': '#4F46E5',
-    'text-teal-500': '#14B8A6',
-    'text-teal-600': '#0D9488',
-    'text-orange-500': '#F97316',
-    'text-orange-600': '#EA580C',
-    'text-cyan-500': '#06B6D4',
-    'text-cyan-600': '#0891B2',
-    'text-lime-500': '#84CC16',
-    'text-lime-600': '#65A30D',
-    'text-rose-500': '#F43F5E',
-    'text-rose-600': '#E11D48',
-    'text-fuchsia-500': '#D946EF',
-    'text-fuchsia-600': '#C026D3',
-    'text-violet-500': '#8B5CF6',
-    'text-violet-600': '#7C3AED',
-    'text-amber-500': '#F59E0B',
-    'text-amber-600': '#D97706',
-    'text-sky-500': '#0EA5E9',
-    'text-sky-600': '#0284C7',
-    'text-gray-500': '#6B7280',
-    'text-gray-600': '#4B5563',
-    'text-slate-500': '#64748B',
-    'text-slate-600': '#475569',
-    'text-neutral-500': '#737373',
-    'text-neutral-600': '#525252',
-    'text-stone-500': '#78716C',
-    'text-stone-600': '#57534E',
-    'text-zinc-500': '#71717A',
-    'text-zinc-600': '#52525B',
-    'text-black': '#000000',
-    'text-white': '#FFFFFF',
-  };
-
-  // Verificar se é uma classe Tailwind
-  if (tailwindClass.startsWith('text-') && tailwindColors[tailwindClass]) {
-    return tailwindColors[tailwindClass];
-  }
-
-  return "#0071E3";
-};
-
-// Função para converter hex para Tailwind text
-const convertHexToTailwindText = (hex: string): string => {
-  if (!hex.startsWith('#')) {
-    return hex; // Já é uma classe Tailwind
-  }
-
-  // Mapear hex para classes Tailwind conhecidas
-  const hexToTailwind: Record<string, string> = {
-    '#EF4444': 'text-red-500',
-    '#DC2626': 'text-red-600',
-    '#10B981': 'text-green-500',
-    '#059669': 'text-green-600',
-    '#3B82F6': 'text-blue-500',
-    '#2563EB': 'text-blue-600',
-
-    '#F59E0B': 'text-amber-500',
-    '#D97706': 'text-amber-600',
-
-    '#8B5CF6': 'text-violet-500',
-    '#7C3AED': 'text-violet-600',
-
-    '#EC4899': 'text-pink-500',
-    '#DB2777': 'text-pink-600',
-    '#6366F1': 'text-indigo-500',
-    '#4F46E5': 'text-indigo-600',
-    '#14B8A6': 'text-teal-500',
-    '#0D9488': 'text-teal-600',
-    '#F97316': 'text-orange-500',
-    '#EA580C': 'text-orange-600',
-    '#06B6D4': 'text-cyan-500',
-    '#0891B2': 'text-cyan-600',
-    '#84CC16': 'text-lime-500',
-    '#65A30D': 'text-lime-600',
-    '#F43F5E': 'text-rose-500',
-    '#E11D48': 'text-rose-600',
-    '#D946EF': 'text-fuchsia-500',
-    '#C026D3': 'text-fuchsia-600',
-    '#0EA5E9': 'text-sky-500',
-    '#0284C7': 'text-sky-600',
-    '#6B7280': 'text-gray-500',
-    '#4B5563': 'text-gray-600',
-    '#64748B': 'text-slate-500',
-    '#475569': 'text-slate-600',
-    '#737373': 'text-neutral-500',
-    '#525252': 'text-neutral-600',
-    '#78716C': 'text-stone-500',
-    '#57534E': 'text-stone-600',
-    '#71717A': 'text-zinc-500',
-    '#52525B': 'text-zinc-600',
-    '#000000': 'text-black',
-    '#FFFFFF': 'text-white',
-    '#0071E3': 'text-[#0071E3]',
-    '#1d1d1f': 'text-[#1d1d1f]',
-  };
-
-  return hexToTailwind[hex] || `text-[${hex}]`;
-};
-
-interface SortableStatsItemProps {
-  statsItem: StatsItem;
-  index: number;
-  originalIndex: number;
-  isLastInOriginalList: boolean;
-  isLastAndEmpty: boolean;
-  showValidation: boolean;
-  statsList: StatsItem[];
-  handleChange: (index: number, field: keyof StatsItem, value: any) => void;
-  openDeleteSingleModal: (index: number, label: string) => void;
-  setNewItemRef?: (node: HTMLDivElement | null) => void;
-}
-
 function SortableStatsItem({
-  statsItem,
+  stats,
   index,
   originalIndex,
   isLastInOriginalList,
@@ -229,9 +89,20 @@ function SortableStatsItem({
   handleChange,
   openDeleteSingleModal,
   setNewItemRef,
-}: SortableStatsItemProps) {
+}: {
+  stats: StatsItem;
+  index: number;
+  originalIndex: number;
+  isLastInOriginalList: boolean;
+  isLastAndEmpty: boolean;
+  showValidation: boolean;
+  statsList: StatsItem[];
+  handleChange: (index: number, field: keyof StatsItem, value: any) => void;
+  openDeleteSingleModal: (index: number, label: string) => void;
+  setNewItemRef?: (node: HTMLDivElement | null) => void;
+}) {
   const stableId = useId();
-  const sortableId = statsItem.id || `stats-${index}-${stableId}`;
+  const sortableId = stats.id || `stats-${index}-${stableId}`;
 
   const {
     attributes,
@@ -248,16 +119,15 @@ function SortableStatsItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const hasValue = statsItem.value.trim() !== "";
-  const hasSuffix = statsItem.suffix.trim() !== "";
-  const hasLabel = statsItem.label.trim() !== "";
-  const hasDescription = statsItem.description.trim() !== "";
-  const hasIcon = statsItem.icon.trim() !== "";
-  const hasColor = statsItem.color.trim() !== "";
+  const hasValue = stats.value.trim() !== "";
+  const hasSuffix = stats.suffix.trim() !== "";
+  const hasLabel = stats.label.trim() !== "";
+  const hasDescription = stats.description.trim() !== "";
+  const hasIcon = stats.icon.trim() !== "";
+  const hasColor = stats.color.trim() !== "";
   
-  // Extrair hex para o ColorPicker
-  const colorHex = extractHexFromTailwind(statsItem.color);
-  const colorTailwind = convertHexToTailwindText(colorHex);
+  // Extrair hex para exibição
+  const colorHex = extractHexFromTailwind(stats.color);
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -280,187 +150,165 @@ function SortableStatsItem({
       style={style}
       className={`relative ${isDragging ? 'z-50' : ''}`}
     >
-      <Card className={`mb-6 overflow-hidden transition-all duration-300 ${
-        isLastInOriginalList && showValidation && !hasLabel ? 'ring-2 ring-red-500' : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''} border-l-4`}>
-        <div className="p-6 bg-white dark:bg-zinc-900">
+      <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
+        isLastInOriginalList && showValidation && !hasLabel ? 'ring-2 ring-[var(--color-danger)]' : ''
+      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-primary)]`}>
+        <div className="p-6">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                className="cursor-move text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="cursor-grab active:cursor-grabbing text-[var(--color-secondary)]/70 hover:text-[var(--color-primary)] transition-colors p-2 rounded-lg hover:bg-[var(--color-background)]/50"
                 {...attributes}
                 {...listeners}
               >
                 <GripVertical className="w-5 h-5" />
               </button>
-              <div className="flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-                <ArrowUpDown className="w-4 h-4" />
-                <span>Posição: {index + 1}</span>
-              </div>
-              <div className="flex items-center gap-2 ml-4">
-                <div className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: `${colorHex}20`, color: colorHex }}>
-                  <div className="flex items-center gap-1">
-                    <IconDisplay icon={statsItem.icon} className="w-3 h-3" />
-                    <span>{statsItem.label || "Estatística"}</span>
-                  </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]/70">
+                  <ArrowUpDown className="w-4 h-4" />
+                  <span>Posição: {index + 1}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {hasLabel ? (
+                    <h4 className="font-medium text-[var(--color-secondary)]">
+                      {stats.label}
+                    </h4>
+                  ) : (
+                    <h4 className="font-medium text-[var(--color-secondary)]/50">
+                      Estatística sem título
+                    </h4>
+                  )}
+                  {hasValue && hasSuffix && hasLabel && hasDescription && hasIcon && hasColor ? (
+                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-300 rounded-full border border-[var(--color-success)]/30">
+                      Completo
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-red rounded-full border border-[var(--color-warning)]/30">
+                      Incompleto
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <ItemHeader
-                index={originalIndex}
-                fields={[
-                  { label: 'Valor', hasValue: hasValue },
-                  { label: 'Sufixo', hasValue: hasSuffix },
-                  { label: 'Título', hasValue: hasLabel },
-                  { label: 'Descrição', hasValue: hasDescription },
-                  { label: 'Ícone', hasValue: hasIcon },
-                  { label: 'Cor', hasValue: hasColor }
-                ]}
-                showValidation={showValidation}
-                isLast={isLastInOriginalList}
-                onDelete={() => openDeleteSingleModal(originalIndex, statsItem.label)}
-                showDelete={statsList.length > 1}
-              />
-            </div>
+            
+            <Button
+              type="button"
+              onClick={() => openDeleteSingleModal(originalIndex, stats.label || "Estatística sem título")}
+              variant="danger"
+              className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
+              disabled={statsList.length <= 1}
+            >
+              <Trash2 className="w-4 h-4" />
+              Remover
+            </Button>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Coluna 1: Dados principais */}
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Valor Numérico
-                  </label>
-                  <Input
-                    type="text"
-                    value={statsItem.value}
-                    onChange={(e: any) => handleChange(originalIndex, "value", e.target.value)}
-                    placeholder="Ex: 45, 120, 15, 98"
-                    className="text-2xl font-bold text-center"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1 text-center">
-                    Use apenas números (ex: 45, 120.5, 98.7)
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Sufixo
-                  </label>
-                  <Input
-                    type="text"
-                    value={statsItem.suffix}
-                    onChange={(e: any) => handleChange(originalIndex, "suffix", e.target.value)}
-                    placeholder="Ex: M+, %, Mi"
-                    className="font-medium text-center"
-                  />
-                  <p className="text-xs text-zinc-500 mt-1 text-center">
-                    Ex: M+ (milhões), % (porcentagem), Mi (milhões)
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Título da Estatística
-                </label>
-                <Input
-                  type="text"
-                  value={statsItem.label}
-                  onChange={(e: any) => handleChange(originalIndex, "label", e.target.value)}
-                  placeholder="Ex: Faturamento Gerado, Média de Crescimento"
-                  className="font-semibold"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Descrição
-                </label>
-                <textarea
-                  value={statsItem.description}
-                  onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
-                  rows={3}
-                  placeholder="Receita direta atribuída às nossas campanhas nos últimos 12 meses."
-                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                />
-              </div>
-            </div>
-
-            {/* Coluna 2: Aparência */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                   Ícone
                 </label>
                 <IconSelector
-                  value={statsItem.icon}
+                  value={stats.icon}
                   onChange={(value) => handleChange(originalIndex, "icon", value)}
                   label="Selecione um ícone"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                   Cor Personalizada
                 </label>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Input
                       type="text"
-                      value={colorTailwind}
+                      value={stats.color}
                       onChange={(e: any) => {
-                        const newValue = e.target.value;
-                        handleChange(originalIndex, "color", newValue);
+                        handleChange(originalIndex, "color", e.target.value);
                       }}
-                      placeholder="Ex: text-[#0071E3] ou text-green-600"
-                      className="flex-1 font-mono"
-                    />
-                    <div 
-                      className="w-10 h-10 rounded-lg border border-zinc-300 dark:border-zinc-600 flex items-center justify-center"
-                      style={{ backgroundColor: colorHex }}
+                      placeholder="Ex: #0071E3 ou text-[#0071E3]"
+                      className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                     <ColorPicker
                       color={colorHex}
                       onChange={handleColorChange}
                     />
                   </div>
-                  
-                  <div className="grid grid-cols-5 gap-2">
-                    {[
-                      { name: "Azul", value: "#0071E3", class: "text-[#0071E3]" },
-                      { name: "Verde", value: "#22C55E", class: "text-green-600" },
-                      { name: "Preto", value: "#1d1d1f", class: "text-[#1d1d1f]" },
-                      { name: "Vermelho", value: "#EF4444", class: "text-red-600" },
-                      { name: "Roxo", value: "#8B5CF6", class: "text-purple-600" },
-                      { name: "Amarelo", value: "#F59E0B", class: "text-yellow-600" },
-                      { name: "Rosa", value: "#EC4899", class: "text-pink-600" },
-                      { name: "Ciano", value: "#06B6D4", class: "text-cyan-600" },
-                      { name: "Laranja", value: "#F97316", class: "text-orange-600" },
-                      { name: "Cinza", value: "#6B7280", class: "text-gray-600" },
-                    ].map((color) => (
-                      <button
-                        key={color.value}
-                        type="button"
-                        onClick={() => handleChange(originalIndex, "color", color.class)}
-                        className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                      >
-                        <div 
-                          className="w-8 h-8 rounded-full border border-zinc-300 dark:border-zinc-600"
-                          style={{ backgroundColor: color.value }}
-                        />
-                        <span className="text-xs text-zinc-600 dark:text-zinc-400">{color.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Use código HEX (#0071E3) ou classes Tailwind (text-green-600). 
-                    Para cores personalizadas, use text-[#HEX].
+                  <p className="text-xs text-[var(--color-secondary)]/70">
+                    Use código HEX (#0071E3) ou classes Tailwind (text-[#HEX])
                   </p>
                 </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Valor Numérico
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: 45, 120, 15.5, 98.7"
+                    value={stats.value}
+                    onChange={(e: any) => handleChange(originalIndex, "value", e.target.value)}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Use números com ou sem decimais
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Sufixo
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: M+, %, Mi"
+                    value={stats.suffix}
+                    onChange={(e: any) => handleChange(originalIndex, "suffix", e.target.value)}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ex: M+ (milhões), % (porcentagem), Mi (milhões)
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Título da Estatística
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Ex: Faturamento Gerado, Média de Crescimento"
+                  value={stats.label}
+                  onChange={(e: any) => handleChange(originalIndex, "label", e.target.value)}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Descrição Detalhada
+                </label>
+                <TextArea
+                  label="Descrição"
+                  placeholder="Receita direta atribuída às nossas campanhas nos últimos 12 meses."
+                  value={stats.description}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                    handleChange(originalIndex, "description", e.target.value)
+                  }
+                  rows={4}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                  Explique o significado e contexto da estatística
+                </p>
               </div>
             </div>
           </div>
@@ -477,14 +325,19 @@ export default function StatsPage({
   type: string; 
   subtype: string; 
 }) {
-  const defaultStatsItem = useMemo(() => ({ 
+  const defaultStats = useMemo(() => ({ 
     value: "", 
     suffix: "",
     label: "",
     description: "",
     icon: "",
-    color: "#0071E3" // Agora armazenamos como hex
+    color: "#0071E3" // Armazena como hex
   }), []);
+
+  const [localStats, setLocalStats] = useState<StatsItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const apiBase = `/api/${subtype}/form`;
 
   const {
     list: statsList,
@@ -496,39 +349,33 @@ export default function StatsPage({
     setSuccess,
     errorMsg,
     setErrorMsg,
-    search,
-    setSearch,
-    sortOrder,
-    setSortOrder,
     showValidation,
-    filteredItems: filteredStats,
     deleteModal,
-    newItemRef,
-    canAddNewItem,
-    completeCount,
-    isLimitReached,
     currentPlanLimit,
     currentPlanType,
-    addItem,
     openDeleteSingleModal,
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    clearFilters,
   } = useListManagement<StatsItem>({
     type,
-    apiPath: `/api/${subtype}/form/${type}`,
-    defaultItem: defaultStatsItem,
+    apiPath: `${apiBase}/${type}`,
+    defaultItem: defaultStats,
     validationFields: ["value", "suffix", "label", "description", "icon", "color"]
   });
 
-  const remainingSlots = Math.max(0, currentPlanLimit - statsList.length);
+  // Sincroniza stats locais
+  useEffect(() => {
+    setLocalStats(statsList);
+  }, [statsList]);
+
+  const newStatsRef = useRef<HTMLDivElement>(null);
 
   const setNewItemRef = useCallback((node: HTMLDivElement | null) => {
-    if (newItemRef && node) {
-      (newItemRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+    if (node) {
+      newStatsRef.current = node;
     }
-  }, [newItemRef]);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -547,15 +394,16 @@ export default function StatsPage({
     if (!over) return;
 
     if (active.id !== over.id) {
-      const oldIndex = statsList.findIndex((item) => 
+      const oldIndex = localStats.findIndex((item) => 
         item.id === active.id || item.id?.includes(active.id as string)
       );
-      const newIndex = statsList.findIndex((item) => 
+      const newIndex = localStats.findIndex((item) => 
         item.id === over.id || item.id?.includes(over.id as string)
       );
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newList = arrayMove(statsList, oldIndex, newIndex);
+        const newList = arrayMove(localStats, oldIndex, newIndex);
+        setLocalStats(newList);
         setStatsList(newList);
       }
     }
@@ -569,12 +417,13 @@ export default function StatsPage({
     setErrorMsg("");
 
     try {
-      const filteredList = statsList.filter(
-        item => item.value.trim() && item.suffix.trim() && item.label.trim() && item.description.trim() && item.icon.trim() && item.color.trim()
+      const filteredList = localStats.filter(
+        stats => stats.value.trim() && stats.suffix.trim() && stats.label.trim() && 
+                stats.description.trim() && stats.icon.trim() && stats.color.trim()
       );
 
       if (!filteredList.length) {
-        setErrorMsg("Adicione ao menos uma estatística completa.");
+        setErrorMsg("Adicione ao menos uma estatística completa com todos os campos preenchidos.");
         return;
       }
 
@@ -582,20 +431,14 @@ export default function StatsPage({
 
       if (exists) fd.append("id", exists.id);
 
-      // Converter cores hex para Tailwind antes de salvar
-      const itemsToSave = filteredList.map(item => ({
-        ...item,
-        color: convertHexToTailwindText(item.color)
-      }));
-
       fd.append(
         "values",
-        JSON.stringify(itemsToSave)
+        JSON.stringify(filteredList)
       );
 
       const method = exists ? "PUT" : "POST";
 
-      const res = await fetch(`/api/${subtype}/form/${type}`, {
+      const res = await fetch(`${apiBase}/${type}`, {
         method,
         body: fd,
       });
@@ -610,9 +453,9 @@ export default function StatsPage({
       const normalized = saved.values.map((v: any, i: number) => ({
         ...v,
         id: v.id || `stats-${Date.now()}-${i}`,
-        color: extractHexFromTailwind(v.color) // Converter de volta para hex
       }));
 
+      setLocalStats(normalized);
       setStatsList(normalized);
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -625,8 +468,9 @@ export default function StatsPage({
   };
 
   const handleChange = (index: number, field: keyof StatsItem, value: any) => {
-    const newList = [...statsList];
+    const newList = [...localStats];
     newList[index] = { ...newList[index], [field]: value };
+    setLocalStats(newList);
     setStatsList(newList);
   };
 
@@ -634,27 +478,28 @@ export default function StatsPage({
     if (!exists) return;
 
     const filteredList = list.filter(
-      item => item.value.trim() || item.suffix.trim() || item.label.trim() || item.description.trim() || item.icon.trim() || item.color.trim()
+      stats => stats.value.trim() || stats.suffix.trim() || stats.label.trim() || 
+               stats.description.trim() || stats.icon.trim() || stats.color.trim()
     );
 
     const fd = new FormData();
     
     fd.append("id", exists.id);
     
-    filteredList.forEach((item, i) => {
-      fd.append(`values[${i}][value]`, item.value || "");
-      fd.append(`values[${i}][suffix]`, item.suffix || "");
-      fd.append(`values[${i}][label]`, item.label || "");
-      fd.append(`values[${i}][description]`, item.description || "");
-      fd.append(`values[${i}][icon]`, item.icon || "");
-      fd.append(`values[${i}][color]`, convertHexToTailwindText(item.color) || "");
+    filteredList.forEach((stats, i) => {
+      fd.append(`values[${i}][value]`, stats.value);
+      fd.append(`values[${i}][suffix]`, stats.suffix);
+      fd.append(`values[${i}][label]`, stats.label);
+      fd.append(`values[${i}][description]`, stats.description);
+      fd.append(`values[${i}][icon]`, stats.icon);
+      fd.append(`values[${i}][color]`, stats.color);
       
-      if (item.id) {
-        fd.append(`values[${i}][id]`, item.id);
+      if (stats.id) {
+        fd.append(`values[${i}][id]`, stats.id);
       }
     });
 
-    const res = await fetch(`/api/${subtype}/form/${type}`, {
+    const res = await fetch(`${apiBase}/${type}`, {
       method: "PUT",
       body: fd,
     });
@@ -665,23 +510,92 @@ export default function StatsPage({
     }
 
     const updated = await res.json();
+    return updated;
+  };
+
+  const handleAddStats = () => {
+    if (localStats.length >= currentPlanLimit) {
+      return false;
+    }
     
-    // Converter de volta para hex
-    const convertedItems = updated.values.map((item: any) => ({
-      ...item,
-      color: extractHexFromTailwind(item.color)
-    }));
-
-    return { ...updated, values: convertedItems };
+    const newItem: StatsItem = {
+      value: '',
+      suffix: '',
+      label: '',
+      description: '',
+      icon: '',
+      color: '#0071E3'
+    };
+    
+    const updated = [...localStats, newItem];
+    setLocalStats(updated);
+    setStatsList(updated);
+    
+    setTimeout(() => {
+      newStatsRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
   };
 
-  const handleSubmitWrapper = () => {
-    handleSubmit();
+  const filteredStats = useMemo(() => {
+    let filtered = [...localStats];
+    
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(stats => 
+        stats.label.toLowerCase().includes(term) ||
+        stats.description.toLowerCase().includes(term) ||
+        stats.value.toLowerCase().includes(term) ||
+        stats.suffix.toLowerCase().includes(term)
+      );
+    }
+    
+    return filtered;
+  }, [localStats, searchTerm]);
+
+  const isStatsLimitReached = localStats.length >= currentPlanLimit;
+  const canAddNewStats = !isStatsLimitReached;
+  const statsCompleteCount = localStats.filter(stats => 
+    stats.value.trim() !== '' && 
+    stats.suffix.trim() !== '' && 
+    stats.label.trim() !== '' && 
+    stats.description.trim() !== '' &&
+    stats.icon.trim() !== '' &&
+    stats.color.trim() !== ''
+  ).length;
+  const statsTotalCount = localStats.length;
+
+  const statsValidationError = isStatsLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Cada estatística tem 6 campos
+    total += localStats.length * 6;
+    localStats.forEach(stats => {
+      if (stats.value.trim()) completed++;
+      if (stats.suffix.trim()) completed++;
+      if (stats.label.trim()) completed++;
+      if (stats.description.trim()) completed++;
+      if (stats.icon.trim()) completed++;
+      if (stats.color.trim()) completed++;
+    });
+
+    return { completed, total };
   };
+
+  const completion = calculateCompletion();
 
   const stableIds = useMemo(
-    () => statsList.map((item, index) => item.id ?? `stats-${index}`),
-    [statsList]
+    () => localStats.map((item, index) => item.id ?? `stats-${index}`),
+    [localStats]
   );
 
   return (
@@ -692,252 +606,137 @@ export default function StatsPage({
       exists={!!exists}
       itemName="Métricas"
     >
-      <div className="mb-6 space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Cabeçalho de Controle */}
+        <Card className="p-6 bg-[var(--color-background)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                Gerenciamento de Métricas
+              </h3>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="w-4 h-4 text-green-300" />
+                  <span className="text-sm text-[var(--color-secondary)]/70">
+                    {statsCompleteCount} de {statsTotalCount} completos
+                  </span>
+                </div>
+                <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                </span>
+              </div>
+            </div>
+          </div>
 
-        <SearchSortBar
-          search={search}
-          setSearch={setSearch}
-          sortOrder={sortOrder}
-          setSortOrder={setSortOrder}
-          onClearFilters={clearFilters}
-          searchPlaceholder="Buscar Métricas por título ou descrição..."
-          total={statsList.length}
-          showing={filteredStats.length}
-          searchActiveText="ⓘ Busca ativa - não é possível adicionar nova estatística"
-          currentPlanType={currentPlanType}
-          currentPlanLimit={currentPlanLimit}
-          remainingSlots={remainingSlots}
-          isLimitReached={isLimitReached}
-        />
-      </div>
+          {/* Barra de busca */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-[var(--color-secondary)]">
+              Buscar Métricas
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
+              <Input
+                type="text"
+                placeholder="Buscar métricas por título, valor ou descrição..."
+                value={searchTerm}
+                onChange={(e: any) => setSearchTerm(e.target.value)}
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
+              />
+            </div>
+          </div>
+        </Card>
 
-      <div className="space-y-4 pb-32">
-        <form onSubmit={handleSubmit}>
+        {/* Mensagem de erro */}
+        {statsValidationError && (
+          <div className={`p-3 rounded-lg ${isStatsLimitReached 
+            ? 'bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30' 
+            : 'bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30'}`}>
+            <div className="flex items-start gap-2">
+              {isStatsLimitReached ? (
+                <XCircle className="w-5 h-5 text-[var(--color-danger)] flex-shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
+              )}
+              <p className={`text-sm ${isStatsLimitReached 
+                ? 'text-[var(--color-danger)]' 
+                : 'text-[var(--color-warning)]'}`}>
+                {statsValidationError}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Lista de Métricas */}
+        <div className="space-y-4">
           <AnimatePresence>
-            {search ? (
-              filteredStats.map((item: any) => {
-                const originalIndex = statsList.findIndex(s => s.id === item.id);
-                const hasValue = item.value.trim() !== "";
-                const hasSuffix = item.suffix.trim() !== "";
-                const hasLabel = item.label.trim() !== "";
-                const hasDescription = item.description.trim() !== "";
-                const hasIcon = item.icon.trim() !== "";
-                const hasColor = item.color.trim() !== "";
-                const isLastInOriginalList = originalIndex === statsList.length - 1;
-                const isLastAndEmpty = isLastInOriginalList && !hasValue && !hasSuffix && !hasLabel && !hasDescription && !hasIcon && !hasColor;
-                const colorHex = extractHexFromTailwind(item.color);
-                const colorTailwind = convertHexToTailwindText(colorHex);
-
-                return (
-                  <div
-                    key={item.id || `stats-${originalIndex}`}
-                    ref={isLastAndEmpty ? setNewItemRef : null}
-                  >
-                    <Card className={`mb-6 overflow-hidden transition-all duration-300 ${
-                      isLastInOriginalList && showValidation && !hasLabel ? 'ring-2 ring-red-500' : ''
-                    } border-l-4`}>
-                      <div className="p-6 bg-white dark:bg-zinc-900">
-                        <ItemHeader
-                          index={originalIndex}
-                          fields={[
-                            { label: 'Valor', hasValue: hasValue },
-                            { label: 'Sufixo', hasValue: hasSuffix },
-                            { label: 'Título', hasValue: hasLabel },
-                            { label: 'Descrição', hasValue: hasDescription },
-                            { label: 'Ícone', hasValue: hasIcon },
-                            { label: 'Cor', hasValue: hasColor }
-                          ]}
-                          showValidation={showValidation}
-                          isLast={isLastInOriginalList}
-                          onDelete={() => openDeleteSingleModal(originalIndex, item.label)}
-                          showDelete={statsList.length > 1}
-                        />
-                        
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                  Valor Numérico
-                                </label>
-                                <Input
-                                  type="text"
-                                  value={item.value}
-                                  onChange={(e: any) => handleChange(originalIndex, "value", e.target.value)}
-                                  placeholder="Ex: 45, 120, 15, 98"
-                                  className="text-2xl font-bold text-center"
-                                />
-                              </div>
-
-                              <div>
-                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                  Sufixo
-                                </label>
-                                <Input
-                                  type="text"
-                                  value={item.suffix}
-                                  onChange={(e: any) => handleChange(originalIndex, "suffix", e.target.value)}
-                                  placeholder="Ex: M+, %, Mi"
-                                  className="font-medium text-center"
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Título da Estatística
-                              </label>
-                              <Input
-                                type="text"
-                                value={item.label}
-                                onChange={(e: any) => handleChange(originalIndex, "label", e.target.value)}
-                                placeholder="Ex: Faturamento Gerado, Média de Crescimento"
-                                className="font-semibold"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Descrição
-                              </label>
-                              <textarea
-                                value={item.description}
-                                onChange={(e: any) => handleChange(originalIndex, "description", e.target.value)}
-                                rows={3}
-                                placeholder="Receita direta atribuída às nossas campanhas nos últimos 12 meses."
-                                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="space-y-6">
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Ícone
-                              </label>
-                              <IconSelector
-                                value={item.icon}
-                                onChange={(value) => handleChange(originalIndex, "icon", value)}
-                                label="Selecione um ícone"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                Cor Personalizada
-                              </label>
-                              <div className="flex items-center gap-2">
-                                <Input
-                                  type="text"
-                                  value={colorTailwind}
-                                  onChange={(e: any) => {
-                                    const newValue = e.target.value;
-                                    handleChange(originalIndex, "color", newValue);
-                                  }}
-                                  placeholder="Ex: text-[#0071E3] ou text-green-600"
-                                  className="flex-1 font-mono"
-                                />
-                                <div 
-                                  className="w-10 h-10 rounded-lg border border-zinc-300 dark:border-zinc-600 flex items-center justify-center"
-                                  style={{ backgroundColor: colorHex }}
-                                />
-                                <ColorPicker
-                                  color={colorHex}
-                                  onChange={(hexColor) => handleChange(originalIndex, "color", hexColor)}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Preview da estatística */}
-                            <div className="mt-4 p-4 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-800/50 dark:to-zinc-900/50">
-                              <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">Preview</h4>
-                              <div className="flex items-center gap-4 p-4 bg-white dark:bg-zinc-800 rounded-xl shadow-sm">
-                                <div className="p-3 rounded-lg" style={{ backgroundColor: `${colorHex}15` }}>
-                                  <IconDisplay icon={item.icon} className="w-8 h-8" />
-                                </div>
-                                <div className="flex-1">
-                                  <div className="flex items-baseline gap-1">
-                                    <span className="text-3xl font-bold" style={{ color: colorHex }}>
-                                      {item.value || "45"}
-                                    </span>
-                                    <span className="text-xl font-semibold" style={{ color: colorHex }}>
-                                      {item.suffix || "M+"}
-                                    </span>
-                                  </div>
-                                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mt-1">
-                                    {item.label || "Faturamento Gerado"}
-                                  </h3>
-                                  <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                                    {item.description || "Receita direta atribuída às nossas campanhas nos últimos 12 meses."}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
-                );
-              })
+            {filteredStats.length === 0 ? (
+              <Card className="p-8 bg-[var(--color-background)]">
+                <div className="text-center">
+                  <BarChart3 className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                    Nenhuma métrica encontrada
+                  </h3>
+                  <p className="text-sm text-[var(--color-secondary)]/70">
+                    {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione sua primeira métrica usando o botão abaixo'}
+                  </p>
+                </div>
+              </Card>
             ) : (
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <ClientOnly>
-                  <SortableContext
-                    items={stableIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {statsList.map((item, index) => {
-                      const originalIndex = index;
-                      const hasValue = item.value.trim() !== "";
-                      const hasSuffix = item.suffix.trim() !== "";
-                      const hasLabel = item.label.trim() !== "";
-                      const hasDescription = item.description.trim() !== "";
-                      const hasIcon = item.icon.trim() !== "";
-                      const hasColor = item.color.trim() !== "";
-                      const isLastInOriginalList = index === statsList.length - 1;
-                      const isLastAndEmpty = isLastInOriginalList && !hasValue && !hasSuffix && !hasLabel && !hasDescription && !hasIcon && !hasColor;
+                <SortableContext
+                  items={stableIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {filteredStats.map((stats, index) => {
+                    const originalIndex = localStats.findIndex(s => s.id === stats.id) || index;
+                    const hasValue = stats.value.trim() !== "";
+                    const hasSuffix = stats.suffix.trim() !== "";
+                    const hasLabel = stats.label.trim() !== "";
+                    const hasDescription = stats.description.trim() !== "";
+                    const hasIcon = stats.icon.trim() !== "";
+                    const hasColor = stats.color.trim() !== "";
+                    const isLastInOriginalList = originalIndex === localStats.length - 1;
+                    const isLastAndEmpty = isLastInOriginalList && !hasValue && !hasSuffix && !hasLabel && !hasDescription && !hasIcon && !hasColor;
 
-                      return (
-                        <SortableStatsItem
-                          key={stableIds[index]}
-                          statsItem={item}
-                          index={index}
-                          originalIndex={originalIndex}
-                          isLastInOriginalList={isLastInOriginalList}
-                          isLastAndEmpty={isLastAndEmpty}
-                          showValidation={showValidation}
-                          statsList={statsList}
-                          handleChange={handleChange}
-                          openDeleteSingleModal={openDeleteSingleModal}
-                          setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
-                        />
-                      );
-                    })}
-                  </SortableContext>
-                </ClientOnly>
+                    return (
+                      <SortableStatsItem
+                        key={stableIds[index]}
+                        stats={stats}
+                        index={index}
+                        originalIndex={originalIndex}
+                        isLastInOriginalList={isLastInOriginalList}
+                        isLastAndEmpty={isLastAndEmpty}
+                        showValidation={showValidation}
+                        statsList={localStats}
+                        handleChange={handleChange}
+                        openDeleteSingleModal={openDeleteSingleModal}
+                        setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
+                      />
+                    );
+                  })}
+                </SortableContext>
               </DndContext>
             )}
           </AnimatePresence>
-        </form>
-      </div>
+        </div>
 
-      <FixedActionBar
-        onDeleteAll={openDeleteAllModal}
-        onAddNew={() => addItem()}
-        onSubmit={handleSubmitWrapper}
-        isAddDisabled={!canAddNewItem || isLimitReached}
-        isSaving={loading}
-        exists={!!exists}
-        completeCount={completeCount}
-        totalCount={statsList.length}
-        itemName="Estatística"
-        icon={BarChart3}
-      />
+        <FixedActionBar
+          onDeleteAll={openDeleteAllModal}
+          onSubmit={handleSubmit}
+          onAddNew={handleAddStats}
+          isAddDisabled={!canAddNewStats}
+          isSaving={loading}
+          exists={!!exists}
+          totalCount={completion.total}
+          itemName="Métrica"
+          icon={BarChart3}
+        />
+      </form>
 
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
@@ -945,8 +744,8 @@ export default function StatsPage({
         onConfirm={() => confirmDelete(updateStats)}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={statsList.length}
-        itemName="Estatística"
+        totalItems={localStats.length}
+        itemName="Métrica"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />

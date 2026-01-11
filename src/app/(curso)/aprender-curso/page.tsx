@@ -1,32 +1,39 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useState, useRef } from "react";
+import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { Button } from "@/components/Button";
+import { TextArea } from "@/components/TextArea";
+import IconSelector from "@/components/IconSelector";
 import { 
+  Layout, 
   GraduationCap,
   Award,
-  ChevronDown, 
-  ChevronUp,
-  Plus,
-  Trash2,
+  Type,
   Settings,
   CheckCircle,
   Sparkles,
   Bold,
   Highlighter,
-  Type,
-  ListChecks
+  GripVertical,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  ListChecks,
+  Trash2,
+  Plus
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import IconSelector from "@/components/IconSelector";
+import { Button } from "@/components/Button";
+import { useSite } from "@/context/site-context";
 
 interface Headline {
   prefix: string;
@@ -46,17 +53,16 @@ interface Description {
 }
 
 interface Feature {
+  id: string;
   label: string;
   icon: string;
 }
 
 interface WhyLearnData {
-  id?: string;
   badge: string;
   headline: Headline;
   description: Description;
   features: Feature[];
-  [key: string]: any;
 }
 
 const defaultWhyLearnData: WhyLearnData = {
@@ -77,234 +83,57 @@ const defaultWhyLearnData: WhyLearnData = {
     }
   },
   features: [
-    { label: "Método Validado", icon: "ph:check-circle-fill" },
-    { label: "Foco em ROI", icon: "ph:chart-line-up-bold" },
-    { label: "Comunidade Ativa", icon: "ph:users-three-fill" }
+    { id: "feature-01", label: "Método Validado", icon: "ph:check-circle-fill" },
+    { id: "feature-02", label: "Foco em ROI", icon: "ph:chart-line-up-bold" },
+    { id: "feature-03", label: "Comunidade Ativa", icon: "ph:users-three-fill" }
   ]
 };
 
-// Componente SectionHeader
-interface SectionHeaderProps {
-  title: string;
-  section: any;
-  icon: any;
-  isExpanded: boolean;
-  onToggle: (section: any) => void;
-}
-
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <div
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </div>
-);
-
-// Componente FeaturesEditor corrigido seguindo o padrão do HeroPage
-interface FeaturesEditorProps {
-  features: Feature[];
-  onChange: (features: Feature[]) => void;
-}
-
-const FeaturesEditor = ({ features, onChange }: FeaturesEditorProps) => {
-  const addFeature = () => {
-    onChange([...features, { label: "", icon: "ph:check-circle-fill" }]);
+const mergeWithDefaults = (apiData: any, defaultData: WhyLearnData): WhyLearnData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    badge: apiData.badge || defaultData.badge,
+    headline: apiData.headline || defaultData.headline,
+    description: apiData.description || defaultData.description,
+    features: apiData.features || defaultData.features,
   };
-
-  const updateFeature = (index: number, field: keyof Feature, value: string) => {
-    const newFeatures = [...features];
-    newFeatures[index] = { ...newFeatures[index], [field]: value };
-    onChange(newFeatures);
-  };
-
-  const removeFeature = (index: number) => {
-    const newFeatures = features.filter((_, i) => i !== index);
-    onChange(newFeatures);
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-2">
-          <ListChecks className="w-5 h-5" />
-          Diferenciais ({features.length})
-        </h4>
-        <Button
-          type="button"
-          onClick={addFeature}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Adicionar Diferencial
-        </Button>
-      </div>
-
-      {features.length === 0 ? (
-        <Card className="p-8 text-center">
-          <CheckCircle className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
-          <h4 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Nenhum diferencial adicionado
-          </h4>
-          <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-            Adicione os diferenciais da Tegbe
-          </p>
-          <Button
-            type="button"
-            onClick={addFeature}
-            className="flex items-center gap-2 mx-auto"
-          >
-            <Plus className="w-4 h-4" />
-            Adicionar Primeiro Diferencial
-          </Button>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {features.map((feature, index) => (
-            <Card key={index} className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Campo do Label */}
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Texto do Diferencial
-                  </label>
-                  <Input
-                    type="text"
-                    value={feature.label}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                      updateFeature(index, "label", e.target.value)
-                    }
-                    placeholder="Ex: Método Validado"
-                  />
-                </div>
-
-                {/* Seletor de Ícone - seguindo o padrão do HeroPage */}
-                <div>
-                  <IconSelector
-                    value={feature.icon}
-                    onChange={(value) => updateFeature(index, "icon", value)}
-                    label="Ícone do Diferencial"
-                  />
-                </div>
-              </div>
-              
-              {/* Botão de Remover - alinhado à direita */}
-              <div className="flex justify-end mt-4">
-                <Button
-                  type="button"
-                  variant="danger"
-                  onClick={() => removeFeature(index)}
-                  className="flex items-center gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Remover Diferencial
-                </Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 };
 
 export default function WhyLearnPage() {
+  const { currentSite } = useSite();
+  const currentPlanType = currentSite.planType;
+  const currentFeatureLimit = currentPlanType === 'pro' ? 10 : 5;
+
   const {
-    data: whyLearnData,
-    setData: setWhyLearnData,
-    updateNested,
+    data: pageData,
+    exists,
     loading,
     success,
     errorMsg,
+    deleteModal,
+    updateNested,
     save,
-    exists,
-    reload
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
   } = useJsonManagement<WhyLearnData>({
     apiPath: "/api/tegbe-institucional/json/porque-aprender",
     defaultData: defaultWhyLearnData,
+    mergeFunction: mergeWithDefaults,
   });
 
+  // Estados para drag & drop
+  const [draggingFeature, setDraggingFeature] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     badge: true,
-    headline: true,
-    description: true,
-    features: true
+    headline: false,
+    description: false,
+    features: false,
   });
 
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  // Processar os dados para mesclar propriedades
-  const [processedData, setProcessedData] = useState<WhyLearnData>(defaultWhyLearnData);
-
-  useEffect(() => {
-    if (whyLearnData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProcessedData(whyLearnData);
-    }
-  }, [whyLearnData]);
-
-  // Calcular campos completos
-  const calculateCompleteCount = useCallback(() => {
-    let count = 0;
-    
-    if (!processedData) return 0;
-    
-    // Verificar badge
-    if (processedData.badge.trim() !== "") {
-      count++;
-    }
-    
-    // Verificar headline - corrigido: remover referência ao "sobre"
-    if (
-      processedData.headline.prefix.trim() !== "" &&
-      processedData.headline.highlight.trim() !== "" &&
-      processedData.headline.suffix.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar description
-    if (
-      processedData.description.paragraph1.text.trim() !== "" &&
-      processedData.description.paragraph2.text.trim() !== ""
-    ) {
-      count++;
-    }
-    
-    // Verificar features
-    if (processedData.features.length > 0) {
-      const hasValidFeatures = processedData.features.some(feature => 
-        feature.label.trim() !== "" && 
-        feature.icon.trim() !== ""
-      );
-      if (hasValidFeatures) count++;
-    }
-    
-    return count;
-  }, [processedData]);
-
-  const completeCount = calculateCompleteCount();
-  const totalCount = 4; // badge, headline, description, features
+  // Referência para novo item
+  const newFeatureRef = useRef<HTMLDivElement>(null);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -313,195 +142,164 @@ export default function WhyLearnPage() {
     }));
   };
 
-  const handleChange = (path: string, value: any) => {
-    updateNested(path, value);
+  // Funções para manipular a lista de features
+  const handleAddFeature = () => {
+    const features = pageData.features;
+    if (features.length >= currentFeatureLimit) {
+      return false;
+    }
+    
+    const newId = `feature-${Date.now()}`;
+    const newFeature: Feature = {
+      id: newId,
+      label: "",
+      icon: "ph:check-circle-fill"
+    };
+    
+    const updated = [...features, newFeature];
+    updateNested('features', updated);
+    
+    setTimeout(() => {
+      newFeatureRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
   };
 
-  const handleSubmitWrapper = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  };
-
-  const handleSubmit = async () => {
-    try {
-      save();
-      await reload();
-    } catch (error) {
-      console.error("Erro ao enviar dados:", error);
+  const handleUpdateFeature = (index: number, updates: Partial<Feature>) => {
+    const features = pageData.features;
+    const updated = [...features];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      updateNested('features', updated);
     }
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODOS OS CONTEÚDOS"
+  const handleRemoveFeature = (index: number) => {
+    const features = pageData.features;
+    
+    if (features.length <= 1) {
+      // Mantém pelo menos um feature vazio
+      const emptyFeature: Feature = {
+        id: "feature-01",
+        label: "",
+        icon: "ph:check-circle-fill"
+      };
+      updateNested('features', [emptyFeature]);
+    } else {
+      const updated = features.filter((_, i) => i !== index);
+      updateNested('features', updated);
+    }
+  };
+
+  // Funções de drag & drop para features
+  const handleFeatureDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingFeature(index);
+  };
+
+  const handleFeatureDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingFeature === null || draggingFeature === index) return;
+    
+    const features = pageData.features;
+    const updated = [...features];
+    const draggedFeature = updated[draggingFeature];
+    
+    // Remove o item arrastado
+    updated.splice(draggingFeature, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingFeature ? index : index;
+    updated.splice(newIndex, 0, draggedFeature);
+    
+    updateNested('features', updated);
+    setDraggingFeature(index);
+  };
+
+  const handleFeatureDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingFeature(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
+  // Validações
+  const isFeatureValid = (feature: Feature): boolean => {
+    return feature.label.trim() !== '' && feature.icon.trim() !== '';
+  };
+
+  const isFeatureLimitReached = pageData.features.length >= currentFeatureLimit;
+  const canAddNewFeature = !isFeatureLimitReached;
+  const featuresCompleteCount = pageData.features.filter(isFeatureValid).length;
+  const featuresTotalCount = pageData.features.length;
+
+  const featuresValidationError = isFeatureLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentFeatureLimit} diferenciais).`
+    : null;
+
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Badge (1 campo)
+    total += 1;
+    if (pageData.badge.trim()) completed++;
+
+    // Headline (3 campos)
+    total += 3;
+    if (pageData.headline.prefix.trim()) completed++;
+    if (pageData.headline.highlight.trim()) completed++;
+    if (pageData.headline.suffix.trim()) completed++;
+
+    // Description (parágrafo 1 - 2 campos, parágrafo 2 - 2 campos)
+    total += 4;
+    if (pageData.description.paragraph1.text.trim()) completed++;
+    if (pageData.description.paragraph1.bold?.trim()) completed++;
+    if (pageData.description.paragraph2.text.trim()) completed++;
+    if (pageData.description.paragraph2.highlight?.trim()) completed++;
+
+    // Features (2 campos por feature)
+    total += pageData.features.length * 2;
+    pageData.features.forEach(feature => {
+      if (feature.label.trim()) completed++;
+      if (feature.icon.trim()) completed++;
     });
+
+    return { completed, total };
   };
 
-  const confirmDelete = async () => {
-    await fetch("/api/tegbe-institucional/json/porque-aprender", {
-      method: "DELETE",
-    });
+  const completion = calculateCompletion();
 
-    setWhyLearnData(defaultWhyLearnData);
-    setProcessedData(defaultWhyLearnData);
-    closeDeleteModal();
-  };
-
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
-
-  const renderBadgeSection = () => {
-    return (
-      <div className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-            Badge
-          </label>
-          <Input
-            type="text"
-            value={processedData.badge}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-              handleChange("badge", e.target.value)
-            }
-            placeholder="Ex: Vivência de Campo"
-          />
-          <p className="text-xs text-zinc-500 mt-2">
-            Texto curto que aparece como um selo ou destaque acima do título
-          </p>
-        </div>
-      </div>
-    );
-  };
-
-  const renderHeadlineSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Prefixo
-            </label>
-            <Input
-              type="text"
-              value={processedData.headline.prefix}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("headline.prefix", e.target.value)
-              }
-              placeholder="Por que aprender com a"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Destaque
-            </label>
-            <Input
-              type="text"
-              value={processedData.headline.highlight}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("headline.highlight", e.target.value)
-              }
-              placeholder="Tegbe"
-              className="font-semibold"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Sufixo
-            </label>
-            <Input
-              type="text"
-              value={processedData.headline.suffix}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("headline.suffix", e.target.value)
-              }
-              placeholder='e não com um "guru"?'
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderDescriptionSection = () => {
-    return (
-      <div className="space-y-6">
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Parágrafo 1 - Texto
-            </label>
-            <textarea
-              value={processedData.description.paragraph1.text}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                handleChange("description.paragraph1.text", e.target.value)
-              }
-              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[100px]"
-              rows={2}
-              placeholder="O mercado está cheio de professores que nunca venderam nada. A Tegbe é, antes de tudo, uma"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 flex items-center gap-2">
-              <Bold className="w-4 h-4" />
-              Parágrafo 1 - Texto em Negrito
-            </label>
-            <Input
-              type="text"
-              value={processedData.description.paragraph1.bold || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("description.paragraph1.bold", e.target.value)
-              }
-              placeholder="operação de vendas ativa"
-              className="font-semibold"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              Parágrafo 2 - Texto
-            </label>
-            <textarea
-              value={processedData.description.paragraph2.text}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                handleChange("description.paragraph2.text", e.target.value)
-              }
-              className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 min-h-[100px]"
-              rows={2}
-              placeholder="Não ensinamos teorias de livros antigos. Nós abrimos a caixa-preta das estratégias que geram milhões todos os meses para nossos clientes de assessoria."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2 flex items-center gap-2">
-              <Highlighter className="w-4 h-4" />
-              Parágrafo 2 - Texto Destacado
-            </label>
-            <Input
-              type="text"
-              value={processedData.description.paragraph2.highlight || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleChange("description.paragraph2.highlight", e.target.value)
-              }
-              placeholder="Você aprende o que nós aplicamos hoje."
-              className="font-medium bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
+  if (loading && !exists) {
+    return <Loading layout={Layout} exists={!!exists} />;
+  }
 
   return (
     <ManageLayout
@@ -509,9 +307,9 @@ export default function WhyLearnPage() {
       title="Por que Aprender com a Tegbe"
       description="Gerencie o conteúdo da seção que explica os diferenciais"
       exists={!!exists}
-      itemName="Conteúdo"
+      itemName="Por que Aprender"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Seção Badge */}
         <div className="space-y-4">
           <SectionHeader
@@ -522,20 +320,30 @@ export default function WhyLearnPage() {
             onToggle={() => toggleSection("badge")}
           />
 
-          <AnimatePresence>
-            {expandedSections.badge && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderBadgeSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.badge ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Badge
+                  </label>
+                  <Input
+                    value={pageData.badge}
+                    onChange={(e) => updateNested('badge', e.target.value)}
+                    placeholder="Ex: Vivência de Campo"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/50 mt-2">
+                    Texto curto que aparece como um selo ou destaque acima do título
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Headline */}
@@ -548,20 +356,53 @@ export default function WhyLearnPage() {
             onToggle={() => toggleSection("headline")}
           />
 
-          <AnimatePresence>
-            {expandedSections.headline && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderHeadlineSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.headline ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Prefixo
+                    </label>
+                    <Input
+                      value={pageData.headline.prefix}
+                      onChange={(e) => updateNested('headline.prefix', e.target.value)}
+                      placeholder="Por que aprender com a"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Destaque
+                    </label>
+                    <Input
+                      value={pageData.headline.highlight}
+                      onChange={(e) => updateNested('headline.highlight', e.target.value)}
+                      placeholder="Tegbe"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Sufixo
+                    </label>
+                    <Input
+                      value={pageData.headline.suffix}
+                      onChange={(e) => updateNested('headline.suffix', e.target.value)}
+                      placeholder='e não com um "guru"?'
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Description */}
@@ -574,20 +415,87 @@ export default function WhyLearnPage() {
             onToggle={() => toggleSection("description")}
           />
 
-          <AnimatePresence>
-            {expandedSections.description && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  {renderDescriptionSection()}
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.description ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Bold className="w-5 h-5" />
+                      Parágrafo 1
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                          Texto
+                        </label>
+                        <TextArea
+                          value={pageData.description.paragraph1.text}
+                          onChange={(e) => updateNested('description.paragraph1.text', e.target.value)}
+                          placeholder="O mercado está cheio de professores que nunca venderam nada. A Tegbe é, antes de tudo, uma"
+                          rows={3}
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <Bold className="w-4 h-4" />
+                          Texto em Negrito (Opcional)
+                        </label>
+                        <Input
+                          value={pageData.description.paragraph1.bold || ''}
+                          onChange={(e) => updateNested('description.paragraph1.bold', e.target.value)}
+                          placeholder="operação de vendas ativa"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-semibold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Highlighter className="w-5 h-5" />
+                      Parágrafo 2
+                    </h4>
+                    
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                          Texto
+                        </label>
+                        <TextArea
+                          value={pageData.description.paragraph2.text}
+                          onChange={(e) => updateNested('description.paragraph2.text', e.target.value)}
+                          placeholder="Não ensinamos teorias de livros antigos. Nós abrimos a caixa-preta das estratégias que geram milhões todos os meses para nossos clientes de assessoria."
+                          rows={3}
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <Sparkles className="w-4 h-4" />
+                          Texto Destacado (Opcional)
+                        </label>
+                        <Input
+                          value={pageData.description.paragraph2.highlight || ''}
+                          onChange={(e) => updateNested('description.paragraph2.highlight', e.target.value)}
+                          placeholder="Você aprende o que nós aplicamos hoje."
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] bg-yellow-500/10 border-yellow-500/20"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
         {/* Seção Features */}
@@ -600,35 +508,186 @@ export default function WhyLearnPage() {
             onToggle={() => toggleSection("features")}
           />
 
-          <AnimatePresence>
-            {expandedSections.features && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="p-6 space-y-6">
-                  <FeaturesEditor
-                    features={processedData.features}
-                    onChange={(features) => handleChange("features", features)}
-                  />
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.features ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                      <ListChecks className="w-5 h-5" />
+                      Diferenciais
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {featuresCompleteCount} de {featuresTotalCount} completos
+                        </span>
+                      </div>
+                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <Button
+                      type="button"
+                      onClick={handleAddFeature}
+                      variant="primary"
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewFeature}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar Diferencial
+                    </Button>
+                    {isFeatureLimitReached && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Limite do plano atingido
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Adicione os diferenciais que tornam a Tegbe única.
+                </p>
+              </div>
+
+              {/* Mensagem de erro */}
+              {featuresValidationError && (
+                <div className={`p-3 rounded-lg ${isFeatureLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                  <div className="flex items-start gap-2">
+                    {isFeatureLimitReached ? (
+                      <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                    )}
+                    <p className={`text-sm ${isFeatureLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {featuresValidationError}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {pageData.features.map((feature, index) => (
+                  <div 
+                    key={index}
+                    ref={index === pageData.features.length - 1 ? newFeatureRef : undefined}
+                    draggable
+                    onDragStart={(e) => handleFeatureDragStart(e, index)}
+                    onDragOver={(e) => handleFeatureDragOver(e, index)}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragEnd={handleFeatureDragEnd}
+                    onDrop={handleDrop}
+                    className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+                      draggingFeature === index 
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                        : 'hover:border-[var(--color-primary)]/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        {/* Handle para drag & drop */}
+                        <div 
+                          className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                          draggable
+                          onDragStart={(e) => handleFeatureDragStart(e, index)}
+                        >
+                          <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                        </div>
+                        
+                        {/* Indicador de posição */}
+                        <div className="flex flex-col items-center">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
+                            <span className="text-sm font-bold text-[var(--color-primary)]">
+                              {index + 1}
+                            </span>
+                          </div>
+                          <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-medium text-[var(--color-secondary)]">
+                              {feature.label || "Sem título"}
+                            </h4>
+                            {isFeatureValid(feature) ? (
+                              <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                Completo
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                Incompleto
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Texto do Diferencial
+                                </label>
+                                <Input
+                                  value={feature.label}
+                                  onChange={(e) => handleUpdateFeature(index, { label: e.target.value })}
+                                  placeholder="Ex: Método Validado"
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Ícone
+                                </label>
+                                <IconSelector
+                                  value={feature.icon}
+                                  onChange={(value) => handleUpdateFeature(index, { icon: value })}
+                                  placeholder="ph:check-circle-fill"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => handleRemoveFeature(index)}
+                          variant="danger"
+                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
-        {/* Fixed Action Bar */}
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completeCount}
-          totalCount={totalCount}
-          itemName="Conteúdo"
+          completeCount={completion.completed}
+          totalCount={completion.total}
+          itemName="Por que Aprender"
           icon={GraduationCap}
         />
       </form>
@@ -640,10 +699,13 @@ export default function WhyLearnPage() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Conteúdo"
+        itemName="Conteúdo da Seção"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }

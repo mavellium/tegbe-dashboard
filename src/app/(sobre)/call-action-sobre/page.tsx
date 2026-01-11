@@ -1,31 +1,37 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { Button } from "@/components/Button";
+import { TextArea } from "@/components/TextArea";
 import { Switch } from "@/components/Switch";
+import { Button } from "@/components/Button";
+import IconSelector from "@/components/IconSelector";
 import { 
-  Tag, 
-  Palette, 
-  Type, 
-  Zap, 
-  Eye, 
-  ChevronDown, 
-  ChevronUp, 
   Layers,
+  Tag,
+  Type,
+  Zap,
+  Eye,
   Layout,
-  LucideIcon
+  Settings,
+  ChevronDown,
+  ChevronUp,
+  Palette,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
-import ColorPicker from "@/components/ColorPicker";
-import IconSelector from "@/components/IconSelector";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
+import { ThemePropertyInput } from "@/components/ThemePropertyInput";
+import { hexToTailwindBgClass, tailwindToHex } from "@/lib/colors";
 
 interface BadgeData {
   text?: string;
@@ -50,6 +56,13 @@ interface HeroPageData {
   button?: ButtonData;
   footer?: FooterData;
   layout?: "simple" | "complex" | "refined";
+  theme?: {
+    primary_color?: string;
+    secondary_color?: string;
+    text_color?: string;
+    background_color?: string;
+    accent_color?: string;
+  };
 }
 
 interface HeroData {
@@ -74,7 +87,14 @@ const defaultHeroPageData: HeroPageData = {
     icon: "",
     stats: ""
   },
-  layout: "simple"
+  layout: "simple",
+  theme: {
+    primary_color: "blue-600",
+    secondary_color: "gray-700",
+    text_color: "gray-900",
+    background_color: "white",
+    accent_color: "amber-500"
+  }
 };
 
 const defaultHeroData: HeroData = {
@@ -94,7 +114,14 @@ const defaultHeroData: HeroData = {
       icon: "mdi:check-decagram",
       stats: ""
     },
-    layout: "simple"
+    layout: "simple",
+    theme: {
+      primary_color: "blue-600",
+      secondary_color: "gray-700",
+      text_color: "gray-900",
+      background_color: "white",
+      accent_color: "amber-500"
+    }
   },
   marketing: {
     badge: {
@@ -112,7 +139,14 @@ const defaultHeroData: HeroData = {
       icon: "",
       stats: "+40"
     },
-    layout: "complex"
+    layout: "complex",
+    theme: {
+      primary_color: "pink-600",
+      secondary_color: "gray-800",
+      text_color: "gray-100",
+      background_color: "gray-900",
+      accent_color: "rose-500"
+    }
   },
   sobre: {
     badge: {
@@ -133,141 +167,95 @@ const defaultHeroData: HeroData = {
         { label: "Senior", sublabel: "Especialista Real" }
       ]
     },
-    layout: "refined"
+    layout: "refined",
+    theme: {
+      primary_color: "blue-700",
+      secondary_color: "slate-800",
+      text_color: "slate-900",
+      background_color: "slate-50",
+      accent_color: "blue-500"
+    }
   }
 };
 
-const expandedSectionsDefault = {
-  badge: true,
-  title: true,
-  subtitle: true,
-  button: true,
-  footer: true,
-  layout: false
-};
+const mergeWithDefaults = (apiData: any, defaultData: HeroData): HeroData => {
+  if (!apiData) return defaultData;
+  
+  const mergedData: HeroData = { ...defaultData };
+  
+  // Mesclar cada tema individualmente
+  (Object.keys(defaultData) as Array<keyof HeroData>).forEach((themeKey) => {
+    if (apiData[themeKey]) {
+      mergedData[themeKey] = {
+        badge: {
+          text: apiData[themeKey].badge?.text || defaultData[themeKey]!.badge!.text,
+          icon: apiData[themeKey].badge?.icon ?? defaultData[themeKey]!.badge!.icon,
+        },
+        title: apiData[themeKey].title || defaultData[themeKey]!.title,
+        subtitle: apiData[themeKey].subtitle || defaultData[themeKey]!.subtitle,
+        button: {
+          text: apiData[themeKey].button?.text || defaultData[themeKey]!.button!.text,
+          icon: apiData[themeKey].button?.icon || defaultData[themeKey]!.button!.icon,
+        },
+        footer: {
+          text: apiData[themeKey].footer?.text || defaultData[themeKey]!.footer!.text,
+          icon: apiData[themeKey].footer?.icon ?? defaultData[themeKey]!.footer!.icon,
+          stats: apiData[themeKey].footer?.stats ?? defaultData[themeKey]!.footer!.stats,
+        },
+        layout: apiData[themeKey].layout || defaultData[themeKey]!.layout,
+        theme: apiData[themeKey].theme || defaultData[themeKey]!.theme,
+      };
+    }
+  });
 
-interface SectionHeaderProps {
-  title: string;
-  section: keyof typeof expandedSectionsDefault;
-  icon: LucideIcon;
-  isExpanded: boolean;
-  onToggle: (section: keyof typeof expandedSectionsDefault) => void;
-}
-
-const SectionHeader = ({
-  title,
-  section,
-  icon: Icon,
-  isExpanded,
-  onToggle
-}: SectionHeaderProps) => (
-  <button
-    type="button"
-    onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-  >
-    <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-      <h3 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">
-        {title}
-      </h3>
-    </div>
-    {isExpanded ? (
-      <ChevronUp className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    ) : (
-      <ChevronDown className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
-    )}
-  </button>
-);
-
-interface ThemeTabProps {
-  themeKey: keyof HeroData;
-  label: string;
-  isActive: boolean;
-  onClick: (theme: keyof HeroData) => void;
-}
-
-const ThemeTab = ({ themeKey, label, isActive, onClick }: ThemeTabProps) => (
-  <button
-    type="button"
-    onClick={() => onClick(themeKey)}
-    className={`px-4 py-2 font-medium rounded-lg transition-colors ${
-      isActive
-        ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
-        : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
-    }`}
-  >
-    {label}
-  </button>
-);
-
-const getSafeData = <T,>(data: T | undefined | null, defaultValue: T): T => {
-  if (!data) return defaultValue;
-  return data;
+  return mergedData;
 };
 
 export default function HeroPage() {
   const [activeTheme, setActiveTheme] = useState<keyof HeroData>("sobre");
-  const [expandedSections, setExpandedSections] = useState(expandedSectionsDefault);
-  
+  const [expandedSections, setExpandedSections] = useState({
+    basic: true,
+    content: false,
+    theme: false,
+  });
+
   const {
     data: heroData,
-    setData: setHeroData,
+    exists,
     loading,
     success,
     errorMsg,
+    deleteModal,
+    updateNested,
     save,
-    exists,
-    reload,
-    updateNested
+    openDeleteAllModal,
+    closeDeleteModal,
+    confirmDelete,
   } = useJsonManagement<HeroData>({
     apiPath: "/api/tegbe-institucional/json/call-to-action",
     defaultData: defaultHeroData,
+    mergeFunction: mergeWithDefaults,
   });
 
-  const [deleteModal, setDeleteModal] = useState({
-    isOpen: false,
-    type: "all" as const,
-    title: ""
-  });
-
-  const getCurrentThemeData = useCallback((): HeroPageData => {
+  const getCurrentThemeData = (): HeroPageData => {
     const themeData = heroData?.[activeTheme];
-    return getSafeData(themeData, defaultHeroPageData);
-  }, [heroData, activeTheme]);
+    return themeData || defaultHeroPageData;
+  };
 
-  const calculateCompleteCount = useCallback(() => {
-    const currentThemeData = getCurrentThemeData();
-    let count = 0;
-    
-    if (currentThemeData.badge?.text?.trim() !== "") count++;
-    if (currentThemeData.title?.trim() !== "") count++;
-    if (currentThemeData.subtitle?.trim() !== "") count++;
-    if (currentThemeData.button?.text?.trim() !== "") count++;
-    if (currentThemeData.footer?.text?.trim() !== "") count++;
-    if (currentThemeData.layout?.trim() !== "") count++;
-    
-    return count;
-  }, [getCurrentThemeData]);
+  const currentThemeData = getCurrentThemeData();
 
-  const completeCount = calculateCompleteCount();
-  const totalCount = 6;
-  const canAddNewItem = false;
-  const isLimitReached = false;
-
-  const toggleSection = (section: keyof typeof expandedSectionsDefault) => {
+  const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
   };
 
-  const handleThemeChange = useCallback((path: string, value: any) => {
+  const handleThemeChange = (path: string, value: any) => {
     updateNested(`${activeTheme}.${path}`, value);
-  }, [activeTheme, updateNested]);
+  };
 
   const handleStatsChange = (index: number, field: 'label' | 'sublabel', value: string) => {
-    const currentThemeData = getCurrentThemeData();
     const stats = currentThemeData.footer?.stats;
     
     if (Array.isArray(stats)) {
@@ -280,7 +268,6 @@ export default function HeroPage() {
   };
 
   const addStatItem = () => {
-    const currentThemeData = getCurrentThemeData();
     const stats = currentThemeData.footer?.stats;
     
     if (Array.isArray(stats)) {
@@ -291,7 +278,6 @@ export default function HeroPage() {
   };
 
   const removeStatItem = (index: number) => {
-    const currentThemeData = getCurrentThemeData();
     const stats = currentThemeData.footer?.stats;
     
     if (Array.isArray(stats)) {
@@ -300,409 +286,64 @@ export default function HeroPage() {
     }
   };
 
-  const handleSubmitWrapper = () => {
-    const fd = new FormData();
-    fd.append("values", JSON.stringify(heroData));
-    save();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await save();
   };
 
-  const openDeleteAllModal = () => {
-    setDeleteModal({
-      isOpen: true,
-      type: "all",
-      title: "TODAS AS CONFIGURAÇÕES HERO"
-    });
+  const handleThemeColorChange = (property: keyof NonNullable<HeroPageData['theme']>, hexColor: string) => {
+    const tailwindClass = hexToTailwindBgClass(hexColor);
+    const colorValue = tailwindClass.replace('bg-', '');
+    handleThemeChange(`theme.${property}`, colorValue);
   };
 
-  const confirmDelete = async () => {
-    try {
-      await fetch("/api/tegbe-institucional/json/hero", {
-        method: "DELETE",
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Badge
+    total += 2;
+    if (currentThemeData.badge?.text?.trim()) completed++;
+    if (currentThemeData.badge?.icon !== undefined) completed++;
+
+    // Title
+    total += 1;
+    if (currentThemeData.title?.trim()) completed++;
+
+    // Subtitle
+    total += 1;
+    if (currentThemeData.subtitle?.trim()) completed++;
+
+    // Button
+    total += 2;
+    if (currentThemeData.button?.text?.trim()) completed++;
+    if (currentThemeData.button?.icon?.trim()) completed++;
+
+    // Footer
+    total += 2;
+    if (currentThemeData.footer?.text?.trim()) completed++;
+    if (currentThemeData.footer?.icon !== undefined) completed++;
+
+    // Layout
+    total += 1;
+    if (currentThemeData.layout?.trim()) completed++;
+
+    // Theme colors
+    if (currentThemeData.theme) {
+      total += 5;
+      Object.values(currentThemeData.theme).forEach(color => {
+        if (color?.trim()) completed++;
       });
-      
-      setHeroData(defaultHeroData);
-      closeDeleteModal();
-      await reload();
-    } catch (err: any) {
-      console.error("Erro ao deletar:", err);
     }
+
+    return { completed, total };
   };
 
-  const closeDeleteModal = () => {
-    setDeleteModal({ 
-      isOpen: false, 
-      type: "all", 
-      title: "" 
-    });
-  };
+  const completion = calculateCompletion();
 
-  const renderBadgeSection = () => {
-    const currentThemeData = getCurrentThemeData();
-    const badgeData = currentThemeData.badge || {};
-    
-    return (
-      <div className="space-y-4">
-        <SectionHeader 
-          title="Badge" 
-          section="badge" 
-          icon={Tag}
-          isExpanded={expandedSections.badge}
-          onToggle={toggleSection}
-        />
-        
-        <motion.div
-          initial={false}
-          animate={{ height: expandedSections.badge ? 'auto' : 0 }}
-          className="overflow-hidden"
-        >
-          <Card className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <IconSelector
-                  value={badgeData.icon || ""}
-                  onChange={(value) => handleThemeChange('badge.icon', value)}
-                  label="Ícone do Badge"
-                />
-                <p className="text-xs text-zinc-500 mt-1">Deixe vazio para não mostrar ícone</p>
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Texto do Badge (HTML permitido)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Próximo Passo Lógico"
-                  value={badgeData.text || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                    handleThemeChange('badge.text', e.target.value)
-                  }
-                />
-                <p className="text-xs text-zinc-500 mt-1">
-                  Use tags HTML como &lt;span&gt; para estilização personalizada
-                </p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  };
-
-  const renderTitleSection = () => {
-    const currentThemeData = getCurrentThemeData();
-    
-    return (
-      <div className="space-y-4">
-        <SectionHeader 
-          title="Título" 
-          section="title" 
-          icon={Type}
-          isExpanded={expandedSections.title}
-          onToggle={toggleSection}
-        />
-        
-        <motion.div
-          initial={false}
-          animate={{ height: expandedSections.title ? 'auto' : 0 }}
-          className="overflow-hidden"
-        >
-          <Card className="p-6">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Texto do Título (HTML permitido)
-              </label>
-              <textarea
-                placeholder="Sua empresa tem um teto de crescimento..."
-                value={currentThemeData.title || ""}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
-                  handleThemeChange('title', e.target.value)
-                }
-                rows={4}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Use &lt;br/&gt; para quebras de linha e &lt;span&gt; com classes para estilização
-              </p>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  };
-
-  const renderSubtitleSection = () => {
-    const currentThemeData = getCurrentThemeData();
-    
-    return (
-      <div className="space-y-4">
-        <SectionHeader 
-          title="Subtítulo" 
-          section="subtitle" 
-          icon={Type}
-          isExpanded={expandedSections.subtitle}
-          onToggle={toggleSection}
-        />
-        
-        <motion.div
-          initial={false}
-          animate={{ height: expandedSections.subtitle ? 'auto' : 0 }}
-          className="overflow-hidden"
-        >
-          <Card className="p-6">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Texto do Subtítulo (HTML permitido)
-              </label>
-              <textarea
-                placeholder="Não entregamos 'tentativas'..."
-                value={currentThemeData.subtitle || ""}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
-                  handleThemeChange('subtitle', e.target.value)
-                }
-                rows={4}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-              />
-              <p className="text-xs text-zinc-500 mt-1">
-                Use tags HTML como &lt;strong&gt; e &lt;span&gt; para destaque
-              </p>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  };
-
-  const renderButtonSection = () => {
-    const currentThemeData = getCurrentThemeData();
-    const buttonData = currentThemeData.button || {};
-    
-    return (
-      <div className="space-y-4">
-        <SectionHeader 
-          title="Botão" 
-          section="button" 
-          icon={Zap}
-          isExpanded={expandedSections.button}
-          onToggle={toggleSection}
-        />
-        
-        <motion.div
-          initial={false}
-          animate={{ height: expandedSections.button ? 'auto' : 0 }}
-          className="overflow-hidden"
-        >
-          <Card className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Texto do Botão
-                </label>
-                <Input
-                  type="text"
-                  placeholder="SOLICITAR MEU DIAGNÓSTICO"
-                  value={buttonData.text || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                    handleThemeChange('button.text', e.target.value)
-                  }
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <IconSelector
-                  value={buttonData.icon || ""}
-                  onChange={(value) => handleThemeChange('button.icon', value)}
-                  label="Ícone do Botão"
-                />
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  };
-
-  const renderFooterSection = () => {
-    const currentThemeData = getCurrentThemeData();
-    const footerData = currentThemeData.footer || {};
-    const stats = footerData.stats;
-    
-    return (
-      <div className="space-y-4">
-        <SectionHeader 
-          title="Rodapé" 
-          section="footer" 
-          icon={Eye}
-          isExpanded={expandedSections.footer}
-          onToggle={toggleSection}
-        />
-        
-        <motion.div
-          initial={false}
-          animate={{ height: expandedSections.footer ? 'auto' : 0 }}
-          className="overflow-hidden"
-        >
-          <Card className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Texto do Rodapé
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Vagas limitadas para este mês"
-                  value={footerData.text || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                    handleThemeChange('footer.text', e.target.value)
-                  }
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                  Ícone do Rodapé
-                </label>
-                <IconSelector
-                  value={footerData.icon || ""}
-                  onChange={(value) => handleThemeChange('footer.icon', value)}
-                  label="Ícone"
-                />
-                <p className="text-xs text-zinc-500 mt-1">Deixe vazio para não mostrar ícone</p>
-              </div>
-
-              <div className="md:col-span-2">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                    Estatísticas
-                  </label>
-                  <Button
-                    type="button"
-                    onClick={addStatItem}
-                    className="text-sm"
-                  >
-                    + Adicionar Item
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  {stats === null || stats === undefined ? (
-                    <p className="text-sm text-zinc-500">Nenhuma estatística configurada</p>
-                  ) : typeof stats === 'string' ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="text"
-                        value={stats}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                          handleThemeChange('footer.stats', e.target.value)
-                        }
-                        placeholder="+40"
-                        className="flex-1"
-                      />
-                      <Button
-                        type="button"
-                        onClick={() => handleThemeChange('footer.stats', null)}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        Limpar
-                      </Button>
-                    </div>
-                  ) : Array.isArray(stats) && stats.length > 0 ? (
-                    stats.map((stat, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-zinc-50 dark:bg-zinc-800/50">
-                        <div className="flex-1 grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="text-xs text-zinc-500 mb-1">Label</label>
-                            <Input
-                              type="text"
-                              value={stat.label || ""}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                                handleStatsChange(index, 'label', e.target.value)
-                              }
-                              placeholder="30 Min"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-zinc-500 mb-1">Sublabel</label>
-                            <Input
-                              type="text"
-                              value={stat.sublabel || ""}
-                              onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                                handleStatsChange(index, 'sublabel', e.target.value)
-                              }
-                              placeholder="Duração da Sessão"
-                            />
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          onClick={() => removeStatItem(index)}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                          variant="danger"
-                        >
-                          Remover
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-zinc-500">Nenhum item adicionado</p>
-                  )}
-                </div>
-                <p className="text-xs text-zinc-500 mt-3">
-                  Pode ser uma string simples (ex: &quot;+40&quot;) ou um array de objetos com label/sublabel
-                </p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  };
-
-  const renderLayoutSection = () => {
-    const currentThemeData = getCurrentThemeData();
-    
-    return (
-      <div className="space-y-4">
-        <SectionHeader 
-          title="Layout" 
-          section="layout" 
-          icon={Layout}
-          isExpanded={expandedSections.layout}
-          onToggle={toggleSection}
-        />
-        
-        <motion.div
-          initial={false}
-          animate={{ height: expandedSections.layout ? 'auto' : 0 }}
-          className="overflow-hidden"
-        >
-          <Card className="p-6">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Tipo de Layout
-              </label>
-              <select
-                value={currentThemeData.layout || "simple"}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => 
-                  handleThemeChange('layout', e.target.value)
-                }
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="simple">Simple</option>
-                <option value="complex">Complex</option>
-                <option value="refined">Refined</option>
-              </select>
-              <div className="mt-4 space-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-                <p><strong>Simple:</strong> Layout limpo e direto</p>
-                <p><strong>Complex:</strong> Layout com mais elementos visuais e efeitos</p>
-                <p><strong>Refined:</strong> Layout refinado com gradientes e detalhes sofisticados</p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  };
+  if (loading && !exists) {
+    return <Loading layout={Layout} exists={!!exists} />;
+  }
 
   return (
     <ManageLayout
@@ -712,66 +353,419 @@ export default function HeroPage() {
       exists={!!exists}
       itemName="Hero Section"
     >
-      <div className="space-y-6 pb-32">
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Tabs de Temas */}
-        <Card className="p-6">
+        <Card className="p-6 bg-[var(--color-background)]">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-[var(--color-secondary)]">Selecione o Tema</h3>
+            <p className="text-sm text-[var(--color-secondary)]/70">
+              Configure diferentes versões para cada tipo de página
+            </p>
+          </div>
+          
           <div className="flex flex-wrap gap-2">
-            <ThemeTab 
-              themeKey="ecommerce" 
-              label="E-commerce" 
-              isActive={activeTheme === "ecommerce"} 
-              onClick={setActiveTheme} 
-            />
-            <ThemeTab 
-              themeKey="marketing" 
-              label="Marketing" 
-              isActive={activeTheme === "marketing"} 
-              onClick={setActiveTheme} 
-            />
-            <ThemeTab 
-              themeKey="sobre" 
-              label="Sobre" 
-              isActive={activeTheme === "sobre"} 
-              onClick={setActiveTheme} 
-            />
+            {(['ecommerce', 'marketing', 'sobre'] as Array<keyof HeroData>).map((themeKey) => (
+              <button
+                key={themeKey}
+                type="button"
+                onClick={() => setActiveTheme(themeKey)}
+                className={`px-4 py-2 font-medium rounded-lg transition-all ${
+                  activeTheme === themeKey
+                    ? "bg-[var(--color-primary)] text-white"
+                    : "bg-[var(--color-background-body)] text-[var(--color-secondary)] hover:bg-[var(--color-border)]"
+                }`}
+              >
+                {themeKey.charAt(0).toUpperCase() + themeKey.slice(1)}
+              </button>
+            ))}
           </div>
         </Card>
 
-        {/* Seções do Hero */}
-        <div className="space-y-6">
-          {renderBadgeSection()}
-          {renderTitleSection()}
-          {renderSubtitleSection()}
-          {renderButtonSection()}
-          {renderFooterSection()}
-          {renderLayoutSection()}
-
-          {/* Fixed Action Bar */}
-          <FixedActionBar
-            onDeleteAll={openDeleteAllModal}
-            onSubmit={handleSubmitWrapper}
-            isAddDisabled={!canAddNewItem || isLimitReached}
-            isSaving={loading}
-            exists={!!exists}
-            completeCount={completeCount}
-            totalCount={totalCount}
-            itemName="Hero Section"
-            icon={Layers}
+        {/* Seção Básica */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Configurações Básicas"
+            section="basic"
+            icon={Settings}
+            isExpanded={expandedSections.basic}
+            onToggle={() => toggleSection("basic")}
           />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.basic ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)] space-y-8">
+              {/* Badge */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                  <Tag className="w-5 h-5" />
+                  Badge
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <IconSelector
+                      value={currentThemeData.badge?.icon || ""}
+                      onChange={(value) => handleThemeChange('badge.icon', value)}
+                      label="Ícone do Badge"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Deixe vazio para não mostrar ícone
+                    </p>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <TextArea
+                      label="Texto do Badge (HTML permitido)"
+                      value={currentThemeData.badge?.text || ""}
+                      onChange={(e) => handleThemeChange('badge.text', e.target.value)}
+                      placeholder="Próximo Passo Lógico"
+                      rows={2}
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Use tags HTML como &lt;span&gt; para estilização personalizada
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layout */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                  <Layout className="w-5 h-5" />
+                  Layout
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {(['simple', 'complex', 'refined'] as const).map((layout) => (
+                    <button
+                      key={layout}
+                      type="button"
+                      onClick={() => handleThemeChange('layout', layout)}
+                      className={`p-4 rounded-lg border transition-all ${
+                        currentThemeData.layout === layout
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                          : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
+                      }`}
+                    >
+                      <div className="text-center">
+                        <div className="font-medium text-[var(--color-secondary)] capitalize mb-1">
+                          {layout}
+                        </div>
+                        <p className="text-xs text-[var(--color-secondary)]/70">
+                          {layout === 'simple' && 'Layout limpo e direto'}
+                          {layout === 'complex' && 'Layout com efeitos visuais'}
+                          {layout === 'refined' && 'Layout refinado e sofisticado'}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </motion.div>
         </div>
 
-        <DeleteConfirmationModal
-          isOpen={deleteModal.isOpen}
-          onClose={closeDeleteModal}
-          onConfirm={confirmDelete}
-          type={deleteModal.type}
-          itemTitle={deleteModal.title}
-          totalItems={3}
-          itemName="Hero Section"
-        />
+        {/* Seção Conteúdo */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Conteúdo da Hero Section"
+            section="content"
+            icon={Type}
+            isExpanded={expandedSections.content}
+            onToggle={() => toggleSection("content")}
+          />
 
-        <FeedbackMessages success={success} errorMsg={errorMsg} />
-      </div>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.content ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)] space-y-8">
+              {/* Título */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+                  Título Principal
+                </h4>
+                <TextArea
+                  label="Texto do Título (HTML permitido)"
+                  value={currentThemeData.title || ""}
+                  onChange={(e) => handleThemeChange('title', e.target.value)}
+                  placeholder="Sua empresa tem um teto de crescimento..."
+                  rows={4}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <p className="text-xs text-[var(--color-secondary)]/70">
+                  Use &lt;br/&gt; para quebras de linha e &lt;span&gt; com classes para estilização
+                </p>
+              </div>
+
+              {/* Subtítulo */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+                  Subtítulo
+                </h4>
+                <TextArea
+                  label="Texto do Subtítulo (HTML permitido)"
+                  value={currentThemeData.subtitle || ""}
+                  onChange={(e) => handleThemeChange('subtitle', e.target.value)}
+                  placeholder="Não entregamos 'tentativas'..."
+                  rows={4}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <p className="text-xs text-[var(--color-secondary)]/70">
+                  Use tags HTML como &lt;strong&gt; e &lt;span&gt; para destaque
+                </p>
+              </div>
+
+              {/* Botão */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                  <Zap className="w-5 h-5" />
+                  Botão de Ação
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Texto do Botão"
+                    value={currentThemeData.button?.text || ""}
+                    onChange={(e) => handleThemeChange('button.text', e.target.value)}
+                    placeholder="SOLICITAR MEU DIAGNÓSTICO"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <div>
+                    <IconSelector
+                      value={currentThemeData.button?.icon || ""}
+                      onChange={(value) => handleThemeChange('button.icon', value)}
+                      label="Ícone do Botão"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Rodapé */}
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                  <Eye className="w-5 h-5" />
+                  Rodapé
+                </h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Texto do Rodapé"
+                    value={currentThemeData.footer?.text || ""}
+                    onChange={(e) => handleThemeChange('footer.text', e.target.value)}
+                    placeholder="Vagas limitadas para este mês"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <div>
+                    <IconSelector
+                      value={currentThemeData.footer?.icon || ""}
+                      onChange={(value) => handleThemeChange('footer.icon', value)}
+                      label="Ícone do Rodapé"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Deixe vazio para não mostrar ícone
+                    </p>
+                  </div>
+                </div>
+
+                {/* Estatísticas */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="font-medium text-[var(--color-secondary)] mb-1">Estatísticas</h5>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        Configure estatísticas para mostrar no rodapé
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      onClick={addStatItem}
+                      variant="primary"
+                      className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                    >
+                      + Adicionar Item
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {currentThemeData.footer?.stats === null || 
+                     currentThemeData.footer?.stats === undefined || 
+                     (typeof currentThemeData.footer?.stats === 'string' && !currentThemeData.footer?.stats) ? (
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        Nenhuma estatística configurada
+                      </p>
+                    ) : typeof currentThemeData.footer?.stats === 'string' ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          value={currentThemeData.footer.stats}
+                          onChange={(e) => handleThemeChange('footer.stats', e.target.value)}
+                          placeholder="+40"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                        <Button
+                          type="button"
+                          onClick={() => handleThemeChange('footer.stats', null)}
+                          variant="danger"
+                          className="bg-red-600 hover:bg-red-700 border-none"
+                        >
+                          Limpar
+                        </Button>
+                      </div>
+                    ) : Array.isArray(currentThemeData.footer?.stats) && currentThemeData.footer.stats.length > 0 ? (
+                      currentThemeData.footer.stats.map((stat, index) => (
+                        <div key={index} className="flex items-center gap-3 p-3 border border-[var(--color-border)] rounded-lg">
+                          <div className="flex-1 grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-[var(--color-secondary)]/70 mb-1">Label</label>
+                              <Input
+                                type="text"
+                                value={stat.label || ""}
+                                onChange={(e) => handleStatsChange(index, 'label', e.target.value)}
+                                placeholder="30 Min"
+                                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-[var(--color-secondary)]/70 mb-1">Sublabel</label>
+                              <Input
+                                type="text"
+                                value={stat.sublabel || ""}
+                                onChange={(e) => handleStatsChange(index, 'sublabel', e.target.value)}
+                                placeholder="Duração da Sessão"
+                                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                              />
+                            </div>
+                          </div>
+                          <Button
+                            type="button"
+                            onClick={() => removeStatItem(index)}
+                            variant="danger"
+                            className="bg-red-600 hover:bg-red-700 border-none"
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      ))
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-[var(--color-secondary)]/70">
+                    Pode ser uma string simples (ex: &quot;+40&quot;) ou um array de objetos com label/sublabel
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Tema */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Configurações do Tema"
+            section="theme"
+            icon={Palette}
+            isExpanded={expandedSections.theme}
+            onToggle={() => toggleSection("theme")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.theme ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Personalize o tema do Hero
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Configure as cores principais para esta versão do Hero
+                </p>
+              </div>
+
+              {currentThemeData.theme && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ThemePropertyInput
+                    property="bg"
+                    label="Cor Primária"
+                    description="Cor principal para destaques"
+                    currentHex={tailwindToHex(`bg-${currentThemeData.theme.primary_color || 'blue-600'}`)}
+                    tailwindClass={`bg-${currentThemeData.theme.primary_color || 'blue-600'}`}
+                    onThemeChange={(_, hex) => handleThemeColorChange('primary_color', hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="bg"
+                    label="Cor Secundária"
+                    description="Cor para elementos secundários"
+                    currentHex={tailwindToHex(`bg-${currentThemeData.theme.secondary_color || 'gray-700'}`)}
+                    tailwindClass={`bg-${currentThemeData.theme.secondary_color || 'gray-700'}`}
+                    onThemeChange={(_, hex) => handleThemeColorChange('secondary_color', hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="text"
+                    label="Cor do Texto"
+                    description="Cor principal para textos"
+                    currentHex={tailwindToHex(`text-${currentThemeData.theme.text_color || 'gray-900'}`)}
+                    tailwindClass={`text-${currentThemeData.theme.text_color || 'gray-900'}`}
+                    onThemeChange={(_, hex) => handleThemeColorChange('text_color', hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="bg"
+                    label="Cor de Fundo"
+                    description="Cor de fundo principal"
+                    currentHex={tailwindToHex(`bg-${currentThemeData.theme.background_color || 'white'}`)}
+                    tailwindClass={`bg-${currentThemeData.theme.background_color || 'white'}`}
+                    onThemeChange={(_, hex) => handleThemeColorChange('background_color', hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="bg"
+                    label="Cor de Destaque"
+                    description="Cor para elementos de destaque"
+                    currentHex={tailwindToHex(`bg-${currentThemeData.theme.accent_color || 'amber-500'}`)}
+                    tailwindClass={`bg-${currentThemeData.theme.accent_color || 'amber-500'}`}
+                    onThemeChange={(_, hex) => handleThemeColorChange('accent_color', hex)}
+                  />
+                </div>
+              )}
+            </Card>
+          </motion.div>
+        </div>
+
+        <FixedActionBar
+          onDeleteAll={openDeleteAllModal}
+          onSubmit={handleSubmit}
+          isAddDisabled={false}
+          isSaving={loading}
+          exists={!!exists}
+          completeCount={completion.completed}
+          totalCount={completion.total}
+          itemName="Hero Section"
+          icon={Layers}
+        />
+      </form>
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDelete}
+        type={deleteModal.type}
+        itemTitle={deleteModal.title}
+        totalItems={3}
+        itemName="Hero Section"
+      />
+
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }
