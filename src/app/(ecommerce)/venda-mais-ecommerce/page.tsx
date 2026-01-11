@@ -19,13 +19,20 @@ import {
   CheckCircle2,
   Trash2,
   XCircle,
-  Search
+  Search,
+  Tag,
+  Type,
+  Sparkles,
+  Palette,
+  Award
 } from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { ImageUpload } from "@/components/ImageUpload";
+import ColorPicker from "@/components/ColorPicker";
+import { extractHexFromTailwind } from "@/lib/colorUtils";
 import {
   DndContext,
   closestCenter,
@@ -48,10 +55,30 @@ interface CaseItem {
   id?: string;
   title: string;
   subtitle: string;
+  badge: string;
   description: string;
   image: string;
   file?: File | null;
+  color: string;
+  badgeColor: string;
+  effect: "none" | "glow" | "pulse" | "shadow" | "gradient";
 }
+
+const CustomCard = ({ style, children, className, ...props }: any) => {
+  return (
+    <div style={style} className={className}>
+      <Card {...props}>{children}</Card>
+    </div>
+  );
+};
+
+const effectOptions = [
+  { value: "none", label: "Sem Efeito" },
+  { value: "glow", label: "Brilho Suave" },
+  { value: "pulse", label: "Pulsação Leve" },
+  { value: "shadow", label: "Sombra Elevada" },
+  { value: "gradient", label: "Gradiente" },
+];
 
 function SortableCaseItem({
   item,
@@ -98,9 +125,16 @@ function SortableCaseItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const hasTitle = item.title.trim() !== "";
-  const hasDescription = item.description.trim() !== "";
-  const hasImage = Boolean(item.image?.trim() !== "" || item.file);
+  const hasTitle = item?.title?.trim() !== "";
+  const hasSubtitle = item?.subtitle?.trim() !== "";
+  const hasBadge = item?.badge?.trim() !== "";
+  const hasDescription = item?.description?.trim() !== "";
+  const hasImage = Boolean(item?.image?.trim() !== "" || item.file);
+  const hasColor = item?.color?.trim() !== "";
+  const hasBadgeColor = item?.badgeColor?.trim() !== "";
+  
+  const colorHex = extractHexFromTailwind(item.color);
+  const badgeColorHex = extractHexFromTailwind(item?.badgeColor);
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -113,17 +147,40 @@ function SortableCaseItem({
     [setNodeRef, isLastAndEmpty, setNewItemRef]
   );
 
+  const handleColorChange = (hexColor: string, type: "main" | "badge") => {
+    const field = type === "main" ? "color" : "badgeColor";
+    handleChange(originalIndex, field, hexColor);
+  };
+
+  const getEffectClasses = (effect: string) => {
+    switch (effect) {
+      case "glow":
+        return "shadow-lg shadow-current/20";
+      case "pulse":
+        return "animate-pulse";
+      case "shadow":
+        return "shadow-2xl";
+      case "gradient":
+        return "bg-gradient-to-r from-current to-transparent";
+      default:
+        return "";
+    }
+  };
+
   return (
     <div
       ref={setRefs}
       style={style}
       className={`relative ${isDragging ? 'z-50' : ''}`}
     >
-      <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-        isLastInOriginalList && showValidation && (!hasTitle || !hasDescription || !hasImage) 
-          ? 'ring-2 ring-[var(--color-danger)]' 
-          : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-primary)]`}>
+      <CustomCard
+        style={{ borderLeftColor: colorHex || '#8B5CF6' }}
+        className={`mb-4 overflow-hidden transition-all duration-300 border-l-4 ${
+          isLastInOriginalList && showValidation && (!hasTitle || !hasDescription || !hasImage) 
+            ? 'ring-2 ring-[var(--color-danger)]' 
+            : ''
+        } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)]`}
+      >
         <div className="p-6">
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -151,11 +208,11 @@ function SortableCaseItem({
                     </h4>
                   )}
                   {hasTitle && hasDescription && hasImage ? (
-                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-300 rounded-full border border-[var(--color-success)]/30">
+                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-[var(--color-success)] rounded-full border border-[var(--color-success)]/30">
                       Completo
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-red rounded-full border border-[var(--color-warning)]/30">
+                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-[var(--color-warning)] rounded-full border border-[var(--color-warning)]/30">
                       Incompleto
                     </span>
                   )}
@@ -165,7 +222,7 @@ function SortableCaseItem({
             
             <Button
               type="button"
-              onClick={() => openDeleteSingleModal(originalIndex, item.title)}
+              onClick={() => openDeleteSingleModal(originalIndex, item.title || "Case sem título")}
               variant="danger"
               className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
               disabled={itemList.length <= 1}
@@ -176,13 +233,12 @@ function SortableCaseItem({
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
                   <Target className="w-4 h-4" />
                   Imagem do Case
                 </label>
-
                 <ImageUpload
                   label="Imagem de Destaque"
                   description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x400px."
@@ -194,12 +250,35 @@ function SortableCaseItem({
                   previewHeight={150}
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                  <Palette className="w-4 h-4" />
+                  Cor Principal
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={item.color}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      handleChange(originalIndex, "color", e.target.value);
+                    }}
+                    placeholder="Ex: #8B5CF6"
+                    className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <ColorPicker
+                    color={colorHex}
+                    onChange={(hex: string) => handleColorChange(hex, "main")}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="lg:col-span-2 space-y-6">
-              <div className="space-y-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
                   <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Type className="w-4 h-4" />
                     Título do Case
                     <span className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-[var(--color-success)]/10 text-white rounded">
                       <Bold className="w-3 h-3" />
@@ -209,12 +288,28 @@ function SortableCaseItem({
                   <Input
                     type="text"
                     value={item.title}
-                    onChange={(e: any) => handleChange(originalIndex, "title", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "title", e.target.value)}
                     placeholder="Ex: Case 40k - R$40.000,00 de faturamento em 90 dias"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                    <Award className="w-4 h-4" />
+                    Badge/Etiqueta
+                  </label>
+                  <Input
+                    type="text"
+                    value={item?.badge}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "badge", e.target.value)}
+                    placeholder="Ex: Sucesso, Destaque, Recorde"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[var(--color-secondary)]">
                     Subtítulo/Resultado
@@ -222,13 +317,51 @@ function SortableCaseItem({
                   <Input
                     type="text"
                     value={item.subtitle}
-                    onChange={(e: any) => handleChange(originalIndex, "subtitle", e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "subtitle", e.target.value)}
                     placeholder="Ex: R$40.000,00 de faturamento em 90 dias"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
                     Destaque o resultado principal do case de forma impactante
                   </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Efeito Visual
+                  </label>
+                  <select
+                    value={item.effect}
+                    onChange={(e) => handleChange(originalIndex, "effect", e.target.value)}
+                    className="w-full p-2 rounded-lg bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)]"
+                  >
+                    {effectOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  Cor do Badge
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    placeholder="Ex: #10B981"
+                    value={item.badgeColor}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange(originalIndex, "badgeColor", e.target.value)}
+                    className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <ColorPicker
+                    color={badgeColorHex}
+                    onChange={(hex: string) => handleColorChange(hex, "badge")}
+                  />
                 </div>
               </div>
 
@@ -247,7 +380,7 @@ function SortableCaseItem({
             </div>
           </div>
         </div>
-      </Card>
+      </CustomCard>
     </div>
   );
 }
@@ -262,9 +395,13 @@ export default function CasesVendaMaisPage({
   const defaultItem = useMemo(() => ({ 
     title: "", 
     subtitle: "",
+    badge: "",
     description: "",
     image: "",
-    file: null, 
+    file: null,
+    color: "#8B5CF6",
+    badgeColor: "#10B981",
+    effect: "none" as const,
   }), []);
 
   const [localItems, setLocalItems] = useState<CaseItem[]>([]);
@@ -366,7 +503,13 @@ export default function CasesVendaMaisPage({
       fd.append(
         "values",
         JSON.stringify(
-          filteredList.map(({ file, ...rest }) => rest)
+          filteredList.map(({ file, ...rest }) => ({
+            ...rest,
+            badge: rest.badge || "",
+            color: rest.color || "#8B5CF6",
+            badgeColor: rest.badgeColor || "#10B981",
+            effect: rest.effect || "none",
+          }))
         )
       );
 
@@ -392,6 +535,10 @@ export default function CasesVendaMaisPage({
 
       const normalized = saved.values.map((v: any, i: number) => ({
         ...v,
+        badge: v.badge || "",
+        color: v.color || "#8B5CF6",
+        badgeColor: v.badgeColor || "#10B981",
+        effect: v.effect || "none",
         id: v.id || `case-${Date.now()}-${i}`,
         file: null,
       }));
@@ -450,7 +597,11 @@ export default function CasesVendaMaisPage({
     filteredList.forEach((item, i) => {
       fd.append(`values[${i}][title]`, item.title || "");
       fd.append(`values[${i}][subtitle]`, item.subtitle || "");
+      fd.append(`values[${i}][badge]`, item.badge || "");
       fd.append(`values[${i}][description]`, item.description || "");
+      fd.append(`values[${i}][color]`, item.color || "#8B5CF6");
+      fd.append(`values[${i}][badgeColor]`, item.badgeColor || "#10B981");
+      fd.append(`values[${i}][effect]`, item.effect || "none");
       fd.append(`values[${i}][image]`, item.image || "");
       
       if (item.file) {
@@ -484,9 +635,13 @@ export default function CasesVendaMaisPage({
     const newItem: CaseItem = {
       title: '',
       subtitle: '',
+      badge: '',
       description: '',
       image: '',
-      file: null
+      file: null,
+      color: '#8B5CF6',
+      badgeColor: '#10B981',
+      effect: 'none'
     };
     
     const updated = [...localItems, newItem];
@@ -511,6 +666,7 @@ export default function CasesVendaMaisPage({
       filtered = filtered.filter(item => 
         item.title.toLowerCase().includes(term) ||
         item.subtitle.toLowerCase().includes(term) ||
+        item?.badge?.toLowerCase().includes(term) ||
         item.description.toLowerCase().includes(term)
       );
     }
@@ -535,13 +691,17 @@ export default function CasesVendaMaisPage({
     let completed = 0;
     let total = 0;
 
-    // Cada case tem 4 campos (título, subtítulo, descrição, imagem)
-    total += localItems.length * 4;
+    // Cada case tem 9 campos (incluindo os novos)
+    total += localItems.length * 9;
     localItems.forEach(item => {
-      if (item.title.trim()) completed++;
-      if (item.subtitle.trim()) completed++;
-      if (item.description.trim()) completed++;
-      if (item.image?.trim() || item.file) completed++;
+      if (item?.title?.trim()) completed++;
+      if (item?.subtitle?.trim()) completed++;
+      if (item?.badge?.trim()) completed++;
+      if (item?.description?.trim()) completed++;
+      if (item?.color?.trim()) completed++;
+      if (item?.badgeColor?.trim()) completed++;
+      if (item?.effect?.trim()) completed++;
+      if (item?.image?.trim() || item.file) completed++;
     });
 
     return { completed, total };
@@ -579,7 +739,11 @@ export default function CasesVendaMaisPage({
                 </div>
                 <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                 <span className="text-sm text-[var(--color-secondary)]/70">
-                  Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                  Campos: {completion.completed}/{completion.total}
+                </span>
+                <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                <span className="text-sm text-[var(--color-secondary)]/70">
+                  Limite: {currentPlanLimit} itens
                 </span>
               </div>
             </div>
@@ -594,9 +758,9 @@ export default function CasesVendaMaisPage({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
               <Input
                 type="text"
-                placeholder="Buscar cases por título, subtítulo ou descrição..."
+                placeholder="Buscar cases por título, subtítulo, badge ou descrição..."
                 value={searchTerm}
-                onChange={(e: any) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
               />
             </div>
@@ -650,11 +814,15 @@ export default function CasesVendaMaisPage({
                 >
                   {filteredItems.map((item, index) => {
                     const originalIndex = localItems.findIndex(i => i.id === item.id) || index;
-                    const hasTitle = item.title.trim() !== "";
-                    const hasDescription = item.description.trim() !== "";
-                    const hasImage = Boolean(item.image?.trim() !== "" || item.file);
+                    const hasTitle = item?.title?.trim() !== "";
+                    const hasSubtitle = item?.subtitle?.trim() !== "";
+                    const hasBadge = item?.badge?.trim() !== "";
+                    const hasDescription = item?.description?.trim() !== "";
+                    const hasImage = Boolean(item?.image?.trim() !== "" || item.file);
+                    const hasColor = item?.color?.trim() !== "";
+                    const hasBadgeColor = item?.badgeColor?.trim() !== "";
                     const isLastInOriginalList = originalIndex === localItems.length - 1;
-                    const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasDescription && !hasImage;
+                    const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasSubtitle && !hasBadge && !hasDescription && !hasImage && !hasColor && !hasBadgeColor;
 
                     return (
                       <SortableCaseItem

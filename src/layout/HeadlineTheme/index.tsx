@@ -1,4 +1,3 @@
-// components/HeadlinePageComponent.tsx
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -23,13 +22,24 @@ import {
   Megaphone,
   Info,
   GraduationCap,
-  LucideIcon,
   GripVertical,
   AlertCircle,
   CheckCircle2,
   XCircle,
   Trash2,
-  Plus
+  Plus,
+  Users,
+  Target,
+  TrendingUp,
+  BarChart3,
+  Award,
+  ArrowRight,
+  Globe,
+  BookOpen,
+  Clock,
+  Star,
+  DollarSign,
+  TrendingUp as TrendingUpIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -38,6 +48,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import ColorPicker from "@/components/ColorPicker";
 import IconSelector from "@/components/IconSelector";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
+import { TextArea } from "@/components/TextArea";
 
 interface BadgeData {
   icone?: string;
@@ -98,12 +109,96 @@ interface HeadlinePageData {
   configuracoes?: ConfiguracoesData;
 }
 
+// ESTRUTURA PARA CURSOS
+interface CursoTheme {
+  accentColor?: string;
+  secondaryColor?: string;
+  buttonTextColor?: string;
+  buttonIconColor?: string;
+}
+
+interface CursoHeadline {
+  prefix?: string;
+  highlight?: string;
+}
+
+interface CursoSubheadline {
+  main?: string;
+  highlight?: string;
+  description?: string;
+}
+
+interface CursoCTAButton {
+  text?: string;
+  url?: string;
+  bg?: string;
+  textColor?: string;
+  iconColor?: string;
+  glow?: string;
+  hoverBg?: string;
+  borderColor?: string;
+}
+
+interface CursoCTA {
+  primary?: CursoCTAButton;
+  secondary?: CursoCTAButton;
+}
+
+interface CursoSocialProof {
+  count?: string;
+  label?: string;
+}
+
+interface CursoCardItem {
+  name?: string;
+  status?: "Liberado" | "Bloqueado";
+}
+
+interface CursoCardHeader {
+  title?: string;
+  subtitle?: string;
+  tag?: string;
+}
+
+interface CursoCardFooter {
+  label?: string;
+  value?: string;
+}
+
+interface CursoCardFloatingBadge {
+  label?: string;
+  value?: string;
+}
+
+interface CursoCardData {
+  header?: CursoCardHeader;
+  items?: CursoCardItem[];
+  footer?: CursoCardFooter;
+  floatingBadge?: CursoCardFloatingBadge;
+}
+
+interface CursoContent {
+  headline?: CursoHeadline;
+  subheadline?: CursoSubheadline;
+  cta?: CursoCTA;
+  socialProof?: CursoSocialProof;
+  card?: CursoCardData;
+}
+
+interface CursoPageData {
+  theme?: CursoTheme;
+  content?: CursoContent;
+}
+
+// TIPO UNION PARA DADOS DO HEADLINE
+type HeadlinePageDataUnion = HeadlinePageData | CursoPageData;
+
 interface HeadlineData {
   home?: HeadlinePageData;
   ecommerce?: HeadlinePageData;
   marketing?: HeadlinePageData;
   sobre?: HeadlinePageData;
-  cursos?: HeadlinePageData;
+  cursos?: CursoPageData;
   defaultTheme?: "home" | "ecommerce" | "marketing" | "sobre" | "cursos";
 }
 
@@ -148,12 +243,74 @@ const defaultHeadlinePageData: HeadlinePageData = {
   }
 };
 
+const defaultCursoPageData: CursoPageData = {
+  theme: {
+    accentColor: "#FFD700",
+    secondaryColor: "#B8860B",
+    buttonTextColor: "#000000",
+    buttonIconColor: "#000000"
+  },
+  content: {
+    headline: {
+      prefix: "Você não precisa entender de internet para",
+      highlight: "começar a vender online."
+    },
+    subheadline: {
+      main: "Descubra o passo a passo completo —",
+      highlight: "do zero à sua primeira venda.",
+      description: "Produto, fornecedor, loja, tráfego e atendimento: tudo explicado de forma simples."
+    },
+    cta: {
+      primary: {
+        text: "COMEÇAR AGORA",
+        url: "#cursos",
+        bg: "#FFD700",
+        textColor: "#000000",
+        iconColor: "#000000",
+        glow: "rgba(255, 215, 0, 0.3)"
+      },
+      secondary: {
+        text: "Ver Conteúdo",
+        url: "#conteudo",
+        textColor: "#FFD700",
+        hoverBg: "rgba(255, 215, 0, 0.05)",
+        borderColor: "rgba(255, 215, 0, 0.2)"
+      }
+    },
+    socialProof: {
+      count: "+1.200",
+      label: "alunos formados"
+    },
+    card: {
+      header: {
+        title: "Ecossistema TegPro",
+        subtitle: "Status: Escala Permitida",
+        tag: "Sistema Ativo"
+      },
+      items: [
+        { name: "Gestão de Tráfego 3.0", status: "Liberado" },
+        { name: "Copywriting Neural", status: "Liberado" },
+        { name: "Automação & CRM", status: "Liberado" },
+        { name: "Vendas High-Ticket", status: "Bloqueado" }
+      ],
+      footer: {
+        label: "PROGRESSO",
+        value: "75%"
+      },
+      floatingBadge: {
+        label: "ROI Mensal",
+        value: "+145%"
+      }
+    }
+  }
+};
+
 const defaultHeadlineData: HeadlineData = {
   home: { ...defaultHeadlinePageData },
   ecommerce: { ...defaultHeadlinePageData },
   marketing: { ...defaultHeadlinePageData },
   sobre: { ...defaultHeadlinePageData },
-  cursos: { ...defaultHeadlinePageData },
+  cursos: { ...defaultCursoPageData },
   defaultTheme: "home"
 };
 
@@ -164,6 +321,15 @@ const expandedSectionsDefault = {
   botao: false,
   agenda: false,
   configuracoes: false
+};
+
+const expandedCursoSectionsDefault = {
+  theme: true,
+  headline: false,
+  subheadline: false,
+  cta: false,
+  socialProof: false,
+  card: false
 };
 
 // Componente ThemeTab
@@ -197,11 +363,14 @@ const getSafeData = <T,>(data: T | undefined | null, defaultValue: T): T => {
   return data;
 };
 
-export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommerce" | "marketing" | "sobre" | "cursos"}) {
+export default function HeadlinePageComponent({ activeTab }: {activeTab: "home" | "ecommerce" | "marketing" | "sobre" | "cursos"}) {
   const [activeTheme, setActiveTheme] = useState<"home" | "ecommerce" | "marketing" | "sobre" | "cursos">(activeTab);
   const [expandedSections, setExpandedSections] = useState(expandedSectionsDefault);
+  const [expandedCursoSections, setExpandedCursoSections] = useState(expandedCursoSectionsDefault);
   const [localPalavrasAnimadas, setLocalPalavrasAnimadas] = useState<PalavraAnimada[]>([]);
+  const [localCardItems, setLocalCardItems] = useState<CursoCardItem[]>([]);
   const [draggingPalavra, setDraggingPalavra] = useState<number | null>(null);
+  const [draggingCardItem, setDraggingCardItem] = useState<number | null>(null);
   
   const {
     data: headlineData,
@@ -220,47 +389,79 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
     defaultData: defaultHeadlineData,
   });
 
-  // Referência para nova palavra animada
+  // Referência para nova palavra animada e card item
   const newPalavraRef = useRef<HTMLDivElement>(null);
+  const newCardItemRef = useRef<HTMLDivElement>(null);
 
   // Controle de planos
   const currentPlanType = 'pro';
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
-  // Sincroniza palavras animadas quando carregam do banco
+  // Resetar estados quando mudar de tema
   useEffect(() => {
-    const currentThemeData = getCurrentThemeData();
-    const palavras = currentThemeData.titulo?.palavrasAnimadas || [];
-    setLocalPalavrasAnimadas(palavras);
-  }, [headlineData, activeTheme]);
+    if (activeTheme !== 'cursos') {
+      setExpandedSections(expandedSectionsDefault);
+      const currentThemeData = getCurrentThemeData() as HeadlinePageData;
+      const palavras = currentThemeData.titulo?.palavrasAnimadas || [];
+      setLocalPalavrasAnimadas(palavras);
+    } else {
+      setExpandedCursoSections(expandedCursoSectionsDefault);
+      const currentThemeData = getCurrentThemeData() as CursoPageData;
+      const items = currentThemeData.content?.card?.items || [];
+      setLocalCardItems(items);
+    }
+  }, [activeTheme, headlineData]);
 
   // Helper para obter dados do tema atual de forma segura
-  const getCurrentThemeData = useCallback((): HeadlinePageData => {
+  const getCurrentThemeData = useCallback((): HeadlinePageDataUnion => {
     const themeData = headlineData?.[activeTheme];
-    return getSafeData(themeData, defaultHeadlinePageData);
+    if (activeTheme === 'cursos') {
+      return getSafeData(themeData as CursoPageData, defaultCursoPageData);
+    }
+    return getSafeData(themeData as HeadlinePageData, defaultHeadlinePageData);
   }, [headlineData, activeTheme]);
 
   // Calcular campos completos
   const calculateCompleteCount = useCallback(() => {
-    const currentThemeData = getCurrentThemeData();
-    let count = 0;
-    
-    // Verificar campos básicos com encadeamento opcional
-    if (currentThemeData.badge?.texto?.trim() !== "") count++;
-    if (currentThemeData.titulo?.tituloPrincipal?.trim() !== "") count++;
-    if (currentThemeData.subtitulo?.trim() !== "") count++;
-    if (currentThemeData.botao?.texto?.trim() !== "" && currentThemeData.botao?.link?.trim() !== "") count++;
-    if (currentThemeData.agenda?.texto?.trim() !== "") count++;
-    if (currentThemeData.configuracoes?.corFundo?.trim() !== "") count++;
-    
-    return count;
-  }, [getCurrentThemeData]);
+    if (activeTheme === 'cursos') {
+      const currentThemeData = getCurrentThemeData() as CursoPageData;
+      let count = 0;
+      
+      if (currentThemeData.theme?.accentColor?.trim() !== "") count++;
+      if (currentThemeData.theme?.secondaryColor?.trim() !== "") count++;
+      if (currentThemeData.content?.headline?.prefix?.trim() !== "") count++;
+      if (currentThemeData.content?.headline?.highlight?.trim() !== "") count++;
+      if (currentThemeData.content?.cta?.primary?.text?.trim() !== "") count++;
+      if (currentThemeData.content?.socialProof?.count?.trim() !== "") count++;
+      
+      return count;
+    } else {
+      const currentThemeData = getCurrentThemeData() as HeadlinePageData;
+      let count = 0;
+      
+      if (currentThemeData.badge?.texto?.trim() !== "") count++;
+      if (currentThemeData.titulo?.tituloPrincipal?.trim() !== "") count++;
+      if (currentThemeData.subtitulo?.trim() !== "") count++;
+      if (currentThemeData.botao?.texto?.trim() !== "" && currentThemeData.botao?.link?.trim() !== "") count++;
+      if (currentThemeData.agenda?.texto?.trim() !== "") count++;
+      if (currentThemeData.configuracoes?.corFundo?.trim() !== "") count++;
+      
+      return count;
+    }
+  }, [activeTheme, getCurrentThemeData]);
 
   const completeCount = calculateCompleteCount();
-  const totalCount = 6;
+  const totalCount = activeTheme === 'cursos' ? 6 : 6;
 
   const toggleSection = (section: keyof typeof expandedSectionsDefault) => {
     setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  const toggleCursoSection = (section: keyof typeof expandedCursoSectionsDefault) => {
+    setExpandedCursoSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
@@ -275,7 +476,7 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
     handleThemeChange(path, cleanColor);
   };
 
-  // Funções para palavras animadas com drag & drop
+  // Funções para palavras animadas com drag & drop (apenas para temas não-cursos)
   const handleAddPalavraAnimada = () => {
     if (localPalavrasAnimadas.length >= currentPlanLimit) {
       return false;
@@ -333,6 +534,58 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
     }
   };
 
+  // Funções para card items (apenas para cursos)
+  const handleAddCardItem = () => {
+    if (localCardItems.length >= currentPlanLimit) {
+      return false;
+    }
+    
+    const newItem: CursoCardItem = {
+      name: "",
+      status: "Liberado"
+    };
+    
+    const updated = [...localCardItems, newItem];
+    setLocalCardItems(updated);
+    handleThemeChange('content.card.items', updated);
+    
+    setTimeout(() => {
+      newCardItemRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const updateCardItem = (index: number, updates: Partial<CursoCardItem>) => {
+    const updated = [...localCardItems];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalCardItems(updated);
+      handleThemeChange('content.card.items', updated);
+    }
+  };
+
+  const removeCardItem = (index: number) => {
+    const updated = [...localCardItems];
+    
+    if (updated.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyItem: CursoCardItem = {
+        name: "",
+        status: "Liberado"
+      };
+      setLocalCardItems([emptyItem]);
+      handleThemeChange('content.card.items', [emptyItem]);
+    } else {
+      updated.splice(index, 1);
+      setLocalCardItems(updated);
+      handleThemeChange('content.card.items', updated);
+    }
+  };
+
   // Funções de drag & drop para palavras animadas
   const handlePalavraDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
@@ -348,14 +601,11 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
     const updated = [...localPalavrasAnimadas];
     const draggedItem = updated[draggingPalavra];
     
-    // Remove o item arrastado
     updated.splice(draggingPalavra, 1);
     
-    // Insere na nova posição
     const newIndex = index > draggingPalavra ? index : index;
     updated.splice(newIndex, 0, draggedItem);
     
-    // Atualiza ordens
     updated.forEach((palavra, idx) => {
       palavra.ordem = idx + 1;
     });
@@ -368,6 +618,34 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
   const handlePalavraDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
     setDraggingPalavra(null);
+  };
+
+  // Funções de drag & drop para card items
+  const handleCardItemDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingCardItem(index);
+  };
+
+  const handleCardItemDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingCardItem === null || draggingCardItem === index) return;
+    
+    const updated = [...localCardItems];
+    const draggedItem = updated[draggingCardItem];
+    
+    updated.splice(draggingCardItem, 1);
+    updated.splice(index, 0, draggedItem);
+    
+    setLocalCardItems(updated);
+    handleThemeChange('content.card.items', updated);
+    setDraggingCardItem(index);
+  };
+
+  const handleCardItemDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingCardItem(null);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -398,76 +676,995 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
     return palavra.texto?.trim() !== '' && palavra.cor?.trim() !== '';
   };
 
+  const isCardItemValid = (item: CursoCardItem): boolean => {
+    return item.name?.trim() !== '' && item.status?.trim() !== '';
+  };
+
   const isPalavrasLimitReached = localPalavrasAnimadas.length >= currentPlanLimit;
   const canAddNewPalavra = !isPalavrasLimitReached;
   const palavrasCompleteCount = localPalavrasAnimadas.filter(isPalavraAnimadaValid).length;
   const palavrasTotalCount = localPalavrasAnimadas.length;
 
-  const palavrasValidationError = isPalavrasLimitReached 
-    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
-    : null;
+  const isCardItemsLimitReached = localCardItems.length >= currentPlanLimit;
+  const canAddNewCardItem = !isCardItemsLimitReached;
+  const cardItemsCompleteCount = localCardItems.filter(isCardItemValid).length;
+  const cardItemsTotalCount = localCardItems.length;
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
-    const currentThemeData = getCurrentThemeData();
+    
+    if (activeTheme === 'cursos') {
+      const currentThemeData = getCurrentThemeData() as CursoPageData;
 
-    // Badge (4 campos)
-    total += 4;
-    if (currentThemeData.badge?.icone?.trim()) completed++;
-    if (currentThemeData.badge?.texto?.trim()) completed++;
-    if (currentThemeData.badge?.cor?.trim()) completed++;
-    if (currentThemeData.badge?.visivel !== undefined) completed++;
+      // Tema (4 campos)
+      total += 4;
+      if (currentThemeData.theme?.accentColor?.trim()) completed++;
+      if (currentThemeData.theme?.secondaryColor?.trim()) completed++;
+      if (currentThemeData.theme?.buttonTextColor?.trim()) completed++;
+      if (currentThemeData.theme?.buttonIconColor?.trim()) completed++;
 
-    // Título (3 campos + palavras animadas)
-    total += 3;
-    if (currentThemeData.titulo?.chamada?.trim()) completed++;
-    if (currentThemeData.titulo?.tituloPrincipal?.trim()) completed++;
-    if (currentThemeData.titulo?.separador?.trim()) completed++;
+      // Headline (2 campos)
+      total += 2;
+      if (currentThemeData.content?.headline?.prefix?.trim()) completed++;
+      if (currentThemeData.content?.headline?.highlight?.trim()) completed++;
 
-    // Palavras Animadas (2 campos cada)
-    total += localPalavrasAnimadas.length * 2;
-    localPalavrasAnimadas.forEach(palavra => {
-      if (palavra.texto?.trim()) completed++;
-      if (palavra.cor?.trim()) completed++;
-    });
+      // Subheadline (3 campos)
+      total += 3;
+      if (currentThemeData.content?.subheadline?.main?.trim()) completed++;
+      if (currentThemeData.content?.subheadline?.highlight?.trim()) completed++;
+      if (currentThemeData.content?.subheadline?.description?.trim()) completed++;
 
-    // Subtítulo (1 campo)
-    total += 1;
-    if (currentThemeData.subtitulo?.trim()) completed++;
+      // CTA Primary (6 campos)
+      total += 6;
+      const primaryCta = currentThemeData.content?.cta?.primary;
+      if (primaryCta?.text?.trim()) completed++;
+      if (primaryCta?.url?.trim()) completed++;
+      if (primaryCta?.bg?.trim()) completed++;
+      if (primaryCta?.textColor?.trim()) completed++;
+      if (primaryCta?.iconColor?.trim()) completed++;
+      if (primaryCta?.glow?.trim()) completed++;
 
-    // Botão (5 campos)
-    total += 5;
-    if (currentThemeData.botao?.texto?.trim()) completed++;
-    if (currentThemeData.botao?.link?.trim()) completed++;
-    if (currentThemeData.botao?.icone?.trim()) completed++;
-    if (currentThemeData.botao?.estilo?.trim()) completed++;
-    if (currentThemeData.botao?.visivel !== undefined) completed++;
+      // CTA Secondary (5 campos)
+      total += 5;
+      const secondaryCta = currentThemeData.content?.cta?.secondary;
+      if (secondaryCta?.text?.trim()) completed++;
+      if (secondaryCta?.url?.trim()) completed++;
+      if (secondaryCta?.textColor?.trim()) completed++;
+      if (secondaryCta?.hoverBg?.trim()) completed++;
+      if (secondaryCta?.borderColor?.trim()) completed++;
 
-    // Agenda (5 campos)
-    total += 5;
-    if (currentThemeData.agenda?.status?.trim()) completed++;
-    if (currentThemeData.agenda?.mes?.trim()) completed++;
-    if (currentThemeData.agenda?.corStatus?.trim()) completed++;
-    if (currentThemeData.agenda?.texto?.trim()) completed++;
-    if (currentThemeData.agenda?.visivel !== undefined) completed++;
+      // Social Proof (2 campos)
+      total += 2;
+      if (currentThemeData.content?.socialProof?.count?.trim()) completed++;
+      if (currentThemeData.content?.socialProof?.label?.trim()) completed++;
 
-    // Configurações (6 campos)
-    total += 6;
-    if (currentThemeData.configuracoes?.intervaloAnimacao) completed++;
-    if (currentThemeData.configuracoes?.corFundo?.trim()) completed++;
-    if (currentThemeData.configuracoes?.corDestaque?.trim()) completed++;
-    if (currentThemeData.configuracoes?.efeitos?.brilhoTitulo?.trim() !== undefined) completed++;
-    if (currentThemeData.configuracoes?.efeitos?.spotlight !== undefined) completed++;
-    if (currentThemeData.configuracoes?.efeitos?.grid !== undefined) completed++;
+      // Card Header (3 campos)
+      total += 3;
+      const cardHeader = currentThemeData.content?.card?.header;
+      if (cardHeader?.title?.trim()) completed++;
+      if (cardHeader?.subtitle?.trim()) completed++;
+      if (cardHeader?.tag?.trim()) completed++;
+
+      // Card Items (2 campos cada)
+      total += localCardItems.length * 2;
+      localCardItems.forEach(item => {
+        if (item.name?.trim()) completed++;
+        if (item.status?.trim()) completed++;
+      });
+
+      // Card Footer (2 campos)
+      total += 2;
+      const cardFooter = currentThemeData.content?.card?.footer;
+      if (cardFooter?.label?.trim()) completed++;
+      if (cardFooter?.value?.trim()) completed++;
+
+      // Floating Badge (2 campos)
+      total += 2;
+      const floatingBadge = currentThemeData.content?.card?.floatingBadge;
+      if (floatingBadge?.label?.trim()) completed++;
+      if (floatingBadge?.value?.trim()) completed++;
+    } else {
+      const currentThemeData = getCurrentThemeData() as HeadlinePageData;
+
+      // Badge (4 campos)
+      total += 4;
+      if (currentThemeData.badge?.icone?.trim()) completed++;
+      if (currentThemeData.badge?.texto?.trim()) completed++;
+      if (currentThemeData.badge?.cor?.trim()) completed++;
+      if (currentThemeData.badge?.visivel !== undefined) completed++;
+
+      // Título (3 campos + palavras animadas)
+      total += 3;
+      if (currentThemeData.titulo?.chamada?.trim()) completed++;
+      if (currentThemeData.titulo?.tituloPrincipal?.trim()) completed++;
+      if (currentThemeData.titulo?.separador?.trim()) completed++;
+
+      // Palavras Animadas (2 campos cada)
+      total += localPalavrasAnimadas.length * 2;
+      localPalavrasAnimadas.forEach(palavra => {
+        if (palavra.texto?.trim()) completed++;
+        if (palavra.cor?.trim()) completed++;
+      });
+
+      // Subtítulo (1 campo)
+      total += 1;
+      if (currentThemeData.subtitulo?.trim()) completed++;
+
+      // Botão (5 campos)
+      total += 5;
+      if (currentThemeData.botao?.texto?.trim()) completed++;
+      if (currentThemeData.botao?.link?.trim()) completed++;
+      if (currentThemeData.botao?.icone?.trim()) completed++;
+      if (currentThemeData.botao?.estilo?.trim()) completed++;
+      if (currentThemeData.botao?.visivel !== undefined) completed++;
+
+      // Agenda (5 campos)
+      total += 5;
+      if (currentThemeData.agenda?.status?.trim()) completed++;
+      if (currentThemeData.agenda?.mes?.trim()) completed++;
+      if (currentThemeData.agenda?.corStatus?.trim()) completed++;
+      if (currentThemeData.agenda?.texto?.trim()) completed++;
+      if (currentThemeData.agenda?.visivel !== undefined) completed++;
+
+      // Configurações (6 campos)
+      total += 6;
+      if (currentThemeData.configuracoes?.intervaloAnimacao) completed++;
+      if (currentThemeData.configuracoes?.corFundo?.trim()) completed++;
+      if (currentThemeData.configuracoes?.corDestaque?.trim()) completed++;
+      if (currentThemeData.configuracoes?.efeitos?.brilhoTitulo?.trim() !== undefined) completed++;
+      if (currentThemeData.configuracoes?.efeitos?.spotlight !== undefined) completed++;
+      if (currentThemeData.configuracoes?.efeitos?.grid !== undefined) completed++;
+    }
 
     return { completed, total };
   };
 
   const completion = calculateCompletion();
 
+  // RENDERIZAÇÃO PARA CURSOS
+  const renderCursoThemeSection = () => {
+    const currentThemeData = getCurrentThemeData() as CursoPageData;
+    const themeData = currentThemeData.theme;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Tema de Cores" 
+          section="theme" 
+          icon={Palette}
+          isExpanded={expandedCursoSections.theme}
+          onToggle={() => toggleCursoSection("theme")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedCursoSections.theme ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)]">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor de Destaque (Primária)
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="#FFD700"
+                    value={themeData?.accentColor || "#FFD700"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('theme.accentColor', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                  />
+                  <ColorPicker
+                    color={themeData?.accentColor || "#FFD700"}
+                    onChange={(color: string) => handleColorChange('theme.accentColor', color)}
+                  />
+                </div>
+                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                  Cor dourada para elementos principais
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor Secundária
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="#B8860B"
+                    value={themeData?.secondaryColor || "#B8860B"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('theme.secondaryColor', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                  />
+                  <ColorPicker
+                    color={themeData?.secondaryColor || "#B8860B"}
+                    onChange={(color: string) => handleColorChange('theme.secondaryColor', color)}
+                  />
+                </div>
+                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                  Cor bronze para elementos secundários
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor do Texto do Botão
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="#000000"
+                    value={themeData?.buttonTextColor || "#000000"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('theme.buttonTextColor', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                  />
+                  <ColorPicker
+                    color={themeData?.buttonTextColor || "#000000"}
+                    onChange={(color: string) => handleColorChange('theme.buttonTextColor', color)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                  Cor do Ícone do Botão
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="#000000"
+                    value={themeData?.buttonIconColor || "#000000"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('theme.buttonIconColor', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                  />
+                  <ColorPicker
+                    color={themeData?.buttonIconColor || "#000000"}
+                    onChange={(color: string) => handleColorChange('theme.buttonIconColor', color)}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const renderCursoHeadlineSection = () => {
+    const currentThemeData = getCurrentThemeData() as CursoPageData;
+    const headlineData = currentThemeData.content?.headline;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Headline Principal" 
+          section="headline" 
+          icon={Type}
+          isExpanded={expandedCursoSections.headline}
+          onToggle={() => toggleCursoSection("headline")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedCursoSections.headline ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)] space-y-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Prefixo do Headline
+              </label>
+              <Input
+                type="text"
+                placeholder="Você não precisa entender de internet para"
+                value={headlineData?.prefix || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleThemeChange('content.headline.prefix', e.target.value)
+                }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+              <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                Primeira parte do headline
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Texto em Destaque
+              </label>
+              <Input
+                type="text"
+                placeholder="começar a vender online."
+                value={headlineData?.highlight || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleThemeChange('content.headline.highlight', e.target.value)
+                }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+              <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                Parte que será destacada em dourado
+              </p>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const renderCursoSubheadlineSection = () => {
+    const currentThemeData = getCurrentThemeData() as CursoPageData;
+    const subheadlineData = currentThemeData.content?.subheadline;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Subheadline" 
+          section="subheadline" 
+          icon={BookOpen}
+          isExpanded={expandedCursoSections.subheadline}
+          onToggle={() => toggleCursoSection("subheadline")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedCursoSections.subheadline ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)] space-y-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Texto Principal
+              </label>
+              <Input
+                type="text"
+                placeholder="Descubra o passo a passo completo —"
+                value={subheadlineData?.main || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleThemeChange('content.subheadline.main', e.target.value)
+                }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Texto em Destaque
+              </label>
+              <Input
+                type="text"
+                placeholder="do zero à sua primeira venda."
+                value={subheadlineData?.highlight || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleThemeChange('content.subheadline.highlight', e.target.value)
+                }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Descrição Detalhada
+              </label>
+              <TextArea
+                placeholder="Produto, fornecedor, loja, tráfego e atendimento: tudo explicado de forma simples."
+                value={subheadlineData?.description || ""}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => 
+                  handleThemeChange('content.subheadline.description', e.target.value)
+                }
+                rows={3}
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const renderCursoCtaSection = () => {
+    const currentThemeData = getCurrentThemeData() as CursoPageData;
+    const ctaData = currentThemeData.content?.cta;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Call to Action" 
+          section="cta" 
+          icon={Zap}
+          isExpanded={expandedCursoSections.cta}
+          onToggle={() => toggleCursoSection("cta")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedCursoSections.cta ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)] space-y-8">
+            {/* CTA Primário */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                <Target className="w-5 h-5" />
+                Botão Primário (Ação Principal)
+              </h4>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Texto do Botão
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="COMEÇAR AGORA"
+                    value={ctaData?.primary?.text || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.cta.primary.text', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    URL/Link
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="#cursos"
+                    value={ctaData?.primary?.url || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.cta.primary.url', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Cor de Fundo
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="#FFD700"
+                      value={ctaData?.primary?.bg || "#FFD700"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleThemeChange('content.cta.primary.bg', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                    />
+                    <ColorPicker
+                      color={ctaData?.primary?.bg || "#FFD700"}
+                      onChange={(color: string) => handleThemeChange('content.cta.primary.bg', color)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Cor do Texto
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="#000000"
+                      value={ctaData?.primary?.textColor || "#000000"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleThemeChange('content.cta.primary.textColor', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                    />
+                    <ColorPicker
+                      color={ctaData?.primary?.textColor || "#000000"}
+                      onChange={(color: string) => handleThemeChange('content.cta.primary.textColor', color)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Cor do Ícone
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="#000000"
+                      value={ctaData?.primary?.iconColor || "#000000"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleThemeChange('content.cta.primary.iconColor', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                    />
+                    <ColorPicker
+                      color={ctaData?.primary?.iconColor || "#000000"}
+                      onChange={(color: string) => handleThemeChange('content.cta.primary.iconColor', color)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Efeito de Brilho (Glow)
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="rgba(255, 215, 0, 0.3)"
+                    value={ctaData?.primary?.glow || "rgba(255, 215, 0, 0.3)"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.cta.primary.glow', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Efeito de sombra com cor RGBA
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* CTA Secundário */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                <Eye className="w-5 h-5" />
+                Botão Secundário (Ação Alternativa)
+              </h4>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Texto do Botão
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Ver Conteúdo"
+                    value={ctaData?.secondary?.text || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.cta.secondary.text', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    URL/Link
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="#conteudo"
+                    value={ctaData?.secondary?.url || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.cta.secondary.url', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Cor do Texto
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      placeholder="#FFD700"
+                      value={ctaData?.secondary?.textColor || "#FFD700"}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleThemeChange('content.cta.secondary.textColor', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono flex-1"
+                    />
+                    <ColorPicker
+                      color={ctaData?.secondary?.textColor || "#FFD700"}
+                      onChange={(color: string) => handleThemeChange('content.cta.secondary.textColor', color)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Fundo no Hover
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="rgba(255, 215, 0, 0.05)"
+                    value={ctaData?.secondary?.hoverBg || "rgba(255, 215, 0, 0.05)"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.cta.secondary.hoverBg', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Cor da Borda
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="rgba(255, 215, 0, 0.2)"
+                    value={ctaData?.secondary?.borderColor || "rgba(255, 215, 0, 0.2)"}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.cta.secondary.borderColor', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const renderCursoSocialProofSection = () => {
+    const currentThemeData = getCurrentThemeData() as CursoPageData;
+    const socialProofData = currentThemeData.content?.socialProof;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Prova Social" 
+          section="socialProof" 
+          icon={Users}
+          isExpanded={expandedCursoSections.socialProof}
+          onToggle={() => toggleCursoSection("socialProof")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedCursoSections.socialProof ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)] space-y-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Contagem/Número
+              </label>
+              <Input
+                type="text"
+                placeholder="+1.200"
+                value={socialProofData?.count || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleThemeChange('content.socialProof.count', e.target.value)
+                }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+              <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                Número impactante com sinal positivo
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                Rótulo/Descrição
+              </label>
+              <Input
+                type="text"
+                placeholder="alunos formados"
+                value={socialProofData?.label || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                  handleThemeChange('content.socialProof.label', e.target.value)
+                }
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+              <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                O que o número representa
+              </p>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  const renderCursoCardSection = () => {
+    const currentThemeData = getCurrentThemeData() as CursoPageData;
+    const cardData = currentThemeData.content?.card;
+    
+    return (
+      <div className="space-y-4">
+        <SectionHeader 
+          title="Card do Ecossistema" 
+          section="card" 
+          icon={TrendingUp}
+          isExpanded={expandedCursoSections.card}
+          onToggle={() => toggleCursoSection("card")}
+        />
+        
+        <motion.div
+          initial={false}
+          animate={{ height: expandedCursoSections.card ? 'auto' : 0 }}
+          className="overflow-hidden"
+        >
+          <Card className="p-6 bg-[var(--color-background)] space-y-8">
+            {/* Card Header */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                <Award className="w-5 h-5" />
+                Cabeçalho do Card
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Título
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Ecossistema TegPro"
+                    value={cardData?.header?.title || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.card.header.title', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Subtítulo
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Status: Escala Permitida"
+                    value={cardData?.header?.subtitle || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.card.header.subtitle', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Tag
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="Sistema Ativo"
+                    value={cardData?.header?.tag || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.card.header.tag', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Card Items */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Itens do Card
+                  </h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-[var(--color-secondary)]/70">
+                      {cardItemsCompleteCount} de {cardItemsTotalCount} completos
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleAddCardItem}
+                    variant="primary"
+                    className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                    disabled={!canAddNewCardItem}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Item
+                  </Button>
+                  {isCardItemsLimitReached && (
+                    <p className="text-xs text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Limite do plano atingido
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {localCardItems.map((item, index) => (
+                  <div 
+                    key={index}
+                    ref={index === localCardItems.length - 1 ? newCardItemRef : undefined}
+                    draggable
+                    onDragStart={(e) => handleCardItemDragStart(e, index)}
+                    onDragOver={(e) => handleCardItemDragOver(e, index)}
+                    onDragEnter={handleDragEnter}
+                    onDragLeave={handleDragLeave}
+                    onDragEnd={handleCardItemDragEnd}
+                    onDrop={handleDrop}
+                    className={`p-4 border border-[var(--color-border)] rounded-lg space-y-4 transition-all duration-200 ${
+                      draggingCardItem === index 
+                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                        : 'hover:border-[var(--color-primary)]/50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        {/* Handle para drag & drop */}
+                        <div 
+                          className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                          draggable
+                          onDragStart={(e) => handleCardItemDragStart(e, index)}
+                        >
+                          <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                        </div>
+                        
+                        <div className="flex flex-col items-center">
+                          <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+                            {index + 1}
+                          </span>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h5 className="font-medium text-[var(--color-secondary)]">
+                              {item.name || "Item sem nome"}
+                            </h5>
+                            {isCardItemValid(item) ? (
+                              <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                Completo
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                Incompleto
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                Nome do Item
+                              </label>
+                              <Input
+                                value={item.name || ""}
+                                onChange={(e) => updateCardItem(index, { name: e.target.value })}
+                                placeholder="Gestão de Tráfego 3.0"
+                                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                              />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                Status
+                              </label>
+                              <select
+                                value={item.status || "Liberado"}
+                                onChange={(e) => updateCardItem(index, { status: e.target.value as "Liberado" | "Bloqueado" })}
+                                className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                              >
+                                <option value="Liberado">Liberado</option>
+                                <option value="Bloqueado">Bloqueado</option>
+                              </select>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          onClick={() => removeCardItem(index)}
+                          variant="danger"
+                          className="bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card Footer */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
+                Rodapé do Card
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Rótulo
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="PROGRESSO"
+                    value={cardData?.footer?.label || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.card.footer.label', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Valor
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="75%"
+                    value={cardData?.footer?.value || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.card.footer.value', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Floating Badge */}
+            <div className="space-y-4">
+              <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                <Award className="w-5 h-5" />
+                Badge Flutuante
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Rótulo
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="ROI Mensal"
+                    value={cardData?.floatingBadge?.label || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.card.floatingBadge.label', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Valor
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="+145%"
+                    value={cardData?.floatingBadge?.value || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                      handleThemeChange('content.card.floatingBadge.value', e.target.value)
+                    }
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  };
+
+  // FUNÇÕES DE RENDERIZAÇÃO PARA TEMAS NÃO-CURSOS (home, ecommerce, marketing, sobre)
   const renderBadgeSection = () => {
-    const currentThemeData = getCurrentThemeData();
+    const currentThemeData = getCurrentThemeData() as HeadlinePageData;
     const badgeData = currentThemeData.badge || {};
     
     return (
@@ -571,7 +1768,7 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
   };
 
   const renderTituloSection = () => {
-    const currentThemeData = getCurrentThemeData();
+    const currentThemeData = getCurrentThemeData() as HeadlinePageData;
     const tituloData = currentThemeData.titulo || {};
     
     return (
@@ -642,22 +1839,6 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
                     )}
                   </div>
                 </div>
-
-                {/* Mensagem de erro */}
-                {palavrasValidationError && (
-                  <div className={`p-3 rounded-lg ${isPalavrasLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
-                    <div className="flex items-start gap-2">
-                      {isPalavrasLimitReached ? (
-                        <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                      )}
-                      <p className={`text-sm ${isPalavrasLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                        {palavrasValidationError}
-                      </p>
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-4">
                   {localPalavrasAnimadas.map((palavra, index) => (
@@ -802,7 +1983,7 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
   };
 
   const renderSubtituloSection = () => {
-    const currentThemeData = getCurrentThemeData();
+    const currentThemeData = getCurrentThemeData() as HeadlinePageData;
     
     return (
       <div className="space-y-4">
@@ -844,7 +2025,7 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
   };
 
   const renderBotaoSection = () => {
-    const currentThemeData = getCurrentThemeData();
+    const currentThemeData = getCurrentThemeData() as HeadlinePageData;
     const botaoData = currentThemeData.botao || {};
     
     return (
@@ -939,7 +2120,7 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
   };
 
   const renderAgendaSection = () => {
-    const currentThemeData = getCurrentThemeData();
+    const currentThemeData = getCurrentThemeData() as HeadlinePageData;
     const agendaData = currentThemeData.agenda || {};
     
     return (
@@ -1049,7 +2230,7 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
   };
 
   const renderConfiguracoesSection = () => {
-    const currentThemeData = getCurrentThemeData();
+    const currentThemeData = getCurrentThemeData() as HeadlinePageData;
     const configuracoesData = currentThemeData.configuracoes || {};
     const efeitosData = configuracoesData.efeitos || {};
     
@@ -1127,7 +2308,7 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
                   />
                   <ColorPicker
                     color={configuracoesData.corDestaque || "#FFCC00"}
-                    onChange={(color: string) => handleThemeChange('configuracoes.corDestaque', color)}
+                    onChange={(color: string) => handleColorChange('configuracoes.corDestaque', color)}
                   />
                 </div>
               </div>
@@ -1200,6 +2381,53 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
     );
   };
 
+  // Renderização condicional baseada no tema ativo
+  const renderContent = () => {
+    if (activeTheme === 'cursos') {
+      return (
+        <div className="space-y-6">
+          {renderCursoThemeSection()}
+          {renderCursoHeadlineSection()}
+          {renderCursoSubheadlineSection()}
+          {renderCursoCtaSection()}
+          {renderCursoSocialProofSection()}
+          {renderCursoCardSection()}
+        </div>
+      );
+    } else {
+      // Renderização para as outras abas (home, ecommerce, marketing, sobre)
+      return (
+        <div className="space-y-6">
+          {renderBadgeSection()}
+          {renderTituloSection()}
+          {renderSubtituloSection()}
+          {renderBotaoSection()}
+          {renderAgendaSection()}
+          {renderConfiguracoesSection()}
+        </div>
+      );
+    }
+  };
+
+  if (loading && !exists) {
+    return (
+      <ManageLayout
+        headerIcon={Layers}
+        title="Headline - Seção Hero"
+        description="Configure o conteúdo principal da seção hero para cada página"
+        exists={!!exists}
+        itemName="Headline"
+      >
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Carregando configurações...</p>
+          </div>
+        </div>
+      </ManageLayout>
+    );
+  }
+
   return (
     <ManageLayout
       headerIcon={Layers}
@@ -1211,6 +2439,13 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Tabs de Temas */}
         <Card className="p-6 bg-[var(--color-background)]">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-[var(--color-secondary)]">Selecione o Tema</h3>
+            <p className="text-sm text-[var(--color-secondary)]/70">
+              Configure diferentes versões para cada tipo de página
+            </p>
+          </div>
+          
           <div className="flex flex-wrap gap-2">
             <ThemeTab 
               themeKey="home" 
@@ -1248,42 +2483,54 @@ export function HeadlinePageComponent({activeTab}: {activeTab: "home" | "ecommer
               icon={<GraduationCap className="w-4 h-4" />}
             />
           </div>
+          
+          {/* Indicador visual da seção ativa */}
+          <div className="mt-4 p-3 rounded-lg bg-[var(--color-background-body)] border border-[var(--color-border)]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {activeTheme === "home" && <Home className="w-5 h-5 text-blue-500" />}
+                {activeTheme === "ecommerce" && <ShoppingCart className="w-5 h-5 text-green-500" />}
+                {activeTheme === "marketing" && <Megaphone className="w-5 h-5 text-purple-500" />}
+                {activeTheme === "sobre" && <Info className="w-5 h-5 text-orange-500" />}
+                {activeTheme === "cursos" && <GraduationCap className="w-5 h-5 text-amber-500" />}
+                <span className="font-medium text-[var(--color-secondary)]">
+                  Configurando: {activeTheme.charAt(0).toUpperCase() + activeTheme.slice(1)}
+                </span>
+              </div>
+              <div className="text-xs text-[var(--color-secondary)]/70">
+                {activeTheme === "cursos" ? "Foco em infoprodutos premium" : "Tema padrão"}
+              </div>
+            </div>
+          </div>
         </Card>
 
-        {/* Seções do Headline */}
-        <div className="space-y-6">
-          {renderBadgeSection()}
-          {renderTituloSection()}
-          {renderSubtituloSection()}
-          {renderBotaoSection()}
-          {renderAgendaSection()}
-          {renderConfiguracoesSection()}
+        {/* Conteúdo baseado no tema ativo */}
+        {renderContent()}
 
-          {/* Fixed Action Bar */}
-          <FixedActionBar
-            onDeleteAll={openDeleteAllModal}
-            onSubmit={handleSubmit}
-            isAddDisabled={false}
-            isSaving={loading}
-            exists={!!exists}
-            totalCount={completion.total}
-            itemName="Headline"
-            icon={Layers}
-          />
-        </div>
-
-        <DeleteConfirmationModal
-          isOpen={deleteModal.isOpen}
-          onClose={closeDeleteModal}
-          onConfirm={confirmDelete}
-          type={deleteModal.type}
-          itemTitle={deleteModal.title}
-          totalItems={5}
-          itemName="Configuração do Headline"
+        <FixedActionBar
+          onDeleteAll={openDeleteAllModal}
+          onSubmit={handleSubmit}
+          isAddDisabled={false}
+          isSaving={loading}
+          exists={!!exists}
+          completeCount={completion.completed}
+          totalCount={completion.total}
+          itemName="Headline"
+          icon={Layers}
         />
-
-        <FeedbackMessages success={success} errorMsg={errorMsg} />
       </form>
+
+      <DeleteConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDelete}
+        type={deleteModal.type}
+        itemTitle={deleteModal.title}
+        totalItems={5}
+        itemName="Configuração do Headline"
+      />
+
+      <FeedbackMessages success={success} errorMsg={errorMsg} />
     </ManageLayout>
   );
 }
