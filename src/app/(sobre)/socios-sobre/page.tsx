@@ -31,14 +31,11 @@ import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { Button } from "@/components/Button";
-import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { tailwindToHex, hexToTailwindTextClass } from "@/lib/colors";
 
 interface Value {
   title: string;
   description: string;
   icon: string;
-  color: string; // Mantém como string para compatibilidade, mas agora usamos ThemePropertyInput
 }
 
 interface Header {
@@ -47,73 +44,65 @@ interface Header {
   subtitle: string;
 }
 
-interface SociosPageData {
-  header: Header;
-  content: string | null;
-  values: Value[];
-  layout: "grid" | "list" | "carousel";
+interface SobreData {
+  sobre: {
+    header: Header;
+    values: Value[];
+  };
 }
 
-const defaultSociosData: SociosPageData = {
-  header: {
-    preTitle: "Nossa Essência",
-    title: "Não fundamos uma agência.<br /><span class='text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-blue-400 to-white'>Criamos um padrão de excelência.</span>",
-    subtitle: "A Tegbe nasceu de uma inquietação: o mercado aceitava o 'bom' como suficiente. Nós não. Somos um time de mentes analíticas obcecadas por elevar a barra do que é possível em performance digital."
-  },
-  content: null,
-  values: [
-    {
-      title: "Inteligência Estratégica",
-      description: "Antes de apertar qualquer botão, nós pensamos. Nossa cultura valoriza o planejamento profundo e a visão de longo prazo em detrimento de hacks imediatistas.",
-      icon: "ph:brain-bold",
-      color: "blue-500" // Atualizado para formato Tailwind completo
+const defaultSobreData: SobreData = {
+  sobre: {
+    header: {
+      preTitle: "Nossa Essência",
+      title: "Não fundamos uma agência.<br /><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] via-[#F5C400] to-white'>Criamos um padrão de excelência.</span>",
+      subtitle: "A Tegbe nasceu de uma inquietação: o mercado aceitava o 'bom' como suficiente. Nós não. Somos um time de mentes analíticas obcecadas por elevar a barra do que é possível em performance digital."
     },
-    {
-      title: "Mentes de Dono",
-      description: "Aqui dentro, ninguém é apenas funcionário. Atuamos com 'Skin in the Game'. Sentimos a dor e a vitória do cliente como se fosse nossa própria operação.",
-      icon: "ph:users-three-bold",
-      color: "blue-500" // Atualizado para formato Tailwind completo
-    },
-    {
-      title: "Rigor Técnico",
-      description: "Rejeitamos o amadorismo. Nossos processos são auditáveis, nossa tecnologia é de ponta e nossa busca por precisão é inegociável.",
-      icon: "ph:diamond-bold",
-      color: "blue-500" // Atualizado para formato Tailwind completo
-    }
-  ],
-  layout: "grid"
+    values: [
+      {
+        title: "Inteligência Estratégica",
+        description: "Antes de apertar qualquer botão, nós pensamos. Nossa cultura valoriza o planejamento profundo e a visão de longo prazo em detrimento de hacks imediatistas.",
+        icon: "ph:brain-bold"
+      },
+      {
+        title: "Mentes de Dono",
+        description: "Aqui dentro, ninguém é apenas funcionário. Atuamos com 'Skin in the Game'. Sentimos a dor e a vitória do cliente como se fosse nossa própria operação.",
+        icon: "ph:users-three-bold"
+      },
+      {
+        title: "Rigor Técnico",
+        description: "Rejeitamos o amadorismo. Nossos processos são auditáveis, nossa tecnologia é de ponta e nossa busca por precisão é inegociável.",
+        icon: "ph:diamond-bold"
+      }
+    ]
+  }
 };
 
-const mergeWithDefaults = (apiData: any, defaultData: SociosPageData): SociosPageData => {
+const mergeWithDefaults = (apiData: any, defaultData: SobreData): SobreData => {
   if (!apiData) return defaultData;
   
-  // Migração: converter cores antigas para formato Tailwind completo
-  const migrateColor = (color: string) => {
-    if (!color) return "blue-500";
-    if (color.includes('-')) return color; // Já está no formato correto
-    return `${color}-500`; // Adiciona o tom padrão
-  };
+  // Se a API retornar dados no formato antigo, converte para o novo formato
+  const apiSobreData = apiData.sobre || apiData;
   
   return {
-    header: {
-      preTitle: apiData.header?.preTitle || defaultData.header.preTitle,
-      title: apiData.header?.title || defaultData.header.title,
-      subtitle: apiData.header?.subtitle || defaultData.header.subtitle,
-    },
-    content: apiData.content || defaultData.content,
-    values: apiData.values?.length 
-      ? apiData.values.map((value: any, index: number) => ({
-          title: value.title || defaultData.values[index]?.title || `Valor ${index + 1}`,
-          description: value.description || defaultData.values[index]?.description || "",
-          icon: value.icon || defaultData.values[index]?.icon || "ph:star-bold",
-          color: migrateColor(value.color || defaultData.values[index]?.color)
-        }))
-      : defaultData.values,
-    layout: apiData.layout || defaultData.layout
+    sobre: {
+      header: {
+        preTitle: apiSobreData.header?.preTitle || defaultData.sobre.header.preTitle,
+        title: apiSobreData.header?.title || defaultData.sobre.header.title,
+        subtitle: apiSobreData.header?.subtitle || defaultData.sobre.header.subtitle,
+      },
+      values: apiSobreData.values?.length 
+        ? apiSobreData.values.map((value: any, index: number) => ({
+            title: value.title || defaultData.sobre.values[index]?.title || `Valor ${index + 1}`,
+            description: value.description || defaultData.sobre.values[index]?.description || "",
+            icon: value.icon || defaultData.sobre.values[index]?.icon || "ph:star-bold",
+          }))
+        : defaultData.sobre.values
+    }
   };
 };
 
-export default function Page() {
+export default function SobrePage() {
   const {
     data: pageData,
     exists,
@@ -126,17 +115,15 @@ export default function Page() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<SociosPageData>({
+  } = useJsonManagement<SobreData>({
     apiPath: "/api/tegbe-institucional/json/socios",
-    defaultData: defaultSociosData,
+    defaultData: defaultSobreData,
     mergeFunction: mergeWithDefaults,
   });
 
   const [expandedSections, setExpandedSections] = useState({
     header: true,
     values: false,
-    layout: false,
-    content: false,
   });
 
   // Controle de planos
@@ -152,7 +139,7 @@ export default function Page() {
 
   // Funções para valores
   const handleAddValue = () => {
-    const values = pageData.values;
+    const values = pageData.sobre.values;
     if (values.length >= currentPlanLimit) {
       return false;
     }
@@ -161,26 +148,25 @@ export default function Page() {
       title: `Valor ${values.length + 1}`,
       description: "",
       icon: "ph:star-bold",
-      color: "blue-500"
     };
     
     const updated = [...values, newItem];
-    updateNested('values', updated);
+    updateNested('sobre.values', updated);
     
     return true;
   };
 
   const handleUpdateValue = (index: number, updates: Partial<Value>) => {
-    const values = pageData.values;
+    const values = pageData.sobre.values;
     const updated = [...values];
     if (index >= 0 && index < updated.length) {
       updated[index] = { ...updated[index], ...updates };
-      updateNested('values', updated);
+      updateNested('sobre.values', updated);
     }
   };
 
   const handleRemoveValue = (index: number) => {
-    const values = pageData.values;
+    const values = pageData.sobre.values;
     
     if (values.length <= 1) {
       // Mantém pelo menos um item vazio
@@ -188,20 +174,12 @@ export default function Page() {
         title: "Valor",
         description: "",
         icon: "ph:star-bold",
-        color: "blue-500"
       };
-      updateNested('values', [emptyItem]);
+      updateNested('sobre.values', [emptyItem]);
     } else {
       const updated = values.filter((_, i) => i !== index);
-      updateNested('values', updated);
+      updateNested('sobre.values', updated);
     }
-  };
-
-  // Função para atualizar cor de valor
-  const handleValueColorChange = (index: number, hexColor: string) => {
-    const tailwindClass = hexToTailwindTextClass(hexColor);
-    const colorValue = tailwindClass.replace('text-', '');
-    handleUpdateValue(index, { color: colorValue });
   };
 
   // Funções de drag & drop para valores
@@ -218,7 +196,7 @@ export default function Page() {
     
     if (draggingValue === null || draggingValue === index) return;
     
-    const values = pageData.values;
+    const values = pageData.sobre.values;
     const updated = [...values];
     const draggedItem = updated[draggingValue];
     
@@ -229,7 +207,7 @@ export default function Page() {
     const newIndex = index > draggingValue ? index : index;
     updated.splice(newIndex, 0, draggedItem);
     
-    updateNested('values', updated);
+    updateNested('sobre.values', updated);
     setDraggingValue(index);
   };
 
@@ -265,11 +243,10 @@ export default function Page() {
   const isValueValid = (item: Value): boolean => {
     return item.title.trim() !== '' && 
            item.description.trim() !== '' && 
-           item.icon.trim() !== '' &&
-           item.color.trim() !== '';
+           item.icon.trim() !== '';
   };
 
-  const values = pageData.values;
+  const values = pageData.sobre.values;
   
   const isValuesLimitReached = values.length >= currentPlanLimit;
   const canAddNewValue = !isValuesLimitReached;
@@ -286,26 +263,17 @@ export default function Page() {
 
     // Header (3 campos)
     total += 3;
-    if (pageData.header.preTitle?.trim()) completed++;
-    if (pageData.header.title?.trim()) completed++;
-    if (pageData.header.subtitle?.trim()) completed++;
+    if (pageData.sobre.header.preTitle?.trim()) completed++;
+    if (pageData.sobre.header.title?.trim()) completed++;
+    if (pageData.sobre.header.subtitle?.trim()) completed++;
 
-    // Content (1 campo)
-    total += 1;
-    if (pageData.content?.trim()) completed++;
-
-    // Values (cada um com 4 campos)
-    total += values.length * 4;
+    // Values (cada um com 3 campos)
+    total += values.length * 3;
     values.forEach(item => {
       if (item.title.trim()) completed++;
       if (item.description.trim()) completed++;
       if (item.icon.trim()) completed++;
-      if (item.color.trim()) completed++;
     });
-
-    // Layout (1 campo)
-    total += 1;
-    if (pageData.layout.trim()) completed++;
 
     return { completed, total };
   };
@@ -319,10 +287,10 @@ export default function Page() {
   return (
     <ManageLayout
       headerIcon={Users}
-      title="Gerenciar Sócios e Valores"
-      description="Configure o conteúdo da seção sobre sócios e valores da empresa"
+      title="Gerenciar Sobre"
+      description="Configure o conteúdo da página sobre a empresa"
       exists={!!exists}
-      itemName="Sócios"
+      itemName="Sobre"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Seção Header */}
@@ -349,8 +317,8 @@ export default function Page() {
                       Pré-título
                     </label>
                     <Input
-                      value={pageData.header.preTitle}
-                      onChange={(e) => updateNested('header.preTitle', e.target.value)}
+                      value={pageData.sobre.header.preTitle}
+                      onChange={(e) => updateNested('sobre.header.preTitle', e.target.value)}
                       placeholder="Ex: Nossa Essência"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
@@ -359,8 +327,8 @@ export default function Page() {
                   <div className="md:col-span-2 space-y-2">
                     <label className="block text-sm font-medium text-[var(--color-secondary)]">Subtítulo</label>
                     <Input
-                      value={pageData.header.subtitle}
-                      onChange={(e) => updateNested('header.subtitle', e.target.value)}
+                      value={pageData.sobre.header.subtitle}
+                      onChange={(e) => updateNested('sobre.header.subtitle', e.target.value)}
                       placeholder="Ex: A Tegbe nasceu de uma inquietação..."
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
@@ -370,52 +338,22 @@ export default function Page() {
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[var(--color-secondary)]">Título Principal</label>
                   <TextArea
-                    value={pageData.header.title}
-                    onChange={(e) => updateNested('header.title', e.target.value)}
-                    placeholder="Pode conter HTML, ex: &lt;span class='...'&gt;texto&lt;/span&gt;"
+                    value={pageData.sobre.header.title}
+                    onChange={(e) => updateNested('sobre.header.title', e.target.value)}
+                    placeholder="Pode conter HTML, ex: &lt;span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] via-[#F5C400] to-white'&gt;texto&lt;/span&gt;"
                     rows={3}
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono text-sm"
                   />
-                  <p className="text-xs text-[var(--color-secondary)]/50">
-                    Pode incluir HTML para estilização. Use classes Tailwind para gradientes.
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção Content */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Conteúdo Principal"
-            section="content"
-            icon={Sparkles}
-            isExpanded={expandedSections.content}
-            onToggle={() => toggleSection("content")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.content ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Conteúdo Adicional (Opcional)
-                  </label>
-                  <TextArea
-                    value={pageData.content || ''}
-                    onChange={(e) => updateNested('content', e.target.value)}
-                    placeholder="Texto adicional sobre os sócios e cultura da empresa..."
-                    rows={4}
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/50">
-                    Deixe vazio para não exibir conteúdo adicional.
-                  </p>
+                  <div className="text-xs text-[var(--color-secondary)]/50 space-y-1">
+                    <p>Pode incluir HTML para estilização.</p>
+                    <p className="flex items-center gap-1">
+                      <Palette className="w-3 h-3" />
+                      Sugestão de gradiente: 
+                      <code className="ml-1 px-1 py-0.5 bg-[var(--color-background-body)] rounded">
+                        from-[#FFD700] via-[#F5C400] to-white
+                      </code>
+                    </p>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -545,7 +483,7 @@ export default function Page() {
                               )}
                             </div>
                             
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                               <div className="space-y-4">
                                 <div className="space-y-2">
                                   <label className="block text-sm font-medium text-[var(--color-secondary)]">Título</label>
@@ -564,6 +502,9 @@ export default function Page() {
                                     onChange={(value) => handleUpdateValue(index, { icon: value })}
                                     placeholder="ph:brain-bold"
                                   />
+                                  <p className="text-xs text-[var(--color-secondary)]/50">
+                                    Use ícones do Phosphor (ex: ph:brain-bold)
+                                  </p>
                                 </div>
                               </div>
                               
@@ -574,29 +515,9 @@ export default function Page() {
                                     value={value.description}
                                     onChange={(e) => handleUpdateValue(index, { description: e.target.value })}
                                     placeholder="Descrição detalhada do valor..."
-                                    rows={4}
+                                    rows={6}
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
-                                </div>
-                              </div>
-
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                                    <Palette className="w-4 h-4" />
-                                    Cor do Valor
-                                  </label>
-                                  <ThemePropertyInput
-                                    property="text"
-                                    label=""
-                                    description=""
-                                    currentHex={tailwindToHex(`text-${value.color}`)}
-                                    tailwindClass={`text-${value.color}`}
-                                    onThemeChange={(_, hex) => handleValueColorChange(index, hex)}
-                                  />
-                                  <p className="text-xs text-[var(--color-secondary)]/50 mt-2">
-                                    Cor associada a este valor específico
-                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -623,67 +544,6 @@ export default function Page() {
           </motion.div>
         </div>
 
-        {/* Seção Layout */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Layout"
-            section="layout"
-            icon={Layout}
-            isExpanded={expandedSections.layout}
-            onToggle={() => toggleSection("layout")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.layout ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Tipo de Layout
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[
-                      { value: "grid", label: "Grid", icon: Layout, description: "Exibição em grade responsiva" },
-                      { value: "list", label: "Lista", icon: Users, description: "Exibição em lista vertical" },
-                      { value: "carousel", label: "Carrossel", icon: Sparkles, description: "Exibição em carrossel interativo" },
-                    ].map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => updateNested('layout', option.value)}
-                        className={`p-4 border rounded-lg text-left transition-all duration-200 ${
-                          pageData.layout === option.value
-                            ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                            : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className={`p-2 rounded ${
-                            pageData.layout === option.value
-                              ? 'bg-[var(--color-primary)]/20 text-[var(--color-primary)]'
-                              : 'bg-[var(--color-background-body)] text-[var(--color-secondary)]'
-                          }`}>
-                            <option.icon className="w-5 h-5" />
-                          </div>
-                          <span className="font-medium text-[var(--color-secondary)]">
-                            {option.label}
-                          </span>
-                        </div>
-                        <p className="text-sm text-[var(--color-secondary)]/70">
-                          {option.description}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
@@ -692,7 +552,7 @@ export default function Page() {
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Sócios"
+          itemName="Sobre"
           icon={Users}
         />
       </form>
@@ -704,7 +564,7 @@ export default function Page() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Configuração de Sócios"
+        itemName="Configuração de Sobre"
       />
 
       <FeedbackMessages 

@@ -118,8 +118,10 @@
           "icon": "FileText",
           "children": [
             { "name": "Socios", "icon": "HelpCircle", "href": "/socios-sobre" },
+            { "name": "Sobre", "icon": "HelpCircle", "href": "/sobre-sobre" },
             { "name": "História", "icon": "HelpCircle", "href": "/historia-sobre" },
             { "name": "Empresas", "icon": "HelpCircle", "href": "/empresas-sobre" },
+            { "name": "Anos De Mercado", "icon": "HelpCircle", "href": "/anos-mercado-sobre" },
             { "name": "Métricas", "icon": "HelpCircle", "href": "/metricas-sobre" },
             { "name": "Localização", "icon": "HelpCircle", "href": "/localizacao-sobre" },
             { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-sobre" }
