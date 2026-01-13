@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import prisma from "@/lib/prisma";
+import sharp from "sharp";
 
 /* =========================================================
    TIPAGEM GENÉRICA
@@ -9,16 +10,81 @@ import prisma from "@/lib/prisma";
 type JsonValue = Record<string, any>;
 
 /* =========================================================
-   UPLOAD HELPER (opcional)
+   CONFIGURAÇÕES DE CONVERSÃO AVIF
+========================================================= */
+const AVIF_CONFIG = {
+  quality: 80,
+  effort: 5,
+  chromaSubsampling: "4:4:4" as const,
+};
+
+/* =========================================================
+   FUNÇÃO DE CONVERSÃO PARA AVIF
+========================================================= */
+async function convertToAvif(file: File): Promise<{ data: Buffer; filename: string }> {
+  const arrayBuffer = await file.arrayBuffer();
+  
+  try {
+    const avifBuffer = await sharp(arrayBuffer)
+      .avif(AVIF_CONFIG)
+      .toBuffer();
+    
+    const originalName = file.name.replace(/\.[^/.]+$/, "");
+    const avifFilename = `${originalName}.avif`;
+    
+    return {
+      data: avifBuffer,
+      filename: avifFilename,
+    };
+  } catch (error) {
+    console.error("Erro na conversão AVIF:", error);
+    // Em caso de erro, retornar o arquivo original
+    return {
+      data: Buffer.from(arrayBuffer),
+      filename: file.name,
+    };
+  }
+}
+
+/* =========================================================
+   UPLOAD HELPER COM CONVERSÃO AUTOMÁTICA
 ========================================================= */
 async function uploadToBlob(file: File): Promise<string> {
-  const blob = await put(`${Date.now()}-${file.name}`, file, {
+  let finalBuffer: any;
+  let finalFilename: string;
+  let contentType = file.type;
+
+  const isImage = file.type.startsWith("image/");
+  const isAlreadyAvif = file.name.toLowerCase().endsWith(".avif") || file.type === "image/avif";
+
+  if (isImage && !isAlreadyAvif) {
+    try {
+      const { data, filename } = await convertToAvif(file);
+      finalBuffer = data;
+      finalFilename = filename;
+      contentType = "image/avif";
+    } catch (error) {
+      console.error("Falha na conversão, mantendo original:", error);
+      const arrayBuffer = await file.arrayBuffer();
+      finalBuffer = Buffer.from(arrayBuffer);
+      finalFilename = file.name;
+    }
+  } else {
+    const arrayBuffer = await file.arrayBuffer();
+    finalBuffer = Buffer.from(arrayBuffer);
+    finalFilename = file.name;
+  }
+
+  // Criar um Blob a partir do Buffer
+  const blob = new Blob([finalBuffer], { type: contentType });
+
+  const result = await put(`${Date.now()}-${finalFilename}`, blob, {
     access: "public",
     token: process.env.BLOB_READ_WRITE_TOKEN!,
-    contentType: file.type,
+    contentType,
   });
 
-  return blob.url;
+  return result.url;
 }
 
 /* =========================================================
@@ -59,9 +125,6 @@ async function handleUpsert(
 
   const formData = await req.formData();
 
-  /* -----------------------------
-     JSON enviado
-  ----------------------------- */
   const rawValues = formData.get("values");
   if (!rawValues) {
     return NextResponse.json(
@@ -72,9 +135,6 @@ async function handleUpsert(
 
   const incomingValues: JsonValue = JSON.parse(rawValues as string);
 
-  /* -----------------------------
-     Buscar registro existente
-  ----------------------------- */
   const existing = await prisma.formData.findUnique({
     where: {
       type_subtype: {
@@ -84,23 +144,12 @@ async function handleUpsert(
     },
   });
 
-  /* -----------------------------
-     Base segura (nunca perde dado)
-  ----------------------------- */
   const mergedValues: JsonValue = existing?.values
     ? structuredClone(existing.values as JsonValue)
     : {};
 
-  /* -----------------------------
-     Merge genérico do JSON
-  ----------------------------- */
   const finalValues = deepMerge(mergedValues, incomingValues);
 
-  /* -----------------------------
-     Uploads dinâmicos
-     Aceita:
-     file:any.path.aqui
-  ----------------------------- */
   for (const [key, value] of formData.entries()) {
     if (!key.startsWith("file:")) continue;
     if (!(value instanceof File) || value.size === 0) continue;
@@ -119,9 +168,6 @@ async function handleUpsert(
     });
   }
 
-  /* -----------------------------
-     UPSERT
-  ----------------------------- */
   const record = await prisma.formData.upsert({
     where: {
       type_subtype: {
