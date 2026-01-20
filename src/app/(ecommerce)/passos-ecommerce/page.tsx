@@ -7,17 +7,14 @@ import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
-import { Switch } from "@/components/Switch";
 import { 
   Layers,
-  Grid,
   Settings,
-  Tag,
-  ImageIcon,
   CheckCircle2,
   Plus,
-  TrendingUp,
-  PlayCircle
+  ExternalLink,
+  MessageCircle,
+  ArrowRight
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -36,15 +33,22 @@ interface Estagio {
   image: string;
 }
 
+interface CTAData {
+  text: string;
+  url: string;
+  description: string;
+}
+
 interface FluxoEstagiosData {
   id: string;
   type: string;
   subtype: string;
   values: Estagio[];
+  cta: CTAData;
 }
 
 const defaultFluxoEstagiosData: FluxoEstagiosData = {
-  id: "fluxo-estagios-ecommerce",
+  id: "passos-ecommerce",
   type: "",
   subtype: "",
   values: [
@@ -52,10 +56,15 @@ const defaultFluxoEstagiosData: FluxoEstagiosData = {
       id: 1,
       title: "",
       subtitle: "",
-      description: "V",
+      description: "",
       image: ""
-    },
-  ]
+    }
+  ],
+  cta: {
+    text: "",
+    url: "",
+    description: ""
+  }
 };
 
 const mergeWithDefaults = (apiData: any, defaultData: FluxoEstagiosData): FluxoEstagiosData => {
@@ -66,6 +75,7 @@ const mergeWithDefaults = (apiData: any, defaultData: FluxoEstagiosData): FluxoE
     type: apiData.type || defaultData.type,
     subtype: apiData.subtype || defaultData.subtype,
     values: apiData.values || defaultData.values,
+    cta: apiData.cta || defaultData.cta
   };
 };
 
@@ -93,6 +103,7 @@ export default function FluxoEstagiosEcommercePage() {
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     estagios: false,
+    cta: false,
   });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -145,6 +156,11 @@ export default function FluxoEstagiosEcommercePage() {
     updateNested('values', updatedEstagios);
   };
 
+  // Funções para gerenciar CTA
+  const handleCTAChange = (field: keyof CTAData, value: string) => {
+    updateNested(`cta.${field}`, value);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
@@ -179,25 +195,16 @@ export default function FluxoEstagiosEcommercePage() {
       if (estagio.image.trim()) completed++;
     });
 
+    // CTA
+    total += 3;
+    if (pageData.cta.text.trim()) completed++;
+    if (pageData.cta.url.trim()) completed++;
+    if (pageData.cta.description.trim()) completed++;
+
     return { completed, total };
   };
 
   const completion = calculateCompletion();
-
-  const getStageIcon = (title: string) => {
-    switch (title.toLowerCase()) {
-      case "aprender":
-        return <PlayCircle className="w-5 h-5" />;
-      case "começar":
-        return <TrendingUp className="w-5 h-5" />;
-      case "estruturar":
-        return <Layers className="w-5 h-5" />;
-      case "performar":
-        return <Grid className="w-5 h-5" />;
-      default:
-        return <div className="w-5 h-5 flex items-center justify-center">{pageData.values.findIndex(e => e.title === title) + 1}</div>;
-    }
-  };
 
   if (loading && !exists) {
     return <Loading layout={Layers} exists={!!exists} />;
@@ -229,21 +236,20 @@ export default function FluxoEstagiosEcommercePage() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="space-y-6">
-
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Input
                     label="Tipo de Conteúdo"
                     value={pageData.type}
                     onChange={(e) => updateNested('type', e.target.value)}
-                    placeholder="Tipo de conteúdo"
+                    placeholder="Ex: E-commerce"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
 
                   <Input
-                    label="Subtipo/Categoria"
+                    label="Subtítulo da Seção"
                     value={pageData.subtype}
                     onChange={(e) => updateNested('subtype', e.target.value)}
-                    placeholder="Subtipo/categoria"
+                    placeholder="Ex: Em qual estágio do seu e-commerce você está?"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                 </div>
@@ -313,7 +319,7 @@ export default function FluxoEstagiosEcommercePage() {
                         <div className="flex flex-col items-center">
                           <div className="p-2 rounded bg-[var(--color-primary)]/10">
                             <span className="text-sm font-medium text-[var(--color-primary)]">
-                              {getStageIcon(estagio.title)}
+                              {index + 1}
                             </span>
                           </div>
                           
@@ -366,19 +372,19 @@ export default function FluxoEstagiosEcommercePage() {
                                 <Input
                                   value={estagio.title}
                                   onChange={(e) => handleUpdateEstagio(index, { title: e.target.value })}
-                                  placeholder="Ex: Aprender, Começar, Estruturar"
+                                  placeholder="Ex: Estou Começando"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
                               </div>
                               
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Subtítulo/Chamada
+                                  Subtítulo
                                 </label>
                                 <Input
                                   value={estagio.subtitle}
                                   onChange={(e) => handleUpdateEstagio(index, { subtitle: e.target.value })}
-                                  placeholder="Ex: Do zero ao primeiro faturamento"
+                                  placeholder="Ex: Idea & Validation"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
                               </div>
@@ -388,12 +394,12 @@ export default function FluxoEstagiosEcommercePage() {
                             <div className="space-y-4">
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Descrição Detalhada
+                                  Descrição
                                 </label>
                                 <TextArea
                                   value={estagio.description}
                                   onChange={(e) => handleUpdateEstagio(index, { description: e.target.value })}
-                                  placeholder="Descreva o que o cliente aprende/ganha neste estágio, benefícios, diferenciais..."
+                                  placeholder="Ex: Validação de ideia e construção da base do negócio."
                                   rows={7}
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -404,7 +410,7 @@ export default function FluxoEstagiosEcommercePage() {
                             <div className="space-y-4">
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Imagem Ilustrativa
+                                  Imagem
                                 </label>
                                 <ImageUpload
                                   label=""
@@ -414,7 +420,7 @@ export default function FluxoEstagiosEcommercePage() {
                                   aspectRatio="aspect-video"
                                   previewWidth={300}
                                   previewHeight={200}
-                                  description="Imagem representativa do estágio (formato recomendado: 16:9)"
+                                  description="Imagem representativa do estágio"
                                 />
                               </div>
                               
@@ -459,6 +465,75 @@ export default function FluxoEstagiosEcommercePage() {
                   </Button>
                 </div>
               )}
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção CTA */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Call to Action"
+            section="cta"
+            icon={MessageCircle}
+            isExpanded={expandedSections.cta}
+            onToggle={() => toggleSection("cta")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cta ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        Texto do Botão
+                      </label>
+                      <Input
+                        type="text"
+                        value={pageData.cta.text || ""}
+                        onChange={(e) => handleCTAChange("text", e.target.value)}
+                        placeholder="Ex: Quero Estruturar e Escalar Meu Negócio"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        URL de Destino
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <ExternalLink className="w-4 h-4 text-[var(--color-secondary)]" />
+                        <Input
+                          type="text"
+                          value={pageData.cta.url || ""}
+                          onChange={(e) => handleCTAChange("url", e.target.value)}
+                          placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        Descrição do CTA
+                      </label>
+                      <TextArea
+                        value={pageData.cta.description || ""}
+                        onChange={(e) => handleCTAChange("description", e.target.value)}
+                        placeholder="Ex: Anúncios, operação e dados trabalhando juntos para vender mais."
+                        rows={4}
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </Card>
           </motion.div>
         </div>

@@ -6,25 +6,23 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   Users, 
-  ShoppingBag, 
-  Megaphone,
   ChevronDown, 
   ChevronUp,
   Upload,
   X,
   Plus,
   Trash2,
-  Star,
-  Building,
-  Tag as TagIcon,
   TrendingUp,
-  LucideIcon,
-  BriefcaseBusiness,
+  Building,
+  ExternalLink,
+  MessageCircle,
+  ArrowRight,
   CheckCircle2,
-  AlertCircle
+  Tag as TagIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -43,7 +41,13 @@ interface Testimonial {
   tags: string[];
 }
 
-interface SectionData {
+interface CTAData {
+  text: string;
+  url: string;
+  description: string;
+}
+
+interface SuccessCasesData {
   badge: {
     text: string;
     icon: string;
@@ -53,57 +57,50 @@ interface SectionData {
     part2: string;
   };
   testimonials: Testimonial[];
-}
-
-interface SuccessCasesData {
-  ecommerce: SectionData;
-  marketing: SectionData;
-}
-
-interface SectionFiles {
-  [key: string]: {
-    [testimonialId: number]: File | null;
-  };
+  cta: CTAData;
 }
 
 const defaultSuccessCasesData: SuccessCasesData = {
-  ecommerce: {
-    badge: {
-      text: "",
-      icon: ""
-    },
-    title: {
-      part1: "",
-      part2: ""
-    },
-    testimonials: []
+  badge: {
+    text: "",
+    icon: "lucide:trending-up"
   },
-  marketing: {
-    badge: {
-      text: "",
-      icon: ""
-    },
-    title: {
-      part1: "",
-      part2: ""
-    },
-    testimonials: []
+  title: {
+    part1: "",
+    part2: ""
+  },
+  testimonials: [
+    {
+      id: 1,
+      logo: "",
+      name: "",
+      description: "",
+      result: "",
+      metric: "",
+      tags: ["Meta Ads", "Google Ads", "TikTok Ads"]
+    }
+  ],
+  cta: {
+    text: "",
+    url: "",
+    description: ""
   }
 };
 
 // Ícones disponíveis para badges
 const availableIcons = [
-  { value: "solar:graph-up-bold", label: "Gráfico Crescente", icon: TrendingUp },
-  { value: "mdi:chart-box-outline", label: "Gráfico em Caixa", icon: TrendingUp },
-  { value: "lucide:trending-up", label: "Trending Up", icon: TrendingUp },
-  { value: "lucide:award", label: "Prêmio", icon: Star },
-  { value: "lucide:building", label: "Edifício", icon: Building },
-  { value: "lucide:briefcase", label: "Maleta", icon: BriefcaseBusiness },
-  { value: "lucide:users", label: "Usuários", icon: Users },
-  { value: "lucide:shopping-bag", label: "Sacola", icon: ShoppingBag }
+  { value: "lucide:trending-up", label: "Trending Up" },
+  { value: "lucide:award", label: "Prêmio" },
+  { value: "lucide:building", label: "Edifício" },
+  { value: "lucide:briefcase", label: "Maleta" },
+  { value: "lucide:users", label: "Usuários" },
+  { value: "lucide:shopping-bag", label: "Sacola" }
 ];
 
 const defaultTags = [
+  "Meta Ads",
+  "Google Ads", 
+  "TikTok Ads",
   "E-commerce",
   "Gestão",
   "Automação",
@@ -116,9 +113,7 @@ const defaultTags = [
   "Vendas",
   "CRM",
   "Fidelização",
-  "Google Ads",
   "CRM Kommo",
-  "Meta Ads",
   "Inbound",
   "Hubspot",
   "Tráfego",
@@ -126,6 +121,17 @@ const defaultTags = [
   "BI",
   "Dashboards"
 ];
+
+const mergeWithDefaults = (apiData: any, defaultData: SuccessCasesData): SuccessCasesData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    badge: apiData.badge || defaultData.badge,
+    title: apiData.title || defaultData.title,
+    testimonials: apiData.testimonials || defaultData.testimonials,
+    cta: apiData.cta || defaultData.cta
+  };
+};
 
 // Componente de preview de logo
 const LogoPreview = ({ logoUrl, name }: { logoUrl: string, name: string }) => {
@@ -266,22 +272,23 @@ const TagInput = ({ tags, onTagsChange, availableTags = defaultTags }: TagInputP
 };
 
 export default function SuccessCasesPage() {
-  const [files, setFiles] = useState<SectionFiles>({
-    ecommerce: {},
-    marketing: {}
+  const [expandedSections, setExpandedSections] = useState({
+    header: true,
+    testimonials: false,
+    cta: false,
   });
-  
+
+  const [expandedTestimonial, setExpandedTestimonial] = useState<number | null>(null);
+
   const {
-    data: successCasesData,
-    setData: setSuccessCasesData,
-    updateNested,
+    data: pageData,
+    exists,
     loading,
     success,
     errorMsg,
-    save,
-    exists,
-    reload,
     deleteModal,
+    updateNested,
+    save,
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
@@ -290,54 +297,8 @@ export default function SuccessCasesPage() {
   } = useJsonManagement<SuccessCasesData>({
     apiPath: "/api/tegbe-institucional/json/company",
     defaultData: defaultSuccessCasesData,
+    mergeFunction: mergeWithDefaults,
   });
-
-  const [expandedSections, setExpandedSections] = useState({
-    ecommerce: true,
-    marketing: false
-  });
-
-  const [expandedTestimonial, setExpandedTestimonial] = useState<{
-    section: "ecommerce" | "marketing";
-    index: number;
-  } | null>(null);
-
-  // Calcular campos completos
-  const calculateCompleteCount = useCallback(() => {
-    let count = 0;
-    let total = 0;
-    
-    // Verificar se cada seção tem badge e título
-    const sections = ["ecommerce", "marketing"] as const;
-    
-    sections.forEach(section => {
-      const sectionData = successCasesData[section];
-      
-      // Badge
-      if (sectionData.badge.text.trim() !== "") count++;
-      if (sectionData.badge.icon.trim() !== "") count++;
-      total += 2;
-      
-      // Título
-      if (sectionData.title.part1.trim() !== "") count++;
-      if (sectionData.title.part2.trim() !== "") count++;
-      total += 2;
-      
-      // Testimonials
-      sectionData.testimonials.forEach(testimonial => {
-        if (testimonial.name.trim() !== "") count++;
-        if (testimonial.description.trim() !== "") count++;
-        if (testimonial.result.trim() !== "") count++;
-        total += 3;
-      });
-    });
-    
-    return { completed: count, total };
-  }, [successCasesData]);
-
-  const completion = calculateCompleteCount();
-  const canAddNewItem = true;
-  const isLimitReached = false;
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -346,25 +307,9 @@ export default function SuccessCasesPage() {
     }));
   };
 
-  const handleSectionChange = (section: "ecommerce" | "marketing", path: string, value: any) => {
-    updateNested(`${section}.${path}`, value);
-  };
-
-  const handleTestimonialChange = (
-    section: "ecommerce" | "marketing",
-    index: number,
-    field: keyof Testimonial,
-    value: any
-  ) => {
-    updateNested(`${section}.testimonials.${index}.${field}`, value);
-  };
-
-  const addTestimonial = (section: "ecommerce" | "marketing") => {
-    const currentTestimonials = successCasesData[section].testimonials;
-    const newId = currentTestimonials.length > 0 
-      ? Math.max(...currentTestimonials.map(t => t.id)) + 1 
-      : 1;
-    
+  // Funções para gerenciar testimonials
+  const handleAddTestimonial = () => {
+    const newId = Math.max(...pageData.testimonials.map(t => t.id), 0) + 1;
     const newTestimonial: Testimonial = {
       id: newId,
       logo: "",
@@ -374,22 +319,47 @@ export default function SuccessCasesPage() {
       metric: "",
       tags: []
     };
-
-    updateNested(`${section}.testimonials`, [...currentTestimonials, newTestimonial]);
+    const updatedTestimonials = [...pageData.testimonials, newTestimonial];
+    updateNested('testimonials', updatedTestimonials);
   };
 
-  const removeTestimonial = (section: "ecommerce" | "marketing", index: number) => {
-    const currentTestimonials = [...successCasesData[section].testimonials];
-    currentTestimonials.splice(index, 1);
-    updateNested(`${section}.testimonials`, currentTestimonials);
-    
+  const handleUpdateTestimonial = (index: number, updates: Partial<Testimonial>) => {
+    const updatedTestimonials = [...pageData.testimonials];
+    updatedTestimonials[index] = { ...updatedTestimonials[index], ...updates };
+    updateNested('testimonials', updatedTestimonials);
+  };
+
+  const handleRemoveTestimonial = (index: number) => {
+    const updatedTestimonials = pageData.testimonials.filter((_, i) => i !== index);
+    updateNested('testimonials', updatedTestimonials);
     // Limpar arquivo se existir
-    setFileState(`${section}.testimonials.${index}.logo`, null);
+    setFileState(`testimonials.${index}.logo`, null);
   };
 
-  const getLogoUrl = (section: "ecommerce" | "marketing", testimonial: Testimonial, index: number): string => {
+  // Funções para gerenciar CTA
+  const handleCTAChange = (field: keyof CTAData, value: string) => {
+    updateNested(`cta.${field}`, value);
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
+    }
+  };
+
+  // Função auxiliar para obter File do fileStates
+  const getFileFromState = (key: string): File | null => {
+    const value = fileStates[key];
+    return value instanceof File ? value : null;
+  };
+
+  const getLogoUrl = (testimonial: Testimonial, index: number): string => {
     // Primeiro verificar se há arquivo selecionado
-    const file = fileStates[`${section}.testimonials.${index}.logo`];
+    const file = getFileFromState(`testimonials.${index}.logo`);
     if (file instanceof File) {
       return URL.createObjectURL(file);
     }
@@ -409,23 +379,45 @@ export default function SuccessCasesPage() {
     return "";
   };
 
-  const handleSubmit = async () => {
-    await save();
-    await reload();
+  const calculateCompletion = () => {
+    let completed = 0;
+    let total = 0;
+
+    // Badge
+    total += 2;
+    if (pageData.badge.text.trim()) completed++;
+    if (pageData.badge.icon.trim()) completed++;
+
+    // Título
+    total += 2;
+    if (pageData.title.part1.trim()) completed++;
+    if (pageData.title.part2.trim()) completed++;
+
+    // Testimonials
+    total += pageData.testimonials.length * 6;
+    pageData.testimonials.forEach(testimonial => {
+      if (testimonial.name.trim()) completed++;
+      if (testimonial.description.trim()) completed++;
+      if (testimonial.result.trim()) completed++;
+      if (testimonial.metric?.trim()) completed++;
+      if (testimonial.logo.trim()) completed++;
+      if (testimonial.tags.length > 0) completed++;
+    });
+
+    // CTA
+    total += 3;
+    if (pageData.cta.text.trim()) completed++;
+    if (pageData.cta.url.trim()) completed++;
+    if (pageData.cta.description.trim()) completed++;
+
+    return { completed, total };
   };
 
-  const handleSubmitWrapper = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSubmit();
-  };
+  const completion = calculateCompletion();
 
-  const renderTestimonialCard = (
-    testimonial: Testimonial, 
-    index: number, 
-    section: "ecommerce" | "marketing"
-  ) => {
-    const logoUrl = getLogoUrl(section, testimonial, index);
-    const isExpanded = expandedTestimonial?.section === section && expandedTestimonial?.index === index;
+  const renderTestimonialCard = (testimonial: Testimonial, index: number) => {
+    const logoUrl = getLogoUrl(testimonial, index);
+    const isExpanded = expandedTestimonial === index;
 
     return (
       <Card key={testimonial.id} className="p-6 bg-[var(--color-background)] border-[var(--color-border)]">
@@ -445,9 +437,7 @@ export default function SuccessCasesPage() {
           <div className="flex gap-2">
             <Button
               type="button"
-              onClick={() => setExpandedTestimonial(
-                isExpanded ? null : { section, index }
-              )}
+              onClick={() => setExpandedTestimonial(isExpanded ? null : index)}
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             >
               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -456,7 +446,7 @@ export default function SuccessCasesPage() {
             <Button
               type="button"
               variant="danger"
-              onClick={() => removeTestimonial(section, index)}
+              onClick={() => handleRemoveTestimonial(index)}
               className="bg-red-600 hover:bg-red-700 text-white border-none"
             >
               <Trash2 className="w-4 h-4" />
@@ -495,15 +485,15 @@ export default function SuccessCasesPage() {
                                 className="hidden"
                                 onChange={(e) => {
                                   const file = e.target.files?.[0] || null;
-                                  setFileState(`${section}.testimonials.${index}.logo`, file);
+                                  setFileState(`testimonials.${index}.logo`, file);
                                 }}
                               />
                             </label>
                             <Button
                               type="button"
                               onClick={() => {
-                                setFileState(`${section}.testimonials.${index}.logo`, null);
-                                handleTestimonialChange(section, index, "logo", "");
+                                setFileState(`testimonials.${index}.logo`, null);
+                                handleUpdateTestimonial(index, { logo: "" });
                               }}
                               variant="danger"
                               className="bg-red-600 hover:bg-red-700 text-white border-none"
@@ -529,7 +519,7 @@ export default function SuccessCasesPage() {
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0] || null;
-                                setFileState(`${section}.testimonials.${index}.logo`, file);
+                                setFileState(`testimonials.${index}.logo`, file);
                               }}
                             />
                           </label>
@@ -549,9 +539,9 @@ export default function SuccessCasesPage() {
                       type="text"
                       value={testimonial.name}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleTestimonialChange(section, index, "name", e.target.value)
+                        handleUpdateTestimonial(index, { name: e.target.value })
                       }
-                      placeholder="Ex: Decora Fest"
+                      placeholder="Ex: Empresa XYZ"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
@@ -564,9 +554,9 @@ export default function SuccessCasesPage() {
                       type="text"
                       value={testimonial.description}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleTestimonialChange(section, index, "description", e.target.value)
+                        handleUpdateTestimonial(index, { description: e.target.value })
                       }
-                      placeholder="Ex: Loja de Decorações • Garça/SP"
+                      placeholder="Ex: E-commerce de Moda"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
@@ -579,34 +569,32 @@ export default function SuccessCasesPage() {
                       type="text"
                       value={testimonial.result}
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleTestimonialChange(section, index, "result", e.target.value)
+                        handleUpdateTestimonial(index, { result: e.target.value })
                       }
-                      placeholder="Ex: Aumento de 30% nas Vendas"
+                      placeholder="Ex: 150% ROI em 3 meses"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
 
-                  {section === "marketing" && (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
-                        Métrica Adicional (opcional)
-                      </label>
-                      <Input
-                        type="text"
-                        value={testimonial.metric || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleTestimonialChange(section, index, "metric", e.target.value)
-                        }
-                        placeholder="Ex: Em 3 meses de campanha"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      />
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
+                      Métrica Adicional
+                    </label>
+                    <Input
+                      type="text"
+                      value={testimonial.metric || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        handleUpdateTestimonial(index, { metric: e.target.value })
+                      }
+                      placeholder="Ex: +300% em vendas"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
 
                   <TagInput
                     tags={testimonial.tags || []}
                     onTagsChange={(newTags) => 
-                      handleTestimonialChange(section, index, "tags", newTags)
+                      handleUpdateTestimonial(index, { tags: newTags })
                     }
                   />
                 </div>
@@ -618,198 +606,244 @@ export default function SuccessCasesPage() {
     );
   };
 
-  const renderSection = (section: "ecommerce" | "marketing") => {
-    const sectionData = successCasesData[section];
-    const sectionLabel = section === "ecommerce" ? "E-commerce" : "Marketing";
-
-    return (
-      <div className="space-y-6">
-        {/* Cabeçalho e Badge */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-              Texto do Badge
-            </label>
-            <Input
-              type="text"
-              value={sectionData.badge.text}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleSectionChange(section, "badge.text", e.target.value)
-              }
-              placeholder="Ex: Track Record"
-              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-              Ícone do Badge
-            </label>
-            <select
-              value={sectionData.badge.icon}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                handleSectionChange(section, "badge.icon", e.target.value)
-              }
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-            >
-              <option value="">Selecione um ícone...</option>
-              {availableIcons.map((icon) => (
-                <option key={icon.value} value={icon.value}>
-                  {icon.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Título */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-              Primeira Parte do Título
-            </label>
-            <Input
-              type="text"
-              value={sectionData.title.part1}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleSectionChange(section, "title.part1", e.target.value)
-              }
-              placeholder="Ex: Empresas que estão"
-              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-              Segunda Parte do Título
-            </label>
-            <Input
-              type="text"
-              value={sectionData.title.part2}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                handleSectionChange(section, "title.part2", e.target.value)
-              }
-              placeholder="Ex: vendendo conosco."
-              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-            />
-          </div>
-        </div>
-
-        {/* Lista de Testimonials */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-                Cases de Sucesso ({sectionData.testimonials.length})
-              </h4>
-              <div className="flex items-center gap-2 mt-1">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                <span className="text-sm text-[var(--color-secondary)]/70">
-                  {sectionData.testimonials.filter(t => t.name && t.description && t.result).length} de {sectionData.testimonials.length} completos
-                </span>
-              </div>
-            </div>
-            <Button
-              type="button"
-              onClick={() => addTestimonial(section)}
-              className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-            >
-              <Plus className="w-4 h-4" />
-              Adicionar Case
-            </Button>
-          </div>
-
-          {sectionData.testimonials.length === 0 ? (
-            <Card className="p-8 text-center bg-[var(--color-background)]">
-              <Users className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
-              <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                Nenhum case de sucesso adicionado
-              </h4>
-              <p className="text-[var(--color-secondary)]/70 mb-4">
-                Comece adicionando os primeiros cases de sucesso da área de {sectionLabel.toLowerCase()}
-              </p>
-              <Button
-                type="button"
-                onClick={() => addTestimonial(section)}
-                className="flex items-center gap-2 mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar Primeiro Case
-              </Button>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {sectionData.testimonials.map((testimonial, index) => 
-                renderTestimonialCard(testimonial, index, section)
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
     <ManageLayout
       headerIcon={Users}
       title="Cases de Sucesso"
-      description="Gerencie os cases de sucesso das áreas de E-commerce e Marketing"
+      description="Gerencie os cases de sucesso das empresas que escalamos"
       exists={!!exists}
       itemName="Configuração de Cases"
     >
-      <form onSubmit={handleSubmitWrapper} className="space-y-6 pb-32">
-        {/* Seção E-commerce */}
+      <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
-            title="Cases de Sucesso - E-commerce"
-            section="ecommerce"
-            icon={ShoppingBag}
-            isExpanded={expandedSections.ecommerce}
-            onToggle={() => toggleSection("ecommerce")}
+            title="Cabeçalho da Seção"
+            section="header"
+            icon={TrendingUp}
+            isExpanded={expandedSections.header}
+            onToggle={() => toggleSection("header")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.ecommerce ? "auto" : 0 }}
+            animate={{ height: expandedSections.header ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              {renderSection("ecommerce")}
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Texto do Badge
+                    </label>
+                    <Input
+                      type="text"
+                      value={pageData.badge.text}
+                      onChange={(e) => updateNested('badge.text', e.target.value)}
+                      placeholder="Ex: Resultados Reais"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Ícone do Badge
+                    </label>
+                    <select
+                      value={pageData.badge.icon}
+                      onChange={(e) => updateNested('badge.icon', e.target.value)}
+                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                    >
+                      <option value="">Selecione um ícone...</option>
+                      {availableIcons.map((icon) => (
+                        <option key={icon.value} value={icon.value}>
+                          {icon.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Primeira Parte do Título
+                    </label>
+                    <Input
+                      type="text"
+                      value={pageData.title.part1}
+                      onChange={(e) => updateNested('title.part1', e.target.value)}
+                      placeholder="Ex: Empresas que escalamos"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Segunda Parte do Título
+                    </label>
+                    <Input
+                      type="text"
+                      value={pageData.title.part2}
+                      onChange={(e) => updateNested('title.part2', e.target.value)}
+                      placeholder="Ex: com tecnologia e dados"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+              </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Seção Marketing */}
+        {/* Seção Testimonials */}
         <div className="space-y-4">
           <SectionHeader
-            title="Cases de Sucesso - Marketing"
-            section="marketing"
-            icon={Megaphone}
-            isExpanded={expandedSections.marketing}
-            onToggle={() => toggleSection("marketing")}
+            title="Cases de Sucesso"
+            section="testimonials"
+            icon={Users}
+            isExpanded={expandedSections.testimonials}
+            onToggle={() => toggleSection("testimonials")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.marketing ? "auto" : 0 }}
+            animate={{ height: expandedSections.testimonials ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              {renderSection("marketing")}
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+                      Cases de Sucesso ({pageData.testimonials.length})
+                    </h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {pageData.testimonials.filter(t => t.name && t.description && t.result && t.logo).length} de {pageData.testimonials.length} completos
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAddTestimonial}
+                    className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar Case
+                  </Button>
+                </div>
+
+                {pageData.testimonials.length === 0 ? (
+                  <div className="text-center py-12 border-2 border-dashed border-[var(--color-border)] rounded-lg">
+                    <Users className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                      Nenhum case de sucesso adicionado
+                    </h4>
+                    <p className="text-[var(--color-secondary)]/70 mb-4">
+                      Comece adicionando os primeiros cases de sucesso
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={handleAddTestimonial}
+                      className="flex items-center gap-2 mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Adicionar Primeiro Case
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pageData.testimonials.map((testimonial, index) => 
+                      renderTestimonialCard(testimonial, index)
+                    )}
+                  </div>
+                )}
+              </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Fixed Action Bar */}
+        {/* Seção CTA */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Call to Action"
+            section="cta"
+            icon={MessageCircle}
+            isExpanded={expandedSections.cta}
+            onToggle={() => toggleSection("cta")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cta ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        Texto do Botão
+                      </label>
+                      <Input
+                        type="text"
+                        value={pageData.cta.text || ""}
+                        onChange={(e) => handleCTAChange("text", e.target.value)}
+                        placeholder="Ex: Quero Estruturar e Escalar Meu Negócio"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        URL de Destino
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <ExternalLink className="w-4 h-4 text-[var(--color-secondary)]" />
+                        <Input
+                          type="text"
+                          value={pageData.cta.url || ""}
+                          onChange={(e) => handleCTAChange("url", e.target.value)}
+                          placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        Descrição do CTA
+                      </label>
+                      <TextArea
+                        value={pageData.cta.description || ""}
+                        onChange={(e) => handleCTAChange("description", e.target.value)}
+                        placeholder="Ex: Anúncios, operação e dados trabalhando juntos para vender mais."
+                        rows={4}
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
-          isAddDisabled={!canAddNewItem || isLimitReached}
+          isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Seção"
+          itemName="Seção de Cases"
           icon={Users}
         />
       </form>
@@ -820,11 +854,14 @@ export default function SuccessCasesPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={2}
-        itemName="Seção de Cases"
+        totalItems={1}
+        itemName="Seção de Cases de Sucesso"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }

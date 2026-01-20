@@ -1,24 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
-import { Switch } from "@/components/Switch";
 import { 
   ShoppingBag,
   Grid,
   Settings,
-  Tag,
-  ImageIcon,
-  AlertCircle,
   CheckCircle2,
-  XCircle,
   Plus,
-  GripVertical
+  ExternalLink,
+  MessageCircle,
+  ArrowRight
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -37,15 +34,22 @@ interface Plataforma {
   image: string;
 }
 
+interface CTAData {
+  text: string;
+  url: string;
+  description: string;
+}
+
 interface PlataformasData {
   id: string;
   type: string;
   subtype: string;
   values: Plataforma[];
+  cta: CTAData;
 }
 
 const defaultPlataformasData: PlataformasData = {
-  id: "plataformas-dominadas-ecommerce",
+  id: "plataformas-marketing",
   type: "",
   subtype: "",
   values: [
@@ -56,7 +60,12 @@ const defaultPlataformasData: PlataformasData = {
       description: "",
       image: ""
     }
-  ]
+  ],
+  cta: {
+    text: "",
+    url: "",
+    description: ""
+  }
 };
 
 const mergeWithDefaults = (apiData: any, defaultData: PlataformasData): PlataformasData => {
@@ -67,10 +76,11 @@ const mergeWithDefaults = (apiData: any, defaultData: PlataformasData): Platafor
     type: apiData.type || defaultData.type,
     subtype: apiData.subtype || defaultData.subtype,
     values: apiData.values || defaultData.values,
+    cta: apiData.cta || defaultData.cta
   };
 };
 
-export default function PlataformasEcommercePage() {
+export default function PlataformasMarketingPage() {
   const {
     data: pageData,
     exists,
@@ -94,6 +104,7 @@ export default function PlataformasEcommercePage() {
   const [expandedSections, setExpandedSections] = useState({
     basic: true,
     plataformas: false,
+    cta: false,
   });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -126,6 +137,11 @@ export default function PlataformasEcommercePage() {
   const handleRemovePlataforma = (index: number) => {
     const updatedPlataformas = pageData.values.filter((_, i) => i !== index);
     updateNested('values', updatedPlataformas);
+  };
+
+  // Funções para gerenciar CTA
+  const handleCTAChange = (field: keyof CTAData, value: string) => {
+    updateNested(`cta.${field}`, value);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -163,6 +179,12 @@ export default function PlataformasEcommercePage() {
       if (plataforma.image.trim()) completed++;
     });
 
+    // CTA
+    total += 3;
+    if (pageData.cta.text.trim()) completed++;
+    if (pageData.cta.url.trim()) completed++;
+    if (pageData.cta.description.trim()) completed++;
+
     return { completed, total };
   };
 
@@ -175,10 +197,10 @@ export default function PlataformasEcommercePage() {
   return (
     <ManageLayout
       headerIcon={ShoppingBag}
-      title="Plataformas Dominadas - E-commerce"
-      description="Gerenciamento das plataformas de e-commerce onde atuamos como especialistas"
+      title="Plataformas de Marketing"
+      description="Gerenciamento das plataformas de marketing onde atuamos como especialistas"
       exists={!!exists}
-      itemName="Plataformas E-commerce"
+      itemName="Plataformas de Marketing"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
         {/* Seção Básica */}
@@ -198,11 +220,22 @@ export default function PlataformasEcommercePage() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    ID (não editável)
+                  </label>
+                  <Input
+                    value={pageData.id}
+                    readOnly
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] opacity-70 cursor-not-allowed"
+                  />
+                </div>
+
                 <Input
                   label="Tipo"
                   value={pageData.type}
                   onChange={(e) => updateNested('type', e.target.value)}
-                  placeholder="Tipo de conteúdo"
+                  placeholder="Ex: Plataformas"
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
 
@@ -210,7 +243,7 @@ export default function PlataformasEcommercePage() {
                   label="Subtipo"
                   value={pageData.subtype}
                   onChange={(e) => updateNested('subtype', e.target.value)}
-                  placeholder="Subtipo/categoria"
+                  placeholder="Ex: Plataformas que utilizamos para escalar seu negócio"
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
@@ -221,7 +254,7 @@ export default function PlataformasEcommercePage() {
         {/* Seção Plataformas */}
         <div className="space-y-4">
           <SectionHeader
-            title="Plataformas de E-commerce"
+            title="Plataformas de Marketing"
             section="plataformas"
             icon={Grid}
             isExpanded={expandedSections.plataformas}
@@ -260,7 +293,7 @@ export default function PlataformasEcommercePage() {
                   </Button>
                 </div>
                 <p className="text-sm text-[var(--color-secondary)]/70 mt-2">
-                  Adicione e configure as plataformas de e-commerce onde sua empresa é especialista
+                  Adicione e configure as plataformas de marketing onde sua empresa é especialista
                 </p>
               </div>
 
@@ -308,7 +341,7 @@ export default function PlataformasEcommercePage() {
                                 <Input
                                   value={plataforma.title}
                                   onChange={(e) => handleUpdatePlataforma(index, { title: e.target.value })}
-                                  placeholder="Ex: Mercado Livre, Shopee, Amazon"
+                                  placeholder="Ex: Meta Ads, Google Ads, TikTok Ads"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
                               </div>
@@ -320,7 +353,7 @@ export default function PlataformasEcommercePage() {
                                 <Input
                                   value={plataforma.subtitle}
                                   onChange={(e) => handleUpdatePlataforma(index, { subtitle: e.target.value })}
-                                  placeholder="Ex: Consultoria Oficial, Partner Verificado"
+                                  placeholder="Ex: Gestão de Tráfego Pago"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
                               </div>
@@ -335,7 +368,7 @@ export default function PlataformasEcommercePage() {
                                 <TextArea
                                   value={plataforma.description}
                                   onChange={(e) => handleUpdatePlataforma(index, { description: e.target.value })}
-                                  placeholder="Descreva sua expertise nesta plataforma, diferenciais, certificações, etc."
+                                  placeholder="Descreva sua expertise nesta plataforma, serviços oferecidos, diferenciais, etc."
                                   rows={5}
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
@@ -388,7 +421,7 @@ export default function PlataformasEcommercePage() {
                     Nenhuma plataforma adicionada
                   </h4>
                   <p className="text-sm text-[var(--color-secondary)]/70 mb-6">
-                    Comece adicionando as plataformas de e-commerce onde sua empresa atua
+                    Comece adicionando as plataformas de marketing onde sua empresa atua
                   </p>
                   <Button
                     type="button"
@@ -405,6 +438,75 @@ export default function PlataformasEcommercePage() {
           </motion.div>
         </div>
 
+        {/* Seção CTA */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Call to Action"
+            section="cta"
+            icon={MessageCircle}
+            isExpanded={expandedSections.cta}
+            onToggle={() => toggleSection("cta")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cta ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        Texto do Botão
+                      </label>
+                      <Input
+                        type="text"
+                        value={pageData.cta.text || ""}
+                        onChange={(e) => handleCTAChange("text", e.target.value)}
+                        placeholder="Ex: Quero Estruturar e Escalar Meu Negócio"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        URL de Destino
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <ExternalLink className="w-4 h-4 text-[var(--color-secondary)]" />
+                        <Input
+                          type="text"
+                          value={pageData.cta.url || ""}
+                          onChange={(e) => handleCTAChange("url", e.target.value)}
+                          placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        Descrição do CTA
+                      </label>
+                      <TextArea
+                        value={pageData.cta.description || ""}
+                        onChange={(e) => handleCTAChange("description", e.target.value)}
+                        placeholder="Ex: Integração completa de plataformas para escalar seus resultados."
+                        rows={4}
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
@@ -413,7 +515,7 @@ export default function PlataformasEcommercePage() {
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Plataformas"
+          itemName="Plataformas de Marketing"
           icon={ShoppingBag}
         />
       </form>
@@ -425,7 +527,7 @@ export default function PlataformasEcommercePage() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Seção de Plataformas"
+        itemName="Seção de Plataformas de Marketing"
       />
 
       <FeedbackMessages 
