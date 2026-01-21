@@ -57,22 +57,10 @@ interface Testimonial {
 }
 
 interface TestimonialsData {
-  id: string;
-  titulo: string;
-  subtitulo: string;
-  backgroundColor: string;
-  textColor: string;
-  showStats: boolean;
   testimonials: Testimonial[];
 }
 
 const defaultTestimonialsData: TestimonialsData = {
-  id: "testimonials-section",
-  titulo: "Casos de Sucesso",
-  subtitulo: "Veja o que nossos alunos e clientes estão conquistando",
-  backgroundColor: "#FFFFFF",
-  textColor: "#1F2937",
-  showStats: true,
   testimonials: []
 };
 
@@ -80,12 +68,6 @@ const mergeWithDefaults = (apiData: any, defaultData: TestimonialsData): Testimo
   if (!apiData) return defaultData;
   
   return {
-    id: apiData.id || defaultData.id,
-    titulo: apiData.titulo || defaultData.titulo,
-    subtitulo: apiData.subtitulo || defaultData.subtitulo,
-    backgroundColor: apiData.backgroundColor || defaultData.backgroundColor,
-    textColor: apiData.textColor || defaultData.textColor,
-    showStats: apiData.showStats ?? defaultData.showStats,
     testimonials: apiData.testimonials || defaultData.testimonials,
   };
 };
@@ -262,14 +244,6 @@ export default function TestimonialsPage() {
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
-
-    // Configurações gerais
-    total += 5;
-    if (testimonialsData.id.trim()) completed++;
-    if (testimonialsData.titulo.trim()) completed++;
-    if (testimonialsData.subtitulo.trim()) completed++;
-    if (testimonialsData.backgroundColor.trim()) completed++;
-    if (testimonialsData.textColor.trim()) completed++;
 
     // Testimonials
     total += testimonialsData.testimonials.length * 4;
