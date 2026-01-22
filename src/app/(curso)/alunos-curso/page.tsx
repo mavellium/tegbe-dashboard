@@ -47,7 +47,7 @@ interface TestimonialStats {
 
 interface Testimonial {
   id: string;
-  type: "video" | "image";
+  type: "video";
   clientName: string;
   clientRole: string;
   description: string;
@@ -141,7 +141,6 @@ const ColorPropertyInput = ({
 const getTypeIcon = (type: Testimonial["type"]) => {
   switch (type) {
     case "video": return Video;
-    case "image": return ImageIcon;
     default: return MessageCircle;
   }
 };
@@ -149,7 +148,6 @@ const getTypeIcon = (type: Testimonial["type"]) => {
 const getTypeColor = (type: Testimonial["type"]) => {
   switch (type) {
     case "video": return "bg-blue-500/10 text-blue-500";
-    case "image": return "bg-green-500/10 text-green-500";
     default: return "bg-[var(--color-background-body)] text-[var(--color-secondary)]";
   }
 };
@@ -201,7 +199,7 @@ export default function TestimonialsPage() {
     const newId = Date.now().toString();
     const newTestimonial: Testimonial = {
       id: newId,
-      type: "image",
+      type: "video",
       clientName: "",
       clientRole: "",
       description: "",
@@ -378,7 +376,7 @@ export default function TestimonialsPage() {
                     Tipo de Depoimento
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {(["video", "image"] as const).map((type) => {
+                    {(["video"] as const).map((type) => {
                       const Icon = getTypeIcon(type);
                       return (
                         <button
@@ -550,19 +548,6 @@ export default function TestimonialsPage() {
                       description="Imagem de capa para o vídeo (opcional)"
                     />
                   </>
-                )}
-
-                {testimonial.type === "image" && (
-                  <ImageUpload
-                    label="Imagem do Depoimento"
-                    currentImage={testimonial.src || ''}
-                    selectedFile={getFileFromState(`testimonials.${index}.src`)}
-                    onFileChange={(file) => setFileState(`testimonials.${index}.src`, file)}
-                    aspectRatio="aspect-video"
-                    previewWidth={800}
-                    previewHeight={450}
-                    description="Imagem do cliente ou do resultado"
-                  />
                 )}
 
                 <div className="text-xs text-[var(--color-secondary)]/50 space-y-1">
