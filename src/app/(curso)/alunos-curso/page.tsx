@@ -47,7 +47,7 @@ interface TestimonialStats {
 
 interface Testimonial {
   id: string;
-  type: "video" | "text" | "image";
+  type: "video" | "image";
   clientName: string;
   clientRole: string;
   description: string;
@@ -57,10 +57,22 @@ interface Testimonial {
 }
 
 interface TestimonialsData {
+  id: string;
+  titulo: string;
+  subtitulo: string;
+  backgroundColor: string;
+  textColor: string;
+  showStats: boolean;
   testimonials: Testimonial[];
 }
 
 const defaultTestimonialsData: TestimonialsData = {
+  id: "testimonials-section",
+  titulo: "Casos de Sucesso",
+  subtitulo: "Veja o que nossos alunos e clientes estão conquistando",
+  backgroundColor: "#FFFFFF",
+  textColor: "#1F2937",
+  showStats: true,
   testimonials: []
 };
 
@@ -68,6 +80,12 @@ const mergeWithDefaults = (apiData: any, defaultData: TestimonialsData): Testimo
   if (!apiData) return defaultData;
   
   return {
+    id: apiData.id || defaultData.id,
+    titulo: apiData.titulo || defaultData.titulo,
+    subtitulo: apiData.subtitulo || defaultData.subtitulo,
+    backgroundColor: apiData.backgroundColor || defaultData.backgroundColor,
+    textColor: apiData.textColor || defaultData.textColor,
+    showStats: apiData.showStats ?? defaultData.showStats,
     testimonials: apiData.testimonials || defaultData.testimonials,
   };
 };
@@ -124,7 +142,6 @@ const getTypeIcon = (type: Testimonial["type"]) => {
   switch (type) {
     case "video": return Video;
     case "image": return ImageIcon;
-    case "text": return FileText;
     default: return MessageCircle;
   }
 };
@@ -133,7 +150,6 @@ const getTypeColor = (type: Testimonial["type"]) => {
   switch (type) {
     case "video": return "bg-blue-500/10 text-blue-500";
     case "image": return "bg-green-500/10 text-green-500";
-    case "text": return "bg-purple-500/10 text-purple-500";
     default: return "bg-[var(--color-background-body)] text-[var(--color-secondary)]";
   }
 };
@@ -185,7 +201,7 @@ export default function TestimonialsPage() {
     const newId = Date.now().toString();
     const newTestimonial: Testimonial = {
       id: newId,
-      type: "text",
+      type: "image",
       clientName: "",
       clientRole: "",
       description: "",
@@ -244,6 +260,14 @@ export default function TestimonialsPage() {
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
+
+    // Configurações gerais
+    total += 5;
+    if (testimonialsData.id.trim()) completed++;
+    if (testimonialsData.titulo.trim()) completed++;
+    if (testimonialsData.subtitulo.trim()) completed++;
+    if (testimonialsData.backgroundColor.trim()) completed++;
+    if (testimonialsData.textColor.trim()) completed++;
 
     // Testimonials
     total += testimonialsData.testimonials.length * 4;
@@ -353,8 +377,8 @@ export default function TestimonialsPage() {
                   <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                     Tipo de Depoimento
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["video", "image", "text"] as const).map((type) => {
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["video", "image"] as const).map((type) => {
                       const Icon = getTypeIcon(type);
                       return (
                         <button
@@ -378,7 +402,7 @@ export default function TestimonialsPage() {
                             testimonial.type === type
                               ? "text-[var(--color-primary)]"
                               : "text-[var(--color-secondary)]/70"
-                          }`}>{type}</span>
+                          }`}>{type === "video" ? "vídeo" : "imagem"}</span>
                         </button>
                       );
                     })}
@@ -500,7 +524,7 @@ export default function TestimonialsPage() {
                 </div>
               </div>
 
-              {/* Coluna 2: Mídia - USANDO OS COMPONENTES DA PÁGINA DE EXEMPLO */}
+              {/* Coluna 2: Mídia */}
               <div className="space-y-6">
                 {testimonial.type === "video" && (
                   <>
@@ -541,20 +565,6 @@ export default function TestimonialsPage() {
                   />
                 )}
 
-                {testimonial.type === "text" && (
-                  <div className={`w-full aspect-video flex items-center justify-center bg-[var(--color-background-body)] rounded-lg border-2 border-dashed border-[var(--color-border)]`}>
-                    <div className="text-center p-8">
-                      <FileText className="w-16 h-16 text-[var(--color-secondary)]/30 mx-auto mb-4" />
-                      <p className="text-[var(--color-secondary)]/70">
-                        Depoimento em formato de texto
-                      </p>
-                      <p className="text-sm text-[var(--color-secondary)]/50 mt-2">
-                        Apenas o texto será exibido
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="text-xs text-[var(--color-secondary)]/50 space-y-1">
                   <p>• Para vídeos: envie o arquivo .mp4 ou .webm</p>
                   <p>• A thumbnail será gerada automaticamente ou você pode enviar uma imagem personalizada</p>
@@ -577,6 +587,85 @@ export default function TestimonialsPage() {
       itemName="Casos de Sucesso"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Seção Configurações Gerais */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Configurações Gerais"
+            section="geral"
+            icon={Settings}
+            isExpanded={expandedSections.geral}
+            onToggle={() => toggleSection("geral")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.geral ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input
+                  label="ID da Seção"
+                  value={testimonialsData.id}
+                  onChange={(e) => updateNested('id', e.target.value)}
+                  placeholder="testimonials-section"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+
+                <div className="md:col-span-2">
+                  <Input
+                    label="Título"
+                    value={testimonialsData.titulo}
+                    onChange={(e) => updateNested('titulo', e.target.value)}
+                    placeholder="Casos de Sucesso"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <TextArea
+                    label="Subtítulo"
+                    value={testimonialsData.subtitulo}
+                    onChange={(e) => updateNested('subtitulo', e.target.value)}
+                    placeholder="Veja o que nossos alunos e clientes estão conquistando"
+                    rows={2}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                <ColorPropertyInput
+                  label="Cor de Fundo"
+                  value={testimonialsData.backgroundColor}
+                  onChange={(color) => updateNested('backgroundColor', color)}
+                  description="Cor de fundo da seção"
+                />
+
+                <ColorPropertyInput
+                  label="Cor do Texto"
+                  value={testimonialsData.textColor}
+                  onChange={(color) => updateNested('textColor', color)}
+                  description="Cor principal do texto"
+                />
+
+                <div className="md:col-span-2">
+                  <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
+                    <div>
+                      <h4 className="font-medium text-[var(--color-secondary)]">Exibir Estatísticas</h4>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        Mostrar os números de resultado nos depoimentos
+                      </p>
+                    </div>
+                    <Switch
+                      checked={testimonialsData.showStats}
+                      onCheckedChange={(checked) => updateNested('showStats', checked)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         {/* Seção Depoimentos */}
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
