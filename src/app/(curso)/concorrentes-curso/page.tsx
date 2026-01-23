@@ -1,30 +1,33 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
-import { motion } from "framer-motion";
+import { useState, useMemo, useId } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Button } from "@/components/Button";
+import IconSelector from "@/components/IconSelector";
 import { 
-  BarChart,
-  TrendingUp,
-  Tag,
-  Type,
-  Plus,
+  GripVertical, 
+  ArrowUpDown, 
+  CheckCircle2, 
   Trash2,
-  Settings,
-  CheckCircle2,
-  GripVertical,
-  AlertCircle,
-  XCircle,
+  Search,
   Target,
-  Shield,
+  BarChart3,
   Zap,
-  Users,
-  RefreshCw,
-  Columns as ColumnsIcon,
+  Layers,
+  Scale,
+  ArrowRight,
+  Check,
+  X as XIcon,
+  Columns
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -32,103 +35,280 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import { Button } from "@/components/Button";
 
 interface Feature {
+  id: string;
   label: string;
   competitor: string;
   us: string;
 }
 
-interface Columns {
-  competitor: string;
-  us: string;
-}
-
-interface Header {
-  badge: string;
-  title: string;
-  subtitle: string;
-}
-
-interface BenchmarkData {
-  id: string;
-  type: string;
-  subtitle: string;
-  header: Header;
-  columns: Columns;
-  features: Feature[];
-}
-
-const defaultBenchmarkData: BenchmarkData = {
-  id: "benchmark-comparison",
-  type: "",
-  subtitle: "",
+interface ComparisonData {
   header: {
-    badge: "Benchmarking de Mercado",
-    title: "A diferença é óbvia.",
-    subtitle: "Compare a profundidade da entrega. Não é sobre quantidade de aulas, é sobre a utilidade do que é ensinado."
+    badge: string;
+    title: string;
+    subtitle: string;
+  };
+  columns: {
+    competitor: string;
+    us: string;
+  };
+  features: Feature[];
+  cta: {
+    text: string;
+    url: string;
+    variant: "gradient" | "primary" | "secondary" | "danger";
+    icon: string;
+    target: "_self" | "_blank";
+  };
+}
+
+const defaultData: ComparisonData = {
+  header: {
+    badge: "Comparação Justa",
+    title: "Por que a TegPro é superior",
+    subtitle: "Veja a diferença entre nossa solução e a concorrência"
   },
   columns: {
-    competitor: "Cursos Tradicionais",
-    us: "Ecossistema TegPro"
+    competitor: "Concorrência",
+    us: "TegPro"
   },
   features: [
     {
-      label: "Origem do Método",
-      competitor: "Teoria e Livros",
-      us: "Campo de Batalha (R$ 45M+ Gerados)"
+      id: "feature-1",
+      label: "Suporte Personalizado",
+      competitor: "Email apenas",
+      us: "WhatsApp + Videochamadas"
     },
     {
-      label: "Foco do Conteúdo",
-      competitor: "Gatilhos Mentais Genéricos",
-      us: "Processos Operacionais de Escala"
+      id: "feature-2",
+      label: "Atualizações",
+      competitor: "Semestral",
+      us: "Mensal"
     },
     {
-      label: "Ferramentas Entregues",
-      competitor: "Nenhuma (Apenas PDF)",
-      us: "Templates de CRM, Scripts e Dashboards"
-    },
-    {
-      label: "Suporte",
-      competitor: "E-mail ou Ticket",
-      us: "Comunidade Ativa no WhatsApp"
-    },
-    {
-      label: "Atualização",
-      competitor: "Anual (Se houver)",
-      us: "Mensal (Baseado no que validamos na agência)"
+      id: "feature-3",
+      label: "Preço",
+      competitor: "R$ 497/mês",
+      us: "R$ 297/mês"
     }
-  ]
-};
-
-const mergeWithDefaults = (apiData: any, defaultData: BenchmarkData): BenchmarkData => {
-  if (!apiData) return defaultData;
-  
-  return {
-    id: apiData.id || defaultData.id,
-    type: apiData.type || defaultData.type,
-    subtitle: apiData.subtitle || defaultData.subtitle,
-    header: apiData.header || defaultData.header,
-    columns: apiData.columns || defaultData.columns,
-    features: apiData.features || defaultData.features,
-  };
-};
-
-const getFeatureIcon = (index: number) => {
-  switch (index % 5) {
-    case 0: return Target;     // Origem do Método
-    case 1: return Zap;        // Foco do Conteúdo
-    case 2: return Shield;     // Ferramentas Entregues
-    case 3: return Users;      // Suporte
-    case 4: return RefreshCw;  // Atualização
-    default: return TrendingUp;
+  ],
+  cta: {
+    text: "Começar Agora",
+    url: "/checkout",
+    variant: "gradient",
+    icon: "ph:arrow-right-bold",
+    target: "_self"
   }
 };
 
-export default function BenchmarkPage() {
+// Função para mesclar com dados padrão
+const mergeWithDefaults = (apiData: any, defaultData: ComparisonData): ComparisonData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    header: {
+      badge: apiData.header?.badge || defaultData.header.badge,
+      title: apiData.header?.title || defaultData.header.title,
+      subtitle: apiData.header?.subtitle || defaultData.header.subtitle
+    },
+    columns: {
+      competitor: apiData.columns?.competitor || defaultData.columns.competitor,
+      us: apiData.columns?.us || defaultData.columns.us
+    },
+    features: apiData.features?.map((feature: any, index: number) => ({
+      id: feature.id || `feature-${Date.now()}-${index}`,
+      label: feature.label || "",
+      competitor: feature.competitor || "",
+      us: feature.us || ""
+    })) || defaultData.features,
+    cta: {
+      text: apiData.cta?.text || defaultData.cta.text,
+      url: apiData.cta?.url || defaultData.cta.url,
+      variant: apiData.cta?.variant || defaultData.cta.variant,
+      icon: apiData.cta?.icon || defaultData.cta.icon,
+      target: apiData.cta?.target || defaultData.cta.target
+    }
+  };
+};
+
+// Componente Sortable para features
+function SortableFeatureItem({
+  item,
+  index,
+  showValidation,
+  itemList,
+  handleChange,
+  openDeleteSingleModal,
+}: {
+  item: Feature;
+  index: number;
+  showValidation: boolean;
+  itemList: Feature[];
+  handleChange: (index: number, field: keyof Feature, value: any) => void;
+  openDeleteSingleModal: (index: number, title: string) => void;
+}) {
+  const stableId = useId();
+  const sortableId = item.id || `feature-${index}-${stableId}`;
+
   const {
-    data: pageData,
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: sortableId });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const hasLabel = item.label.trim() !== "";
+  const hasCompetitor = item.competitor.trim() !== "";
+  const hasUs = item.us.trim() !== "";
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`relative ${isDragging ? 'z-50' : ''}`}
+    >
+      <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
+        showValidation && (!hasLabel || !hasCompetitor || !hasUs) 
+          ? 'ring-2 ring-[var(--color-danger)]' 
+          : ''
+      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-primary)]`}>
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="cursor-grab active:cursor-grabbing text-[var(--color-secondary)]/70 hover:text-[var(--color-primary)] transition-colors p-2 rounded-lg hover:bg-[var(--color-background)]/50"
+                {...attributes}
+                {...listeners}
+              >
+                <GripVertical className="w-5 h-5" />
+              </button>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]/70">
+                  <ArrowUpDown className="w-4 h-4" />
+                  <span>Posição: {index + 1}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  {hasLabel ? (
+                    <h4 className="font-medium text-[var(--color-secondary)]">
+                      {item.label}
+                    </h4>
+                  ) : (
+                    <h4 className="font-medium text-[var(--color-secondary)]/50">
+                      Recurso sem título
+                    </h4>
+                  )}
+                  {hasLabel && hasCompetitor && hasUs ? (
+                    <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-300 rounded-full border border-[var(--color-success)]/30">
+                      Completo
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-red rounded-full border border-[var(--color-warning)]/30">
+                      Incompleto
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <Button
+              type="button"
+              onClick={() => openDeleteSingleModal(index, item.label || "Recurso sem título")}
+              variant="danger"
+              className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
+              disabled={itemList.length <= 1}
+            >
+              <Trash2 className="w-4 h-4" />
+              Remover
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  Título do Recurso
+                </label>
+                <Input
+                  type="text"
+                  value={item.label}
+                  onChange={(e: any) => handleChange(index, "label", e.target.value)}
+                  placeholder="Ex: Suporte Personalizado"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+                <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
+                  Nome do recurso que será comparado
+                </p>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <XIcon className="w-4 h-4 text-[var(--color-danger)]" />
+                    Valor da Concorrência
+                  </label>
+                  <Input
+                    type="text"
+                    value={item.competitor}
+                    onChange={(e: any) => handleChange(index, "competitor", e.target.value)}
+                    placeholder="Ex: Email apenas"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
+                    O que a concorrência oferece (pode usar R$ para preços)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-[var(--color-success)]" />
+                    Nossa Solução
+                  </label>
+                  <Input
+                    type="text"
+                    value={item.us}
+                    onChange={(e: any) => handleChange(index, "us", e.target.value)}
+                    placeholder="Ex: WhatsApp + Videochamadas"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
+                    O que a TegPro oferece (destacar vantagem)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export default function ComparisonPage() {
+  const [expandedSections, setExpandedSections] = useState({
+    header: true,
+    columns: false,
+    features: true,
+    cta: false
+  });
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showValidation, setShowValidation] = useState(false);
+
+  const {
+    data: componentData,
     exists,
     loading,
     success,
@@ -139,28 +319,14 @@ export default function BenchmarkPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<BenchmarkData>({
-    apiPath: "/api/tegbe-institucional/json/concorrentes",
-    defaultData: defaultBenchmarkData,
+  } = useJsonManagement<ComparisonData>({
+    apiPath: "/api/tegbe-institucional/json/comparison",
+    defaultData: defaultData,
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estados para drag & drop
-  const [draggingItem, setDraggingItem] = useState<number | null>(null);
-
-  const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    header: false,
-    columns: false,
-    features: false
-  });
-
-  // Referência para novo item
-  const newFeatureRef = useRef<HTMLDivElement>(null);
-
-  // Controle de planos
-  const currentPlanType = 'pro';
-  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+  const currentData = componentData || defaultData;
+  const features = currentData.features;
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -169,230 +335,129 @@ export default function BenchmarkPage() {
     }));
   };
 
-  // Funções para features
-  const handleAddFeature = () => {
-    const features = pageData.features;
-    if (features.length >= currentPlanLimit) {
-      return false;
-    }
-    
-    const newItem: Feature = {
-      label: "",
-      competitor: "",
-      us: ""
-    };
-    
-    const updated = [...features, newItem];
-    updateNested('features', updated);
-    
-    setTimeout(() => {
-      newFeatureRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'nearest'
-      });
-    }, 100);
-    
-    return true;
+  const handleChange = (path: string, value: any) => {
+    updateNested(path, value);
   };
 
-  const handleUpdateFeature = (index: number, updates: Partial<Feature>) => {
-    const features = pageData.features;
-    const updated = [...features];
-    if (index >= 0 && index < updated.length) {
-      updated[index] = { ...updated[index], ...updates };
-      updateNested('features', updated);
-    }
-  };
-
-  const handleRemoveFeature = (index: number) => {
-    const features = pageData.features;
-    
-    if (features.length <= 1) {
-      // Mantém pelo menos um item vazio
-      const emptyItem: Feature = {
-        label: "",
-        competitor: "",
-        us: ""
-      };
-      updateNested('features', [emptyItem]);
-    } else {
-      const updated = features.filter((_, i) => i !== index);
-      updateNested('features', updated);
-    }
-  };
-
-  // Funções de drag & drop
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.setData('text/plain', index.toString());
-    e.currentTarget.classList.add('dragging');
-    setDraggingItem(index);
-  };
-
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    
-    if (draggingItem === null || draggingItem === index) return;
-    
-    const features = pageData.features;
-    const updated = [...features];
-    const draggedItem = updated[draggingItem];
-    
-    // Remove o item arrastado
-    updated.splice(draggingItem, 1);
-    
-    // Insere na nova posição
-    const newIndex = index > draggingItem ? index : index;
-    updated.splice(newIndex, 0, draggedItem);
-    
-    updateNested('features', updated);
-    setDraggingItem(index);
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('dragging');
-    setDraggingItem(null);
-  };
-
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  // Função para mover item para cima/baixo
-  const moveItem = (fromIndex: number, toIndex: number) => {
-    const features = [...pageData.features];
-    const [item] = features.splice(fromIndex, 1);
-    features.splice(toIndex, 0, item);
-    updateNested('features', features);
+  const handleFeatureChange = (index: number, field: keyof Feature, value: any) => {
+    const newFeatures = [...features];
+    newFeatures[index] = { ...newFeatures[index], [field]: value };
+    updateNested(`features`, newFeatures);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
+    setShowValidation(true);
+    await save();
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = features.findIndex((item) => item.id === active.id);
+    const newIndex = features.findIndex((item) => item.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newFeatures = arrayMove(features, oldIndex, newIndex);
+      updateNested(`features`, newFeatures);
     }
   };
 
-  // Validações
-  const isFeatureValid = (item: Feature): boolean => {
-    return item.label.trim() !== '' && 
-           item.competitor.trim() !== '' && 
-           item.us.trim() !== '';
+  const handleAddFeature = () => {
+    const newFeature: Feature = {
+      id: `feature-${Date.now()}-${features.length}`,
+      label: '',
+      competitor: '',
+      us: ''
+    };
+    updateNested(`features`, [...features, newFeature]);
   };
 
-  const features = pageData.features;
-  
-  const isFeaturesLimitReached = features.length >= currentPlanLimit;
-  const canAddNewFeature = !isFeaturesLimitReached;
-  const featuresCompleteCount = features.filter(isFeatureValid).length;
-  const featuresTotalCount = features.length;
+  const openDeleteSingleModal = (index: number, title: string) => {
+    // Implementação da abertura do modal de deleção individual
+    console.log("Abrir modal para deletar feature:", index, title);
+  };
 
-  const featuresValidationError = isFeaturesLimitReached 
-    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
-    : null;
+  const filteredFeatures = useMemo(() => {
+    if (!searchTerm) return features;
+    const term = searchTerm.toLowerCase();
+    return features.filter(item => 
+      item.label.toLowerCase().includes(term) ||
+      item.competitor.toLowerCase().includes(term) ||
+      item.us.toLowerCase().includes(term)
+    );
+  }, [features, searchTerm]);
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Informações básicas
-    total += 2; // type e subtitle
-    if (pageData.type.trim()) completed++;
-    if (pageData.subtitle.trim()) completed++;
-
     // Header
     total += 3;
-    if (pageData.header.badge.trim()) completed++;
-    if (pageData.header.title.trim()) completed++;
-    if (pageData.header.subtitle.trim()) completed++;
+    if (currentData.header.badge.trim()) completed++;
+    if (currentData.header.title.trim()) completed++;
+    if (currentData.header.subtitle.trim()) completed++;
 
     // Columns
     total += 2;
-    if (pageData.columns.competitor.trim()) completed++;
-    if (pageData.columns.us.trim()) completed++;
+    if (currentData.columns.competitor.trim()) completed++;
+    if (currentData.columns.us.trim()) completed++;
 
     // Features
-    total += features.length * 3;
-    features.forEach(item => {
-      if (item.label.trim()) completed++;
-      if (item.competitor.trim()) completed++;
-      if (item.us.trim()) completed++;
+    total += features.length * 3; // label, competitor, us para cada feature
+    features.forEach(feature => {
+      if (feature.label.trim()) completed++;
+      if (feature.competitor.trim()) completed++;
+      if (feature.us.trim()) completed++;
     });
+
+    // CTA
+    total += 5;
+    if (currentData.cta.text.trim()) completed++;
+    if (currentData.cta.url.trim()) completed++;
+    if (currentData.cta.variant.trim()) completed++;
+    if (currentData.cta.icon.trim()) completed++;
+    if (currentData.cta.target.trim()) completed++;
 
     return { completed, total };
   };
 
   const completion = calculateCompletion();
+  const featuresCompletas = features.filter(f => 
+    f.label.trim() && f.competitor.trim() && f.us.trim()
+  ).length;
 
   if (loading && !exists) {
-    return <Loading layout={BarChart} exists={!!exists} />;
+    return <Loading layout={Layers} exists={!!exists} />;
   }
 
   return (
     <ManageLayout
-      headerIcon={BarChart}
-      title="Benchmarking de Mercado"
-      description="Gerencie a tabela de comparação entre a TegPro e cursos tradicionais"
+      headerIcon={Scale}
+      title="Página de Comparação"
+      description="Configure a tabela comparativa entre TegPro e concorrência"
       exists={!!exists}
-      itemName="Benchmark"
+      itemName="Comparação"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Básica */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Configurações da Seção"
-            section="basic"
-            icon={Settings}
-            isExpanded={expandedSections.basic}
-            onToggle={() => toggleSection("basic")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.basic ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Tipo de Conteúdo"
-                    value={pageData.type}
-                    onChange={(e) => updateNested('type', e.target.value)}
-                    placeholder="Tipo de conteúdo"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <Input
-                    label="Subtítulo Geral"
-                    value={pageData.subtitle}
-                    onChange={(e) => updateNested('subtitle', e.target.value)}
-                    placeholder="Subtítulo geral da seção"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
         {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
             title="Cabeçalho"
             section="header"
-            icon={Tag}
+            icon={Zap}
             isExpanded={expandedSections.header}
             onToggle={() => toggleSection("header")}
           />
@@ -403,44 +468,54 @@ export default function BenchmarkPage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Badge
-                    </label>
-                    <Input
-                      value={pageData.header.badge}
-                      onChange={(e) => updateNested('header.badge', e.target.value)}
-                      placeholder="Benchmarking de Mercado"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Configurações do Cabeçalho
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Configure os textos principais da seção de comparação
+                </p>
+              </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Título
-                    </label>
-                    <Input
-                      value={pageData.header.title}
-                      onChange={(e) => updateNested('header.title', e.target.value)}
-                      placeholder="A diferença é óbvia."
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Subtítulo
-                  </label>
-                  <TextArea
-                    value={pageData.header.subtitle}
-                    onChange={(e) => updateNested('header.subtitle', e.target.value)}
-                    placeholder="Compare a profundidade da entrega. Não é sobre quantidade de aulas, é sobre a utilidade do que é ensinado."
-                    rows={3}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Input
+                    label="Badge"
+                    value={currentData.header.badge}
+                    onChange={(e) => handleChange('header.badge', e.target.value)}
+                    placeholder="Ex: Comparação Justa"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Texto do badge acima do título
+                  </p>
+                </div>
+
+                <div>
+                  <Input
+                    label="Título Principal"
+                    value={currentData.header.title}
+                    onChange={(e) => handleChange('header.title', e.target.value)}
+                    placeholder="Ex: Por que a TegPro é superior"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Título principal da comparação
+                  </p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <TextArea
+                    label="Subtítulo"
+                    value={currentData.header.subtitle}
+                    onChange={(e) => handleChange('header.subtitle', e.target.value)}
+                    placeholder="Ex: Veja a diferença entre nossa solução e a concorrência"
+                    rows={2}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Texto explicativo abaixo do título
+                  </p>
                 </div>
               </div>
             </Card>
@@ -450,9 +525,9 @@ export default function BenchmarkPage() {
         {/* Seção Colunas */}
         <div className="space-y-4">
           <SectionHeader
-            title="Colunas da Comparação"
+            title="Nomes das Colunas"
             section="columns"
-            icon={ColumnsIcon}
+            icon={Columns}
             isExpanded={expandedSections.columns}
             onToggle={() => toggleSection("columns")}
           />
@@ -462,65 +537,56 @@ export default function BenchmarkPage() {
             animate={{ height: expandedSections.columns ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Título da Coluna Concorrente
-                    </label>
-                    <Input
-                      value={pageData.columns.competitor}
-                      onChange={(e) => updateNested('columns.competitor', e.target.value)}
-                      placeholder="Cursos Tradicionais"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                    <p className="text-xs text-[var(--color-secondary)]/70">
-                      Título da coluna da esquerda (geralmente negativo)
-                    </p>
-                  </div>
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Nomes das Colunas da Tabela
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Defina os nomes que aparecerão no cabeçalho da tabela comparativa
+                </p>
+              </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Título da Coluna TegPro
-                    </label>
-                    <Input
-                      value={pageData.columns.us}
-                      onChange={(e) => updateNested('columns.us', e.target.value)}
-                      placeholder="Ecossistema TegPro"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                    <p className="text-xs text-[var(--color-secondary)]/70">
-                      Título da coluna da direita (geralmente positivo)
-                    </p>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Input
+                    label="Nome da Concorrência"
+                    value={currentData.columns.competitor}
+                    onChange={(e) => handleChange('columns.competitor', e.target.value)}
+                    placeholder="Ex: Concorrência"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Nome da coluna da concorrência
+                  </p>
+                </div>
+
+                <div>
+                  <Input
+                    label="Nosso Nome"
+                    value={currentData.columns.us}
+                    onChange={(e) => handleChange('columns.us', e.target.value)}
+                    placeholder="Ex: TegPro"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Nome da nossa coluna (sua marca)
+                  </p>
                 </div>
               </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Seção Features */}
+        {/* Seção Recursos de Comparação */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <SectionHeader
-              title={`Características de Comparação (${features.length} itens)`}
-              section="features"
-              icon={TrendingUp}
-              isExpanded={expandedSections.features}
-              onToggle={() => toggleSection("features")}
-            />
-            <Button
-              type="button"
-              onClick={handleAddFeature}
-              variant="primary"
-              className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
-              disabled={!canAddNewFeature}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Item
-            </Button>
-          </div>
+          <SectionHeader
+            title="Recursos de Comparação"
+            section="features"
+            icon={Target}
+            isExpanded={expandedSections.features}
+            onToggle={() => toggleSection("features")}
+          />
 
           <motion.div
             initial={false}
@@ -529,230 +595,188 @@ export default function BenchmarkPage() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <div>
                     <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                      Itens de Comparação
+                      Gerenciamento de Recursos
                     </h4>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-[var(--color-secondary)]/70">
-                          {featuresCompleteCount} de {featuresTotalCount} completos
-                        </span>
-                      </div>
-                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                    <p className="text-sm text-[var(--color-secondary)]/70">
+                      Arraste e solte para reordenar os recursos na tabela comparativa
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4 text-green-300" />
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
+                        {featuresCompletas} de {features.length} completos
                       </span>
                     </div>
                   </div>
                 </div>
-                <p className="text-sm text-[var(--color-secondary)]/70 mt-2">
-                  Configure os pontos de comparação entre a TegPro e a concorrência
+
+                {/* Barra de busca */}
+                <div className="space-y-2 mb-6">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Buscar Recursos
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
+                    <Input
+                      type="text"
+                      placeholder="Buscar recursos por título, concorrência ou nossa solução..."
+                      value={searchTerm}
+                      onChange={(e: any) => setSearchTerm(e.target.value)}
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <AnimatePresence>
+                  {filteredFeatures.length === 0 ? (
+                    <Card className="p-8 bg-[var(--color-background)]">
+                      <div className="text-center">
+                        <Target className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
+                        <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                          Nenhum recurso encontrado
+                        </h3>
+                        <p className="text-sm text-[var(--color-secondary)]/70">
+                          {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro recurso de comparação'}
+                        </p>
+                      </div>
+                    </Card>
+                  ) : (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <SortableContext
+                        items={features.map(f => f.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {filteredFeatures.map((item, index) => (
+                          <SortableFeatureItem
+                            key={item.id}
+                            item={item}
+                            index={index}
+                            showValidation={showValidation}
+                            itemList={features}
+                            handleChange={handleFeatureChange}
+                            openDeleteSingleModal={openDeleteSingleModal}
+                          />
+                        ))}
+                      </SortableContext>
+                    </DndContext>
+                  )}
+                </AnimatePresence>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Call to Action */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Call to Action"
+            section="cta"
+            icon={ArrowRight}
+            isExpanded={expandedSections.cta}
+            onToggle={() => toggleSection("cta")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cta ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Configurações do Botão de Ação
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Configure o botão que aparecerá abaixo da tabela comparativa
                 </p>
               </div>
 
-              {/* Mensagem de erro de validação */}
-              {featuresValidationError && (
-                <div className={`p-3 rounded-lg mb-4 ${
-                  isFeaturesLimitReached 
-                    ? 'bg-red-900/20 border border-red-800' 
-                    : 'bg-yellow-900/20 border border-yellow-800'
-                }`}>
-                  <div className="flex items-start gap-2">
-                    {isFeaturesLimitReached ? (
-                      <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                    )}
-                    <p className={`text-sm ${
-                      isFeaturesLimitReached ? 'text-red-400' : 'text-yellow-400'
-                    }`}>
-                      {featuresValidationError}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-6">
-                {features.map((feature, index) => {
-                  const FeatureIcon = getFeatureIcon(index);
-                  const isDragging = draggingItem === index;
-                  const itemId = `feature-${index}`;
-                  
-                  return (
-                    <div 
-                      key={itemId}
-                      ref={index === features.length - 1 ? newFeatureRef : undefined}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnter={handleDragEnter}
-                      onDragLeave={handleDragLeave}
-                      onDragEnd={handleDragEnd}
-                      onDrop={handleDrop}
-                      className={`p-6 border rounded-lg space-y-6 transition-all duration-200 ${
-                        isDragging
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10 opacity-70' 
-                          : 'border-[var(--color-border)] hover:border-[var(--color-primary)]/50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3 flex-1">
-                          {/* Handle para drag & drop */}
-                          <div 
-                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors flex flex-col items-center"
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, index)}
-                          >
-                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
-                            
-                            {/* Controles de ordenação */}
-                            <div className="flex flex-col gap-1 mt-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (index > 0) {
-                                    moveItem(index, index - 1);
-                                  }
-                                }}
-                                disabled={index === 0}
-                                className={`p-1 rounded ${index === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--color-border)]'}`}
-                              >
-                                ↑
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (index < features.length - 1) {
-                                    moveItem(index, index + 1);
-                                  }
-                                }}
-                                disabled={index === features.length - 1}
-                                className={`p-1 rounded ${index === features.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--color-border)]'}`}
-                              >
-                                ↓
-                              </button>
-                            </div>
-                          </div>
-                          
-                          {/* Indicador de posição */}
-                          <div className="flex flex-col items-center">
-                            <div className="p-2 rounded bg-[var(--color-primary)]/10">
-                              <FeatureIcon className="w-5 h-5 text-[var(--color-primary)]" />
-                            </div>
-                          </div>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-4">
-                              <h4 className="font-medium text-[var(--color-secondary)]">
-                                {feature.label || "Novo Item de Comparação"}
-                              </h4>
-                              {isFeatureValid(feature) ? (
-                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
-                                  Completo
-                                </span>
-                              ) : (
-                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                                  Incompleto
-                                </span>
-                              )}
-                              <span className="px-2 py-1 text-xs bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full">
-                                Posição {index + 1} de {features.length}
-                              </span>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                              {/* Coluna 1: Rótulo */}
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                    Rótulo da Característica
-                                  </label>
-                                  <Input
-                                    value={feature.label}
-                                    onChange={(e) => handleUpdateFeature(index, { label: e.target.value })}
-                                    placeholder="Ex: Origem do Método"
-                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                  />
-                                </div>
-                              </div>
-                              
-                              {/* Coluna 2: Competidor */}
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                    {pageData.columns.competitor}
-                                  </label>
-                                  <TextArea
-                                    value={feature.competitor}
-                                    onChange={(e) => handleUpdateFeature(index, { competitor: e.target.value })}
-                                    placeholder="Ex: Teoria e Livros"
-                                    rows={4}
-                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] border-red-300 focus:border-red-500"
-                                  />
-                                </div>
-                              </div>
-                              
-                              {/* Coluna 3: TegPro */}
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                    {pageData.columns.us}
-                                  </label>
-                                  <TextArea
-                                    value={feature.us}
-                                    onChange={(e) => handleUpdateFeature(index, { us: e.target.value })}
-                                    placeholder="Ex: Campo de Batalha (R$ 45M+ Gerados)"
-                                    rows={4}
-                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] border-green-300 focus:border-green-500"
-                                  />
-                                </div>
-                                
-                                <div className="pt-4">
-                                  <Button
-                                    type="button"
-                                    onClick={() => handleRemoveFeature(index)}
-                                    variant="danger"
-                                    className="w-full bg-red-600 hover:bg-red-700 border-none flex items-center justify-center gap-2"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                    Remover Item
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {features.length === 0 && (
-                <div className="text-center py-12 border-2 border-dashed border-[var(--color-border)] rounded-lg">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-background-body)] mb-4">
-                    <TrendingUp className="w-8 h-8 text-[var(--color-secondary)]/50" />
-                  </div>
-                  <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                    Nenhum item de comparação definido
-                  </h4>
-                  <p className="text-sm text-[var(--color-secondary)]/70 mb-6">
-                    Comece adicionando características para comparar a TegPro com a concorrência
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Input
+                    label="Texto do Botão"
+                    value={currentData.cta.text}
+                    onChange={(e) => handleChange('cta.text', e.target.value)}
+                    placeholder="Ex: Começar Agora"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Texto que aparecerá no botão
                   </p>
-                  <Button
-                    type="button"
-                    onClick={handleAddFeature}
-                    variant="primary"
-                    className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2 mx-auto"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar Primeiro Item
-                  </Button>
                 </div>
-              )}
+
+                <div>
+                  <Input
+                    label="URL do Botão"
+                    value={currentData.cta.url}
+                    onChange={(e) => handleChange('cta.url', e.target.value)}
+                    placeholder="Ex: /checkout"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Para onde o botão levará (use / para páginas internas)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Variante do Botão
+                  </label>
+                  <select
+                    value={currentData.cta.variant}
+                    onChange={(e) => handleChange('cta.variant', e.target.value)}
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                  >
+                    <option value="gradient">Gradiente</option>
+                    <option value="primary">Primário</option>
+                    <option value="secondary">Secundário</option>
+                    <option value="danger">Perigo</option>
+                  </select>
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Estilo visual do botão
+                  </p>
+                </div>
+
+                <div>
+                  <IconSelector
+                    value={currentData.cta.icon}
+                    onChange={(value) => handleChange('cta.icon', value)}
+                    label="Ícone do Botão"
+                    placeholder="ph:arrow-right-bold"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ícone que aparecerá no botão (opcional)
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Alvo do Link
+                  </label>
+                  <select
+                    value={currentData.cta.target}
+                    onChange={(e) => handleChange('cta.target', e.target.value)}
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                  >
+                    <option value="_self">Mesma aba</option>
+                    <option value="_blank">Nova aba</option>
+                  </select>
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Onde o link será aberto
+                  </p>
+                </div>
+              </div>
             </Card>
           </motion.div>
         </div>
@@ -760,13 +784,14 @@ export default function BenchmarkPage() {
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
+          onAddNew={handleAddFeature}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Benchmark"
-          icon={BarChart}
+          itemName="Comparação"
+          icon={Scale}
         />
       </form>
 
@@ -776,8 +801,8 @@ export default function BenchmarkPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={1}
-        itemName="Benchmark"
+        totalItems={features.length}
+        itemName="Comparação"
       />
 
       <FeedbackMessages 
