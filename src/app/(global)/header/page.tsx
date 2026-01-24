@@ -22,7 +22,6 @@ import {
   Trash2,
   Plus,
   Megaphone,
-  Clock,
   ArrowUpToLine,
   ArrowDownToLine,
   Maximize2,
@@ -70,10 +69,6 @@ interface AnnouncementBar {
     position: string;
     fullWidth: boolean;
     className: string;
-  };
-  behavior: {
-    autoClose: number;
-    persistent: boolean;
   };
 }
 
@@ -164,10 +159,6 @@ const defaultHeaderData: HeaderData = {
       position: "top",
       fullWidth: true,
       className: ""
-    },
-    behavior: {
-      autoClose: 0,
-      persistent: false
     }
   }
 };
@@ -227,7 +218,10 @@ const mergeWithDefaults = (apiData: any, defaultData: HeaderData): HeaderData =>
         underline: apiData.variants?.cursos?.underline || defaultData.variants.cursos.underline,
       }
     },
-    announcementBar: apiData.announcementBar || defaultData.announcementBar,
+    announcementBar: {
+      content: apiData.announcementBar?.content || defaultData.announcementBar.content,
+      styles: apiData.announcementBar?.styles || defaultData.announcementBar.styles,
+    },
   };
 };
 
@@ -440,17 +434,17 @@ export default function Page() {
     let completed = 0;
     let total = 0;
 
-    // Announcement Bar (8 campos)
+    // Announcement Bar (6 campos - removido autoClose e persistent)
     const ab = headerData.announcementBar;
-    total += 8;
+    total += 6;
     if (ab.content.text.trim()) completed++;
     if (ab.content.linkText.trim()) completed++;
     if (ab.content.linkUrl.trim()) completed++;
     if (ab.content.icon.trim()) completed++;
     completed++; // showIcon é boolean
     if (ab.styles.variant.trim()) completed++;
-    completed++; // fullWidth é boolean
-    completed++; // persistent é boolean
+    // fullWidth não conta como campo preenchível (é boolean sempre true/false)
+    // Removido: autoClose e persistent
 
     // Geral (5 campos)
     total += 5;
@@ -731,69 +725,6 @@ export default function Page() {
                         placeholder="minha-classe-personalizada"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Comportamento */}
-                <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
-                  <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
-                    <Clock className="w-5 h-5" />
-                    Comportamento
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                        Fechar Automaticamente (segundos)
-                      </label>
-                      <Input
-                        type="number"
-                        value={headerData.announcementBar.behavior.autoClose}
-                        onChange={(e) => updateNested('announcementBar.behavior.autoClose', parseInt(e.target.value) || 0)}
-                        placeholder="0 (não fecha automaticamente)"
-                        min="0"
-                        max="3600"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      />
-                      <p className="text-xs text-[var(--color-secondary)]/50">
-                        0 = não fecha automaticamente
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
-                      <div className="flex items-center gap-3">
-                        {headerData.announcementBar.behavior.persistent ? (
-                          <Eye className="w-5 h-5 text-green-500" />
-                        ) : (
-                          <EyeOff className="w-5 h-5 text-gray-500" />
-                        )}
-                        <div>
-                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                            Persistente
-                          </label>
-                          <p className="text-sm text-[var(--color-secondary)]/70">
-                            Manter visível após fechar
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => updateNested('announcementBar.behavior.persistent', !headerData.announcementBar.behavior.persistent)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          headerData.announcementBar.behavior.persistent 
-                            ? 'bg-green-500' 
-                            : 'bg-gray-300'
-                        }`}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            headerData.announcementBar.behavior.persistent 
-                              ? 'translate-x-6' 
-                              : 'translate-x-1'
-                          }`}
-                        />
-                      </button>
                     </div>
                   </div>
                 </div>

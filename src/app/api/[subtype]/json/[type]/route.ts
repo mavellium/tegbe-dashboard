@@ -91,18 +91,36 @@ async function uploadToBlob(file: File): Promise<string> {
    MERGE PROFUNDO (genérico)
 ========================================================= */
 function deepMerge(target: any, source: any): any {
-  if (typeof target !== "object" || typeof source !== "object") {
-    return source ?? target;
+  // Se source for null ou undefined, retornar target
+  if (source == null) {
+    return target;
+  }
+  
+  // Se target for null ou undefined, retornar source
+  if (target == null) {
+    return source;
   }
 
-  const output = Array.isArray(target) ? [...target] : { ...target };
+  // Se não são objetos, retornar source (ou target se source for undefined)
+  if (typeof target !== "object" || typeof source !== "object") {
+    return source === undefined ? target : source;
+  }
+
+  // Se são arrays, substituir completamente
+  if (Array.isArray(target) || Array.isArray(source)) {
+    return source;
+  }
+
+  const output = { ...target };
 
   for (const key of Object.keys(source)) {
     if (source[key] === undefined) continue;
 
     if (
       typeof source[key] === "object" &&
+      source[key] !== null &&
       !Array.isArray(source[key]) &&
+      target[key] &&
       typeof target[key] === "object"
     ) {
       output[key] = deepMerge(target[key], source[key]);
