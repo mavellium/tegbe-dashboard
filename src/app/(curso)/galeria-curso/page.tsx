@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useCallback, useId, useRef } from "react";
+import { useState, useMemo, useCallback, useId, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -32,7 +32,13 @@ import {
   Zap,
   Palette,
   Layers,
-  Grid3x3
+  Grid3x3,
+  Crown,
+  Image as ImageLucide,
+  Text,
+  Badge,
+  Hash,
+  Tag
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -42,7 +48,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 
-interface GaleriaFoto {
+interface GalleryImage {
   id: string;
   alt: string;
   image: string;
@@ -50,97 +56,94 @@ interface GaleriaFoto {
   file?: File | null;
 }
 
-interface TitulosData {
-  badge: {
-    texto: string;
-    icone: string;
-  };
-  tituloPrincipal: {
-    linha1: string;
-    linha2: string;
-    palavrasDestaque: string;
-  };
-  descricao: string;
-  cta: {
-    botao: string;
-    cardTitulo: string;
-    cardDescricao: string;
+interface BadgeContent {
+  text: string;
+  icon: string;
+}
+
+interface TitleContent {
+  line1: string;
+  line2: string;
+  highlightWords: string;
+}
+
+interface GalleryData {
+  data: GalleryImage[];
+  textContent: {
+    badge: BadgeContent;
+    title: TitleContent;
+    description?: string;
+    cta?: {
+      button: string;
+      cardTitle?: string;
+      cardDescription?: string;
+    };
+    // Adicione outros campos conforme necessário
   };
 }
 
-interface GaleriaData {
-  galeria: {
-    fotos: GaleriaFoto[];
-    titulos: TitulosData;
-  };
-}
-
-const defaultData: GaleriaData = {
-  galeria: {
-    fotos: [
-      {
-        id: "1",
-        alt: "",
-        image: "",
-        span: "row-span-2"
-      }
-    ],
-    titulos: {
-      badge: {
-        texto: "",
-        icone: "ph:users-three-fill"
-      },
-      tituloPrincipal: {
-        linha1: "",
-        linha2: "",
-        palavrasDestaque: ""
-      },
-      descricao: "",
-      cta: {
-        botao: "",
-        cardTitulo: "",
-        cardDescricao: ""
-      }
+const defaultData: GalleryData = {
+  data: [
+    {
+      id: "1",
+      alt: "",
+      image: "",
+      span: "row-span-2"
+    }
+  ],
+  textContent: {
+    badge: {
+      text: "Comunidade VIP",
+      icon: "ph:crown"
+    },
+    title: {
+      line1: "Faça parte da",
+      line2: "elite do mercado",
+      highlightWords: "elite do mercado"
+    },
+    description: "",
+    cta: {
+      button: "",
+      cardTitle: "",
+      cardDescription: ""
     }
   }
 };
 
 // Função para mesclar com dados padrão
-const mergeWithDefaults = (apiData: any, defaultData: GaleriaData): GaleriaData => {
+const mergeWithDefaults = (apiData: any, defaultData: GalleryData): GalleryData => {
   if (!apiData) return defaultData;
   
   return {
-    galeria: {
-      fotos: apiData.galeria?.fotos?.map((foto: any, index: number) => ({
-        id: foto.id || `foto-${Date.now()}-${index}`,
-        alt: foto.alt || "",
-        image: foto.image || "",
-        span: foto.span || "row-span-1",
-        file: null
-      })) || defaultData.galeria.fotos,
-      titulos: {
-        badge: {
-          texto: apiData.galeria?.titulos?.badge?.texto || defaultData.galeria.titulos.badge.texto,
-          icone: apiData.galeria?.titulos?.badge?.icone || defaultData.galeria.titulos.badge.icone
-        },
-        tituloPrincipal: {
-          linha1: apiData.galeria?.titulos?.tituloPrincipal?.linha1 || defaultData.galeria.titulos.tituloPrincipal.linha1,
-          linha2: apiData.galeria?.titulos?.tituloPrincipal?.linha2 || defaultData.galeria.titulos.tituloPrincipal.linha2,
-          palavrasDestaque: apiData.galeria?.titulos?.tituloPrincipal?.palavrasDestaque || defaultData.galeria.titulos.tituloPrincipal.palavrasDestaque
-        },
-        descricao: apiData.galeria?.titulos?.descricao || defaultData.galeria.titulos.descricao,
-        cta: {
-          botao: apiData.galeria?.titulos?.cta?.botao || defaultData.galeria.titulos.cta.botao,
-          cardTitulo: apiData.galeria?.titulos?.cta?.cardTitulo || defaultData.galeria.titulos.cta.cardTitulo,
-          cardDescricao: apiData.galeria?.titulos?.cta?.cardDescricao || defaultData.galeria.titulos.cta.cardDescricao
-        }
+    data: apiData.data?.map((item: any, index: number) => ({
+      id: item.id || `image-${Date.now()}-${index}`,
+      alt: item.alt || "",
+      image: item.image || "",
+      span: item.span || "row-span-1",
+      file: null
+    })) || defaultData.data,
+    textContent: {
+      badge: {
+        text: apiData.textContent?.badge?.text || defaultData.textContent.badge.text,
+        icon: apiData.textContent?.badge?.icon || defaultData.textContent.badge.icon
+      },
+      title: {
+        line1: apiData.textContent?.title?.line1 || defaultData.textContent.title.line1,
+        line2: apiData.textContent?.title?.line2 || defaultData.textContent.title.line2,
+        highlightWords: apiData.textContent?.title?.highlightWords || defaultData.textContent.title.highlightWords
+      },
+      description: apiData.textContent?.description || defaultData.textContent.description,
+      cta: {
+        button: apiData.textContent?.cta?.button || defaultData?.textContent?.cta?.button,
+        cardTitle: apiData.textContent?.cta?.cardTitle || defaultData?.textContent?.cta?.cardTitle,
+        cardDescription: apiData.textContent?.cta?.cardDescription || defaultData?.textContent?.cta?.cardDescription
       }
     }
   };
 };
 
-// Componente Sortable para fotos
-function SortableGaleriaItem({
+// Componente Sortable para imagens
+function SortableGalleryItem({
   item,
   index,
   showValidation,
@@ -150,17 +153,17 @@ function SortableGaleriaItem({
   openDeleteSingleModal,
   getImageUrl,
 }: {
-  item: GaleriaFoto;
+  item: GalleryImage;
   index: number;
   showValidation: boolean;
-  itemList: GaleriaFoto[];
-  handleChange: (index: number, field: keyof GaleriaFoto, value: any) => void;
+  itemList: GalleryImage[];
+  handleChange: (index: number, field: keyof GalleryImage, value: any) => void;
   handleFileChange: (index: number, file: File | null) => void;
   openDeleteSingleModal: (index: number, title: string) => void;
-  getImageUrl: (item: GaleriaFoto) => string;
+  getImageUrl: (item: GalleryImage) => string;
 }) {
   const stableId = useId();
-  const sortableId = item.id || `galeria-${index}-${stableId}`;
+  const sortableId = item.id || `gallery-${index}-${stableId}`;
 
   const {
     attributes,
@@ -253,7 +256,7 @@ function SortableGaleriaItem({
                   Imagem da Galeria
                 </label>
                 <ImageUpload
-                  label="Imagem da Galeria"
+                  label=""
                   description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 1000x500px."
                   currentImage={item.image || ""}
                   selectedFile={item.file || null}
@@ -319,18 +322,17 @@ function SortableGaleriaItem({
   );
 }
 
-export default function GaleriaPage() {
+export default function GalleryPage() {
   const [expandedSections, setExpandedSections] = useState({
-    badge: true,
-    tituloPrincipal: false,
-    descricao: false,
-    cta: false,
-    fotos: true
+    textContent: true,
+    images: true
   });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
+  const [deleteImageIndex, setDeleteImageIndex] = useState<number | null>(null);
+  const [deleteImageTitle, setDeleteImageTitle] = useState<string>("");
 
   const {
     data: componentData,
@@ -346,15 +348,15 @@ export default function GaleriaPage() {
     confirmDelete,
     fileStates,
     setFileState,
-  } = useJsonManagement<GaleriaData>({
+  } = useJsonManagement<GalleryData>({
     apiPath: "/api/tegbe-institucional/json/gallery",
     defaultData: defaultData,
     mergeFunction: mergeWithDefaults,
   });
 
   const currentData = componentData || defaultData;
-  const fotos = currentData.galeria.fotos;
-  const titulos = currentData.galeria.titulos;
+  const images = currentData.data;
+  const textContent = currentData.textContent;
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -363,20 +365,20 @@ export default function GaleriaPage() {
     }));
   };
 
-  const handleTitulosChange = (path: string, value: any) => {
-    updateNested(`galeria.titulos.${path}`, value);
+  const handleTextContentChange = (path: string, value: any) => {
+    updateNested(`textContent.${path}`, value);
   };
 
-  const handleFotoChange = (index: number, field: keyof GaleriaFoto, value: any) => {
-    const newFotos = [...fotos];
-    newFotos[index] = { ...newFotos[index], [field]: value };
-    updateNested(`galeria.fotos`, newFotos);
+  const handleImageChange = (index: number, field: keyof GalleryImage, value: any) => {
+    const newImages = [...images];
+    newImages[index] = { ...newImages[index], [field]: value };
+    updateNested(`data`, newImages);
   };
 
-  const handleFotoFileChange = (index: number, file: File | null) => {
-    const newFotos = [...fotos];
-    newFotos[index] = { ...newFotos[index], file };
-    updateNested(`galeria.fotos`, newFotos);
+  const handleImageFileChange = (index: number, file: File | null) => {
+    const newImages = [...images];
+    newImages[index] = { ...newImages[index], file };
+    updateNested(`data`, newImages);
   };
 
   const getFileFromState = (key: string): File | null => {
@@ -405,16 +407,16 @@ export default function GaleriaPage() {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
-    const oldIndex = fotos.findIndex((item) => item.id === active.id);
-    const newIndex = fotos.findIndex((item) => item.id === over.id);
+    const oldIndex = images.findIndex((item) => item.id === active.id);
+    const newIndex = images.findIndex((item) => item.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
-      const newFotos = arrayMove(fotos, oldIndex, newIndex);
-      updateNested(`galeria.fotos`, newFotos);
+      const newImages = arrayMove(images, oldIndex, newIndex);
+      updateNested(`data`, newImages);
     }
   };
 
-  const getImageUrl = (item: GaleriaFoto): string => {
+  const getImageUrl = (item: GalleryImage): string => {
     if (item.file) return URL.createObjectURL(item.file);
     if (item.image) {
       return item.image.startsWith('http') ? item.image : `https://mavellium.com.br${item.image.startsWith('/') ? '' : '/'}${item.image}`;
@@ -422,59 +424,79 @@ export default function GaleriaPage() {
     return "";
   };
 
-  const handleAddFoto = () => {
-    const newFoto: GaleriaFoto = {
-      id: `foto-${Date.now()}-${fotos.length}`,
+  const handleAddImage = () => {
+    const newImage: GalleryImage = {
+      id: `image-${Date.now()}-${images.length}`,
       alt: '',
       image: '',
       span: 'row-span-1',
       file: null
     };
-    updateNested(`galeria.fotos`, [...fotos, newFoto]);
+    updateNested(`data`, [...images, newImage]);
   };
 
   const openDeleteSingleModal = (index: number, title: string) => {
-    // Implementação da abertura do modal de deleção individual
-    console.log("Abrir modal para deletar foto:", index, title);
+    setDeleteImageIndex(index);
+    setDeleteImageTitle(title);
   };
 
-  const filteredFotos = useMemo(() => {
-    if (!searchTerm) return fotos;
+  const handleDeleteImage = () => {
+    if (deleteImageIndex !== null) {
+      const newImages = images.filter((_, i) => i !== deleteImageIndex);
+      updateNested(`data`, newImages);
+      setDeleteImageIndex(null);
+      setDeleteImageTitle("");
+    }
+  };
+
+  const filteredImages = useMemo(() => {
+    if (!searchTerm) return images;
     const term = searchTerm.toLowerCase();
-    return fotos.filter(item => 
+    return images.filter(item => 
       item.alt.toLowerCase().includes(term) ||
       item.image.toLowerCase().includes(term) ||
       item.span.toLowerCase().includes(term)
     );
-  }, [fotos, searchTerm]);
+  }, [images, searchTerm]);
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Contar campos dos títulos
-    total += 7; // badge.texto, badge.icone, tituloPrincipal.linha1, tituloPrincipal.linha2, tituloPrincipal.palavrasDestaque, descricao, cta.botao
-    if (titulos.badge.texto.trim()) completed++;
-    if (titulos.badge.icone.trim()) completed++;
-    if (titulos.tituloPrincipal.linha1.trim()) completed++;
-    if (titulos.tituloPrincipal.linha2.trim()) completed++;
-    if (titulos.tituloPrincipal.palavrasDestaque.trim()) completed++;
-    if (titulos.descricao.trim()) completed++;
-    if (titulos.cta.botao.trim()) completed++;
+    // Contar campos do textContent
+    total += 3; // badge.text, badge.icon, title.line1, title.line2, title.highlightWords
+    if (textContent.badge.text.trim()) completed++;
+    if (textContent.badge.icon.trim()) completed++;
+    if (textContent.title.line1.trim()) completed++;
+    if (textContent.title.line2.trim()) completed++;
+    if (textContent.title.highlightWords.trim()) completed++;
 
-    // Contar campos das fotos
-    total += fotos.length * 3; // alt, image, span para cada foto
-    fotos.forEach(foto => {
-      if (foto.alt.trim()) completed++;
-      if (foto.image.trim() || foto.file) completed++;
-      if (foto.span.trim()) completed++;
+    // Campos opcionais
+    if (textContent.description) total += 1;
+    if (textContent.description?.trim()) completed++;
+    
+    if (textContent.cta?.button) total += 1;
+    if (textContent.cta?.button?.trim()) completed++;
+    
+    if (textContent.cta?.cardTitle) total += 1;
+    if (textContent.cta?.cardTitle?.trim()) completed++;
+    
+    if (textContent.cta?.cardDescription) total += 1;
+    if (textContent.cta?.cardDescription?.trim()) completed++;
+
+    // Contar campos das imagens
+    total += images.length * 3; // alt, image, span para cada imagem
+    images.forEach(image => {
+      if (image.alt.trim()) completed++;
+      if (image.image.trim() || image.file) completed++;
+      if (image.span.trim()) completed++;
     });
 
     return { completed, total };
   };
 
   const completion = calculateCompletion();
-  const fotosCompletas = fotos.filter(foto => foto.alt.trim() && (foto.image.trim() || foto.file)).length;
+  const imagesComplete = images.filter(image => image.alt.trim() && (image.image.trim() || image.file)).length;
 
   if (loading && !exists) {
     return <Loading layout={Layers} exists={!!exists} />;
@@ -484,248 +506,178 @@ export default function GaleriaPage() {
     <ManageLayout
       headerIcon={ImageIcon}
       title="Galeria"
-      description="Configure a galeria de imagens com textos e fotos"
+      description="Configure a galeria de imagens e conteúdo de texto"
       exists={!!exists}
       itemName="Galeria"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Badge */}
+        {/* Seção Text Content */}
         <div className="space-y-4">
           <SectionHeader
-            title="Badge"
-            section="badge"
-            icon={Zap}
-            isExpanded={expandedSections.badge}
-            onToggle={() => toggleSection("badge")}
+            title="Conteúdo de Texto"
+            section="textContent"
+            icon={Text}
+            isExpanded={expandedSections.textContent}
+            onToggle={() => toggleSection("textContent")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.badge ? "auto" : 0 }}
+            animate={{ height: expandedSections.textContent ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                  Configurações do Badge
-                </h4>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Configure o badge que aparece acima do título principal
-                </p>
-              </div>
+              <div className="space-y-8">
+                {/* Badge */}
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Badge className="w-5 h-5 text-[var(--color-secondary)]" />
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
+                      Badge
+                    </h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <IconSelector
+                        value={textContent.badge.icon}
+                        onChange={(value) => handleTextContentChange('badge.icon', value)}
+                        label="Ícone do Badge"
+                        placeholder="ph:crown"
+                      />
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                        Ícone que aparece no badge
+                      </p>
+                    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <IconSelector
-                    value={titulos.badge.icone}
-                    onChange={(value) => handleTitulosChange('badge.icone', value)}
-                    label="Ícone do Badge"
-                    placeholder="ph:users-three-fill"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Ícone que aparece no badge
-                  </p>
+                    <div>
+                      <Input
+                        label="Texto do Badge"
+                        value={textContent.badge.text}
+                        onChange={(e) => handleTextContentChange('badge.text', e.target.value)}
+                        placeholder="Comunidade VIP"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                        Texto pequeno acima do título principal
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div>
-                  <Input
-                    label="Texto do Badge"
-                    value={titulos.badge.texto}
-                    onChange={(e) => handleTitulosChange('badge.texto', e.target.value)}
-                    placeholder="Comunidade Elite"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Texto pequeno acima do título principal
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção Título Principal */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Título Principal"
-            section="tituloPrincipal"
-            icon={Type}
-            isExpanded={expandedSections.tituloPrincipal}
-            onToggle={() => toggleSection("tituloPrincipal")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.tituloPrincipal ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                  Título da Galeria
-                </h4>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Configure o título principal da seção de galeria
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <Input
-                    label="Linha 1"
-                    value={titulos.tituloPrincipal.linha1}
-                    onChange={(e) => handleTitulosChange('tituloPrincipal.linha1', e.target.value)}
-                    placeholder="Você nunca vai"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+                {/* Title */}
+                <div className="space-y-4 pt-6 border-t border-[var(--color-border)]">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Type className="w-5 h-5 text-[var(--color-secondary)]" />
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
+                      Título
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Linha 1"
+                        value={textContent.title.line1}
+                        onChange={(e) => handleTextContentChange('title.line1', e.target.value)}
+                        placeholder="Faça parte da"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                      <Input
+                        label="Linha 2"
+                        value={textContent.title.line2}
+                        onChange={(e) => handleTextContentChange('title.line2', e.target.value)}
+                        placeholder="elite do mercado"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                    
+                    <Input
+                      label="Palavras em Destaque"
+                      value={textContent.title.highlightWords}
+                      onChange={(e) => handleTextContentChange('title.highlightWords', e.target.value)}
+                      placeholder="elite do mercado"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70">
+                      Palavras que serão destacadas no título (separadas por vírgula se necessário)
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <Input
-                    label="Linha 2"
-                    value={titulos.tituloPrincipal.linha2}
-                    onChange={(e) => handleTitulosChange('tituloPrincipal.linha2', e.target.value)}
-                    placeholder="jogar sozinho."
+                {/* Descrição Opcional */}
+                <div className="space-y-4 pt-6 border-t border-[var(--color-border)]">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
+                      Descrição (Opcional)
+                    </h3>
+                  </div>
+                  
+                  <TextArea
+                    label="Descrição"
+                    value={textContent.description || ""}
+                    onChange={(e) => handleTextContentChange('description', e.target.value)}
+                    placeholder="Entre para o ecossistema onde networking não é troca de cartão, é troca de estratégia de escala."
+                    rows={3}
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                 </div>
 
-                <div>
-                  <Input
-                    label="Palavras em Destaque"
-                    value={titulos.tituloPrincipal.palavrasDestaque}
-                    onChange={(e) => handleTitulosChange('tituloPrincipal.palavrasDestaque', e.target.value)}
-                    placeholder="jogar sozinho"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Palavras que serão destacadas no título
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção Descrição */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Descrição"
-            section="descricao"
-            icon={MessageSquare}
-            isExpanded={expandedSections.descricao}
-            onToggle={() => toggleSection("descricao")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.descricao ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                  Descrição da Galeria
-                </h4>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Texto descritivo abaixo do título principal
-                </p>
-              </div>
-
-              <TextArea
-                label="Descrição"
-                value={titulos.descricao}
-                onChange={(e) => handleTitulosChange('descricao', e.target.value)}
-                placeholder="Entre para o ecossistema onde networking não é troca de cartão, é troca de estratégia de escala."
-                rows={3}
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-              />
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção CTA */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Call to Action"
-            section="cta"
-            icon={Instagram}
-            isExpanded={expandedSections.cta}
-            onToggle={() => toggleSection("cta")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.cta ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                  Configurações do Call to Action
-                </h4>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Configure o botão de ação e elementos relacionados
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <Input
-                    label="Texto do Botão"
-                    value={titulos.cta.botao}
-                    onChange={(e) => handleTitulosChange('cta.botao', e.target.value)}
-                    placeholder="Ver Galeria Completa no Instagram"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Texto do botão principal
-                  </p>
-                </div>
-
-                <div>
-                  <Input
-                    label="Título do Card"
-                    value={titulos.cta.cardTitulo}
-                    onChange={(e) => handleTitulosChange('cta.cardTitulo', e.target.value)}
-                    placeholder="Sua foto aqui"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Título do card flutuante
-                  </p>
-                </div>
-
-                <div>
-                  <Input
-                    label="Descrição do Card"
-                    value={titulos.cta.cardDescricao}
-                    onChange={(e) => handleTitulosChange('cta.cardDescricao', e.target.value)}
-                    placeholder="Junte-se aos próximos cases de sucesso da Tegbe."
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Descrição do card flutuante
-                  </p>
+                {/* CTA Opcional */}
+                <div className="space-y-4 pt-6 border-t border-[var(--color-border)]">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Instagram className="w-5 h-5 text-[var(--color-secondary)]" />
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
+                      Call to Action (Opcional)
+                    </h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <Input
+                      label="Texto do Botão"
+                      value={textContent.cta?.button || ""}
+                      onChange={(e) => handleTextContentChange('cta.button', e.target.value)}
+                      placeholder="Ver Galeria Completa no Instagram"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Título do Card"
+                        value={textContent.cta?.cardTitle || ""}
+                        onChange={(e) => handleTextContentChange('cta.cardTitle', e.target.value)}
+                        placeholder="Sua foto aqui"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                      <Input
+                        label="Descrição do Card"
+                        value={textContent.cta?.cardDescription || ""}
+                        onChange={(e) => handleTextContentChange('cta.cardDescription', e.target.value)}
+                        placeholder="Junte-se aos próximos cases de sucesso da Tegbe."
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Seção Fotos da Galeria */}
+        {/* Seção Imagens */}
         <div className="space-y-4">
           <SectionHeader
-            title="Fotos da Galeria"
-            section="fotos"
-            icon={ImageIcon}
-            isExpanded={expandedSections.fotos}
-            onToggle={() => toggleSection("fotos")}
+            title="Imagens da Galeria"
+            section="images"
+            icon={ImageLucide}
+            isExpanded={expandedSections.images}
+            onToggle={() => toggleSection("images")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.fotos ? "auto" : 0 }}
+            animate={{ height: expandedSections.images ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
@@ -733,52 +685,73 @@ export default function GaleriaPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <div>
                     <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                      Gerenciamento de Fotos
+                      Gerenciamento de Imagens
                     </h4>
                     <p className="text-sm text-[var(--color-secondary)]/70">
-                      Arraste e solte para reordenar as fotos da galeria
+                      Arraste e solte para reordenar as imagens da galeria
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4 text-green-300" />
-                      <span className="text-sm text-[var(--color-secondary)]/70">
-                        {fotosCompletas} de {fotos.length} completas
-                      </span>
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-300" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {imagesComplete} de {images.length} completas
+                        </span>
+                      </div>
                     </div>
+                    
+                    <Button
+                      type="button"
+                      onClick={handleAddImage}
+                      variant="primary"
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      Adicionar Imagem
+                    </Button>
                   </div>
                 </div>
 
                 {/* Barra de busca */}
                 <div className="space-y-2 mb-6">
                   <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Buscar Fotos
+                    Buscar Imagens
                   </label>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
                     <Input
                       type="text"
-                      placeholder="Buscar fotos por descrição, URL ou tamanho..."
+                      placeholder="Buscar imagens por descrição, URL ou tamanho..."
                       value={searchTerm}
                       onChange={(e: any) => setSearchTerm(e.target.value)}
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
                     />
+                    {searchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTerm("")}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--color-secondary)]/70 hover:text-[var(--color-secondary)]"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="space-y-4">
                 <AnimatePresence>
-                  {filteredFotos.length === 0 ? (
+                  {filteredImages.length === 0 ? (
                     <Card className="p-8 bg-[var(--color-background)]">
                       <div className="text-center">
                         <ImageIcon className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
                         <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                          Nenhuma foto encontrada
+                          Nenhuma imagem encontrada
                         </h3>
                         <p className="text-sm text-[var(--color-secondary)]/70">
-                          {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione sua primeira foto'}
+                          {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione sua primeira imagem'}
                         </p>
                       </div>
                     </Card>
@@ -789,18 +762,18 @@ export default function GaleriaPage() {
                       onDragEnd={handleDragEnd}
                     >
                       <SortableContext
-                        items={fotos.map(f => f.id)}
+                        items={images.map(f => f.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        {filteredFotos.map((item, index) => (
-                          <SortableGaleriaItem
+                        {filteredImages.map((item, index) => (
+                          <SortableGalleryItem
                             key={item.id}
                             item={item}
                             index={index}
                             showValidation={showValidation}
-                            itemList={fotos}
-                            handleChange={handleFotoChange}
-                            handleFileChange={handleFotoFileChange}
+                            itemList={images}
+                            handleChange={handleImageChange}
+                            handleFileChange={handleImageFileChange}
                             openDeleteSingleModal={openDeleteSingleModal}
                             getImageUrl={getImageUrl}
                           />
@@ -817,7 +790,7 @@ export default function GaleriaPage() {
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
-          onAddNew={handleAddFoto}
+          onAddNew={handleAddImage}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
@@ -828,13 +801,62 @@ export default function GaleriaPage() {
         />
       </form>
 
+      {/* Modal de confirmação de exclusão de imagem */}
+      <AnimatePresence>
+        {deleteImageIndex !== null && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-[var(--color-background)] rounded-lg shadow-xl max-w-md w-full"
+            >
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-500" />
+                  <h3 className="text-xl font-semibold text-[var(--color-secondary)]">
+                    Confirmar Exclusão
+                  </h3>
+                </div>
+                <p className="text-[var(--color-secondary)]/80 mb-6">
+                  Tem certeza que deseja excluir a imagem <strong>&quot;{deleteImageTitle}&quot;</strong>?
+                  Esta ação não pode ser desfeita.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setDeleteImageIndex(null);
+                      setDeleteImageTitle("");
+                    }}
+                    className="border-[var(--color-border)]"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="danger"
+                    onClick={handleDeleteImage}
+                    className="bg-red-600 hover:bg-red-700 border-none"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={fotos.length}
+        totalItems={images.length}
         itemName="Galeria"
       />
 

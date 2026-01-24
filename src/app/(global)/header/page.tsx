@@ -7,6 +7,7 @@ import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { ImageUpload } from "@/components/ImageUpload";
+import IconSelector from "@/components/IconSelector";
 import { 
   Layout, 
   Settings, 
@@ -19,7 +20,14 @@ import {
   CheckCircle2,
   XCircle,
   Trash2,
-  Plus
+  Plus,
+  Megaphone,
+  Clock,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  Maximize2,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -47,6 +55,28 @@ interface VariantTheme {
   underline: string;
 }
 
+interface AnnouncementBar {
+  content: {
+    text: string;
+    linkText: string;
+    linkUrl: string;
+    icon: string;
+    showIcon: boolean;
+  };
+  styles: {
+    variant: string;
+    customBackgroundColor: string | null;
+    customTextColor: string | null;
+    position: string;
+    fullWidth: boolean;
+    className: string;
+  };
+  behavior: {
+    autoClose: number;
+    persistent: boolean;
+  };
+}
+
 type HeaderData = {
   id?: string;
   general: {
@@ -63,6 +93,7 @@ type HeaderData = {
     sobre: VariantTheme;
     cursos: VariantTheme;
   };
+  announcementBar: AnnouncementBar;
 };
 
 const defaultHeaderData: HeaderData = {
@@ -116,6 +147,27 @@ const defaultHeaderData: HeaderData = {
       border: "border-[#FFD700]/30",
       glow: "shadow-[0_0_25px_rgba(255,215,0,0.3)]",
       underline: "bg-[#FFD700]"
+    }
+  },
+  announcementBar: {
+    content: {
+      text: "",
+      linkText: "",
+      linkUrl: "#",
+      icon: "ph:megaphone-simple-fill",
+      showIcon: true
+    },
+    styles: {
+      variant: "warning",
+      customBackgroundColor: null,
+      customTextColor: null,
+      position: "top",
+      fullWidth: true,
+      className: ""
+    },
+    behavior: {
+      autoClose: 0,
+      persistent: false
     }
   }
 };
@@ -174,7 +226,8 @@ const mergeWithDefaults = (apiData: any, defaultData: HeaderData): HeaderData =>
         glow: apiData.variants?.cursos?.glow || defaultData.variants.cursos.glow,
         underline: apiData.variants?.cursos?.underline || defaultData.variants.cursos.underline,
       }
-    }
+    },
+    announcementBar: apiData.announcementBar || defaultData.announcementBar,
   };
 };
 
@@ -204,7 +257,8 @@ export default function Page() {
   const [draggingLink, setDraggingLink] = useState<number | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
-    general: true,
+    announcement: true,
+    general: false,
     links: false,
     colors: false,
   });
@@ -386,6 +440,18 @@ export default function Page() {
     let completed = 0;
     let total = 0;
 
+    // Announcement Bar (8 campos)
+    const ab = headerData.announcementBar;
+    total += 8;
+    if (ab.content.text.trim()) completed++;
+    if (ab.content.linkText.trim()) completed++;
+    if (ab.content.linkUrl.trim()) completed++;
+    if (ab.content.icon.trim()) completed++;
+    completed++; // showIcon é boolean
+    if (ab.styles.variant.trim()) completed++;
+    completed++; // fullWidth é boolean
+    completed++; // persistent é boolean
+
     // Geral (5 campos)
     total += 5;
     completed += generalCompleteCount;
@@ -425,6 +491,317 @@ export default function Page() {
       itemName="Header"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        {/* Seção Announcement Bar */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Barra de Anúncio"
+            section="announcement"
+            icon={Megaphone}
+            isExpanded={expandedSections.announcement}
+            onToggle={() => toggleSection("announcement")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.announcement ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                {/* Conteúdo */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                    <Megaphone className="w-5 h-5" />
+                    Conteúdo
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Texto do Anúncio
+                    </label>
+                    <Input
+                      value={headerData.announcementBar.content.text}
+                      onChange={(e) => updateNested('announcementBar.content.text', e.target.value)}
+                      placeholder="🚀 Promoção especial: 50% de desconto em todos os cursos!"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Texto do Link
+                      </label>
+                      <Input
+                        value={headerData.announcementBar.content.linkText}
+                        onChange={(e) => updateNested('announcementBar.content.linkText', e.target.value)}
+                        placeholder="Saiba mais"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        URL do Link
+                      </label>
+                      <Input
+                        value={headerData.announcementBar.content.linkUrl}
+                        onChange={(e) => updateNested('announcementBar.content.linkUrl', e.target.value)}
+                        placeholder="#"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Ícone
+                      </label>
+                      <IconSelector
+                        value={headerData.announcementBar.content.icon}
+                        onChange={(value) => updateNested('announcementBar.content.icon', value)}
+                        placeholder="ph:megaphone-simple-fill"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
+                      <div className="flex items-center gap-3">
+                        {headerData.announcementBar.content.showIcon ? (
+                          <Eye className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <EyeOff className="w-5 h-5 text-gray-500" />
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Mostrar Ícone
+                          </label>
+                          <p className="text-sm text-[var(--color-secondary)]/70">
+                            Exibir ícone ao lado do texto
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateNested('announcementBar.content.showIcon', !headerData.announcementBar.content.showIcon)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          headerData.announcementBar.content.showIcon 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            headerData.announcementBar.content.showIcon 
+                              ? 'translate-x-6' 
+                              : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Estilos */}
+                <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
+                  <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                    <Palette className="w-5 h-5" />
+                    Estilos
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Variante
+                      </label>
+                      <select
+                        value={headerData.announcementBar.styles.variant}
+                        onChange={(e) => updateNested('announcementBar.styles.variant', e.target.value)}
+                        className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
+                      >
+                        <option value="info">Info (Azul)</option>
+                        <option value="warning">Warning (Amarelo)</option>
+                        <option value="success">Success (Verde)</option>
+                        <option value="error">Error (Vermelho)</option>
+                        <option value="custom">Customizado</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Posição
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateNested('announcementBar.styles.position', 'top')}
+                          className={`flex-1 flex items-center justify-center gap-2 p-2 rounded border ${
+                            headerData.announcementBar.styles.position === 'top'
+                              ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                              : 'bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]'
+                          }`}
+                        >
+                          <ArrowUpToLine className="w-4 h-4" />
+                          Topo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateNested('announcementBar.styles.position', 'bottom')}
+                          className={`flex-1 flex items-center justify-center gap-2 p-2 rounded border ${
+                            headerData.announcementBar.styles.position === 'bottom'
+                              ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                              : 'bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]'
+                          }`}
+                        >
+                          <ArrowDownToLine className="w-4 h-4" />
+                          Rodapé
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {headerData.announcementBar.styles.variant === 'custom' && (
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-[var(--color-secondary)]">Cores Personalizadas</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <ThemePropertyInput
+                          property="customBackgroundColor"
+                          label="Cor de Fundo"
+                          description="Cor de fundo da barra de anúncio"
+                          currentHex={headerData.announcementBar.styles.customBackgroundColor || '#FFCC00'}
+                          tailwindClass=""
+                          onThemeChange={(prop, hex) => updateNested('announcementBar.styles.customBackgroundColor', hex)}
+                        />
+
+                        <ThemePropertyInput
+                          property="customTextColor"
+                          label="Cor do Texto"
+                          description="Cor do texto da barra de anúncio"
+                          currentHex={headerData.announcementBar.styles.customTextColor || '#000000'}
+                          tailwindClass=""
+                          onThemeChange={(prop, hex) => updateNested('announcementBar.styles.customTextColor', hex)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
+                      <div className="flex items-center gap-3">
+                        {headerData.announcementBar.styles.fullWidth ? (
+                          <Maximize2 className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <Maximize2 className="w-5 h-5 text-gray-500" />
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Largura Total
+                          </label>
+                          <p className="text-sm text-[var(--color-secondary)]/70">
+                            Ocupar toda a largura da tela
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateNested('announcementBar.styles.fullWidth', !headerData.announcementBar.styles.fullWidth)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          headerData.announcementBar.styles.fullWidth 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            headerData.announcementBar.styles.fullWidth 
+                              ? 'translate-x-6' 
+                              : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Classe CSS Personalizada
+                      </label>
+                      <Input
+                        value={headerData.announcementBar.styles.className}
+                        onChange={(e) => updateNested('announcementBar.styles.className', e.target.value)}
+                        placeholder="minha-classe-personalizada"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Comportamento */}
+                <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
+                  <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                    <Clock className="w-5 h-5" />
+                    Comportamento
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Fechar Automaticamente (segundos)
+                      </label>
+                      <Input
+                        type="number"
+                        value={headerData.announcementBar.behavior.autoClose}
+                        onChange={(e) => updateNested('announcementBar.behavior.autoClose', parseInt(e.target.value) || 0)}
+                        placeholder="0 (não fecha automaticamente)"
+                        min="0"
+                        max="3600"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                      <p className="text-xs text-[var(--color-secondary)]/50">
+                        0 = não fecha automaticamente
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
+                      <div className="flex items-center gap-3">
+                        {headerData.announcementBar.behavior.persistent ? (
+                          <Eye className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <EyeOff className="w-5 h-5 text-gray-500" />
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Persistente
+                          </label>
+                          <p className="text-sm text-[var(--color-secondary)]/70">
+                            Manter visível após fechar
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateNested('announcementBar.behavior.persistent', !headerData.announcementBar.behavior.persistent)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          headerData.announcementBar.behavior.persistent 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-300'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            headerData.announcementBar.behavior.persistent 
+                              ? 'translate-x-6' 
+                              : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
         {/* Seção Geral */}
         <div className="space-y-4">
           <SectionHeader
@@ -799,6 +1176,7 @@ export default function Page() {
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
+          completeCount={completion.completed}
           totalCount={completion.total}
           itemName="Header"
           icon={Layout}

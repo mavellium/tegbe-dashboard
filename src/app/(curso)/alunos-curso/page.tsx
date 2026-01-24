@@ -55,7 +55,7 @@ interface FooterStat {
 
 interface Testimonial {
   id: string;
-  type: "video" | "image";
+  type: "video";
   clientName: string;
   clientRole: string;
   description: string;
@@ -403,7 +403,7 @@ const TestimonialItem = ({
                   Tipo de Depoimento
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {(["video", "image"] as const).map((type) => {
+                  {(["video"] as const).map((type) => {
                     const Icon = type === "video" ? Video : ImageIcon;
                     return (
                       <button

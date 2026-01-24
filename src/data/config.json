@@ -102,6 +102,7 @@
             { "name": "Headline", "icon": "HelpCircle", "href": "/headline-curso" },
             { "name": "Aprender", "icon": "HelpCircle", "href": "/aprender-curso" },
             { "name": "Bastidores", "icon": "HelpCircle", "href": "/video-curso" },
+            { "name": "Logos", "icon": "HelpCircle", "href": "/logos-curso" },
             { "name": "Formações", "icon": "HelpCircle", "href": "/formacoes-curso" },
             { "name": "Alunos", "icon": "HelpCircle", "href": "/alunos-curso" },
             { "name": "Galeria", "icon": "HelpCircle", "href": "/galeria-curso" },
