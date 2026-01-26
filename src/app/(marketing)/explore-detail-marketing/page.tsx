@@ -1,362 +1,153 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useId, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { motion } from "framer-motion";
+import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
-import IconSelector from "@/components/IconSelector";
-import { Switch } from "@/components/Switch";
 import { 
-  ImageIcon,
+  Settings, 
   GripVertical,
-  ArrowUpDown,
+  AlertCircle,
   CheckCircle2,
+  XCircle,
   Trash2,
-  Search,
-  Link,
-  ExternalLink,
-  Settings,
-  ChevronDown,
-  ChevronUp,
-  Zap,
-  Layers,
-  School,
   Plus,
-  Grid3x3,
-  X,
-  BookOpen,
-  GraduationCap
+  Target,
+  Tag,
+  Type,
+  Sparkles,
+  Palette,
+  Search,
+  Layers
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { SectionHeader } from "@/components/SectionHeader";
-import Loading from "@/components/Loading";
-import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ImageUpload } from "@/components/ImageUpload";
+import IconSelector from "@/components/IconSelector";
+import ColorPicker from "@/components/ColorPicker";
+import { hexToTailwindBgClass, normalizeHexColor } from "@/lib/colors";
+import Loading from "@/components/Loading";
 
-interface LogoData {
-  id: number;
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
-  url: string;
+interface ServiceItem {
+  id?: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  description: string;
+  icon: string;
+  image: string;
+  color: string; // Armazenado como hex
+  badgeColor: string; // Armazenado como hex
+  effect: "none" | "glow" | "pulse" | "shadow" | "gradient";
 }
 
-interface LogosCursoPageData {
-  variant: string;
-  data: LogoData[];
-  showBadge: boolean;
-  badgeText: string;
-  badgeIcon: string;
+interface ServicesData {
+  id?: string;
+  header: {
+    title: string;
+    subtitle: string;
+  };
+  services: ServiceItem[];
 }
 
-const defaultData: LogosCursoPageData = {
-  variant: "cursos",
-  data: [
+const defaultServicesData: ServicesData = {
+  header: {
+    title: "Nossos Serviços",
+    subtitle: "Soluções especializadas para impulsionar seu negócio"
+  },
+  services: [
     {
-      id: 1,
-      src: "",
-      alt: "",
-      width: 120,
-      height: 80,
-      url: ""
+      id: "service-1",
+      title: "Aquisição Cirúrgica",
+      subtitle: "Tráfego pago de alta conversão",
+      badge: "Popular",
+      description: "Tráfego pago focado em ICPs (Perfis de Cliente Ideal). Ignoramos curiosos e atraímos decisores com Google e Meta Ads de alta intenção.",
+      icon: "target",
+      image: "",
+      color: "#3B82F6", // Armazenado como hex
+      badgeColor: "#EF4444", // Armazenado como hex
+      effect: "none"
     }
-  ],
-  showBadge: true,
-  badgeText: "Plataformas de Cursos",
-  badgeIcon: "ph:graduation-cap-fill"
+  ]
 };
 
-// Função para mesclar com dados padrão
-const mergeWithDefaults = (apiData: any, defaultData: LogosCursoPageData): LogosCursoPageData => {
+const effectOptions = [
+  { value: "none", label: "Sem Efeito" },
+  { value: "glow", label: "Brilho Suave" },
+  { value: "pulse", label: "Pulsação Leve" },
+  { value: "shadow", label: "Sombra Elevada" },
+  { value: "gradient", label: "Gradiente" },
+];
+
+// Função para extrair hex de uma classe Tailwind
+const extractHexFromTailwindString = (tailwindClass: string): string => {
+  if (!tailwindClass) return "#3B82F6";
+  
+  // Se já for hex, normaliza e retorna
+  if (tailwindClass.startsWith("#")) {
+    return normalizeHexColor(tailwindClass);
+  }
+  
+  // Se for classe Tailwind com hex customizado [hex]
+  const hexMatch = tailwindClass.match(/\[#([0-9A-Fa-f]{3,6})\]/);
+  if (hexMatch) {
+    return normalizeHexColor(`#${hexMatch[1]}`);
+  }
+  
+  // Para classes Tailwind nomeadas, mapeamos para hex
+  const colorMap: Record<string, string> = {
+    // Blue
+    "bg-blue-500": "#3B82F6", "text-blue-500": "#3B82F6",
+    "bg-blue-600": "#2563EB", "text-blue-600": "#2563EB",
+    // Red
+    "bg-red-500": "#EF4444", "text-red-500": "#EF4444",
+    "bg-red-600": "#DC2626", "text-red-600": "#DC2626",
+    // Purple
+    "bg-purple-500": "#8B5CF6", "text-purple-500": "#8B5CF6",
+    // Green
+    "bg-green-500": "#10B981", "text-green-500": "#10B981",
+    // Fallback
+    "bg-[#3B82F6]": "#3B82F6", "text-[#3B82F6]": "#3B82F6",
+  };
+  
+  return colorMap[tailwindClass] || "#3B82F6";
+};
+
+const mergeWithDefaults = (apiData: any, defaultData: ServicesData): ServicesData => {
   if (!apiData) return defaultData;
   
   return {
-    variant: apiData.variant || defaultData.variant,
-    data: apiData.data?.map((logo: any, index: number) => ({
-      id: logo.id || index + 1,
-      src: logo.src || "",
-      alt: logo.alt || "",
-      width: logo.width || 120,
-      height: logo.height || 80,
-      url: logo.url || "",
-    })) || defaultData.data,
-    showBadge: apiData.showBadge ?? defaultData.showBadge,
-    badgeText: apiData.badgeText || defaultData.badgeText,
-    badgeIcon: apiData.badgeIcon || defaultData.badgeIcon
+    id: apiData.id,
+    header: {
+      title: apiData.header?.title || defaultData.header.title,
+      subtitle: apiData.header?.subtitle || defaultData.header.subtitle,
+    },
+    services: apiData.services?.map((service: any, index: number) => ({
+      id: service.id || `service-${index + 1}`,
+      title: service.title || `Serviço ${index + 1}`,
+      subtitle: service.subtitle || "",
+      badge: service.badge || "",
+      description: service.description || "",
+      icon: service.icon || "",
+      image: service.image || "",
+      // Converte classes Tailwind para hex se necessário
+      color: extractHexFromTailwindString(service.color || defaultData.services[0].color),
+      badgeColor: extractHexFromTailwindString(service.badgeColor || defaultData.services[0].badgeColor),
+      effect: service.effect || "none",
+    })) || defaultData.services
   };
 };
 
-// Componente Sortable para logos de cursos
-function SortableLogoItem({
-  item,
-  index,
-  showValidation,
-  itemList,
-  handleChange,
-  selectedFile,
-  onFileChange,
-  openDeleteSingleModal,
-}: {
-  item: LogoData;
-  index: number;
-  showValidation: boolean;
-  itemList: LogoData[];
-  handleChange: (index: number, field: keyof LogoData, value: any) => void;
-  selectedFile: File | null;
-  onFileChange: (file: File | null) => void;
-  openDeleteSingleModal: (index: number, title: string) => void;
-}) {
-  const stableId = useId();
-  const sortableId = `logo-curso-${item.id}-${stableId}`;
-
+export default function ServicesPage() {
   const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: sortableId });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const hasSrc = item.src.trim() !== "" || selectedFile;
-  const hasAlt = item.alt.trim() !== "";
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`relative ${isDragging ? 'z-50' : ''}`}
-    >
-      <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-        showValidation && (!hasSrc || !hasAlt) 
-          ? 'ring-2 ring-[var(--color-danger)]' 
-          : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-accent)]`}>
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="cursor-grab active:cursor-grabbing text-[var(--color-secondary)]/70 hover:text-[var(--color-accent)] transition-colors p-2 rounded-lg hover:bg-[var(--color-background)]/50"
-                {...attributes}
-                {...listeners}
-              >
-                <GripVertical className="w-5 h-5" />
-              </button>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]/70">
-                  <ArrowUpDown className="w-4 h-4" />
-                  <span>Posição: {index + 1}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  {hasAlt ? (
-                    <h4 className="font-medium text-[var(--color-secondary)]">
-                      {item.alt}
-                    </h4>
-                  ) : (
-                    <h4 className="font-medium text-[var(--color-secondary)]/50">
-                      Logo sem nome
-                    </h4>
-                  )}
-                  {hasSrc && hasAlt ? (
-                    <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
-                      Completo
-                    </span>
-                  ) : (
-                    <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                      Incompleto
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <Button
-              type="button"
-              onClick={() => openDeleteSingleModal(index, item.alt || "Logo sem nome")}
-              variant="danger"
-              className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Remover
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                  <ImageIcon className="w-4 h-4" />
-                  Logo da Plataforma
-                </label>
-                <ImageUpload
-                  label="Logo"
-                  description="Formatos suportados: SVG, PNG, JPG. Tamanho recomendado: 240x160px."
-                  currentImage={item.src || ""}
-                  selectedFile={selectedFile || null}
-                  onFileChange={onFileChange}
-                  aspectRatio="aspect-video"
-                  previewWidth={150}
-                  previewHeight={100}
-                />
-              </div>
-              
-              <div className="bg-[var(--color-background-body)] p-4 rounded-lg border border-[var(--color-border)]">
-                <h4 className="text-sm font-medium text-[var(--color-secondary)] mb-2">Preview do Link</h4>
-                {item.url ? (
-                  <div className="flex items-center gap-2">
-                    <Link className="w-4 h-4 text-[var(--color-accent)]" />
-                    <a 
-                      href={item.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-sm text-[var(--color-accent)] hover:underline truncate"
-                    >
-                      {item.url.length > 30 ? `${item.url.substring(0, 30)}...` : item.url}
-                    </a>
-                    <ExternalLink className="w-3 h-3 text-[var(--color-secondary)]/70" />
-                  </div>
-                ) : (
-                  <p className="text-sm text-[var(--color-secondary)]/50">Nenhum link configurado</p>
-                )}
-              </div>
-            </div>
-
-            <div className="lg:col-span-2 space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    URL da Imagem (src)
-                  </label>
-                  <Input
-                    type="text"
-                    value={item.src}
-                    onChange={(e: any) => handleChange(index, "src", e.target.value)}
-                    placeholder="Ex: https://exemplo.com/logo.svg"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono text-sm"
-                  />
-                  <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                    URL da imagem do logo. Deixe em branco se fizer upload de arquivo.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      Nome da Plataforma (alt) <span className="text-xs text-[var(--color-danger)]">*</span>
-                    </label>
-                    <Input
-                      type="text"
-                      value={item.alt}
-                      onChange={(e: any) => handleChange(index, "alt", e.target.value)}
-                      placeholder="Ex: Alura, Udemy, Coursera"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                    <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                      Nome da plataforma de cursos
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      URL da Plataforma
-                    </label>
-                    <div className="relative">
-                      <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-[var(--color-secondary)]/70" />
-                      <Input
-                        type="text"
-                        value={item.url}
-                        onChange={(e: any) => handleChange(index, "url", e.target.value)}
-                        placeholder="Ex: https://www.alura.com.br/"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                      Link para a plataforma de cursos
-                    </p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      Largura (px)
-                    </label>
-                    <Input
-                      type="number"
-                      value={item.width}
-                      onChange={(e: any) => handleChange(index, "width", parseInt(e.target.value) || 120)}
-                      placeholder="120"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                    <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                      Largura da imagem em pixels
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      Altura (px)
-                    </label>
-                    <Input
-                      type="number"
-                      value={item.height}
-                      onChange={(e: any) => handleChange(index, "height", parseInt(e.target.value) || 80)}
-                      placeholder="80"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                    <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                      Altura da imagem em pixels
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-export default function LogosCursoPage() {
-  const [expandedSections, setExpandedSections] = useState({
-    config: true,
-    logos: true
-  });
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showValidation, setShowValidation] = useState(false);
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
-  const [deleteSingleModal, setDeleteSingleModal] = useState({
-    isOpen: false,
-    index: -1,
-    title: ""
-  });
-
-  // Estado local para gerenciar os logos
-  const [localLogos, setLocalLogos] = useState<LogoData[]>([]);
-  const [lastAddedId, setLastAddedId] = useState<number | null>(null);
-
-  const {
-    data: componentData,
+    data: servicesData,
     exists,
     loading,
     success,
@@ -369,36 +160,34 @@ export default function LogosCursoPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<LogosCursoPageData>({
-    apiPath: "/api/tegbe-institucional/json/logos-curso",
-    defaultData: defaultData,
+  } = useJsonManagement<ServicesData>({
+    apiPath: "/api/tegbe-institucional/json/services-marketing",
+    defaultData: defaultServicesData,
     mergeFunction: mergeWithDefaults,
   });
 
-  const currentData = componentData || defaultData;
+  // Estado local para gerenciar os serviços
+  const [localServices, setLocalServices] = useState<ServiceItem[]>([]);
+  const [draggingService, setDraggingService] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [expandedSections, setExpandedSections] = useState({
+    header: true,
+    services: false,
+  });
+
+  // Referências para novos itens
+  const newServiceRef = useRef<HTMLDivElement>(null);
+
+  // Controle de planos
+  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   // Sincroniza os dados quando carregam do banco
   useEffect(() => {
-    if (currentData.data) {
-      setLocalLogos(currentData.data);
+    if (servicesData.services) {
+      setLocalServices(servicesData.services);
     }
-  }, [currentData.data]);
-
-  // Efeito para fazer scroll até o último item adicionado
-  useEffect(() => {
-    if (lastAddedId) {
-      setTimeout(() => {
-        const element = document.querySelector(`[data-logo-id="${lastAddedId}"]`);
-        if (element) {
-          element.scrollIntoView({ 
-            behavior: 'smooth',
-            block: 'nearest'
-          });
-          setLastAddedId(null); // Reseta após o scroll
-        }
-      }, 100);
-    }
-  }, [lastAddedId]);
+  }, [servicesData.services]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -407,377 +196,621 @@ export default function LogosCursoPage() {
     }));
   };
 
-  const handleChange = (path: string, value: any) => {
-    updateNested(path, value);
-  };
-
-  const handleLogoChange = (index: number, field: keyof LogoData, value: any) => {
-    const updated = [...localLogos];
-    if (index >= 0 && index < updated.length) {
-      updated[index] = { ...updated[index], [field]: value };
-      setLocalLogos(updated);
-      updateNested('data', updated);
+  // Funções para serviços
+  const handleAddService = () => {
+    if (localServices.length >= currentPlanLimit) {
+      return false;
     }
-  };
-
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
-  };
-
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    setShowValidation(true);
-    await save();
-  };
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-
-    const oldIndex = localLogos.findIndex((item) => `logo-curso-${item.id}` === active.id);
-    const newIndex = localLogos.findIndex((item) => `logo-curso-${item.id}` === over.id);
-
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const updated = arrayMove(localLogos, oldIndex, newIndex);
-      setLocalLogos(updated);
-      updateNested('data', updated);
-    }
-  };
-
-  const generateNewId = () => {
-    const existingIds = localLogos.map(logo => logo.id);
-    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
-    return maxId + 1;
-  };
-
-  const handleAddLogo = () => {
-    const newId = generateNewId();
-    const newLogo: LogoData = {
-      id: newId,
-      src: '',
-      alt: '',
-      width: 120,
-      height: 80,
-      url: ''
+    
+    const newItem: ServiceItem = {
+      id: `service-${Date.now()}`,
+      title: '',
+      subtitle: '',
+      badge: '',
+      description: '',
+      icon: '',
+      image: '',
+      color: '#3B82F6',
+      badgeColor: '#EF4444',
+      effect: 'none'
     };
     
-    // CORREÇÃO: Adiciona o novo item no FINAL da lista
-    const updated = [...localLogos, newLogo];
-    setLocalLogos(updated);
-    updateNested('data', updated);
-    setLastAddedId(newId); // Define o ID do último item adicionado
+    const updated = [...localServices, newItem];
+    setLocalServices(updated);
+    updateNested('services', updated);
+    
+    setTimeout(() => {
+      newServiceRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
   };
 
-  const removeLogo = (index: number) => {
-    if (localLogos.length <= 1) {
-      // Se só tem um item, não remove, apenas limpa
-      const updated = [{
-        id: 1,
-        src: '',
-        alt: '',
-        width: 120,
-        height: 80,
-        url: ''
-      }];
-      setLocalLogos(updated);
-      updateNested('data', updated);
-      
-      // Remove o arquivo correspondente do estado de arquivos
-      setFileState(`data.1.src`, null);
+  const updateService = (index: number, updates: Partial<ServiceItem>) => {
+    const updated = [...localServices];
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      setLocalServices(updated);
+      updateNested('services', updated);
+    }
+  };
+
+  const removeService = (index: number) => {
+    const updated = [...localServices];
+    
+    if (updated.length <= 1) {
+      // Mantém pelo menos um item vazio
+      const emptyItem: ServiceItem = {
+        id: `service-${Date.now()}`,
+        title: '',
+        subtitle: '',
+        badge: '',
+        description: '',
+        icon: '',
+        image: '',
+        color: '#3B82F6',
+        badgeColor: '#EF4444',
+        effect: 'none'
+      };
+      setLocalServices([emptyItem]);
+      updateNested('services', [emptyItem]);
     } else {
-      const updated = [...localLogos];
-      const deletedLogo = updated[index];
       updated.splice(index, 1);
-      
-      setLocalLogos(updated);
-      updateNested('data', updated);
-      
-      // Remove o arquivo correspondente do estado de arquivos
-      if (deletedLogo) {
-        setFileState(`data.${deletedLogo.id}.src`, null);
-      }
+      setLocalServices(updated);
+      updateNested('services', updated);
     }
   };
 
-  const openDeleteSingleModal = (index: number, title: string) => {
-    setDeleteSingleModal({
-      isOpen: true,
-      index,
-      title
-    });
+  // Funções de drag & drop para serviços
+  const handleServiceDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingService(index);
   };
 
-  const closeDeleteSingleModal = () => {
-    setDeleteSingleModal({
-      isOpen: false,
-      index: -1,
-      title: ""
-    });
+  const handleServiceDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    
+    if (draggingService === null || draggingService === index) return;
+    
+    const updated = [...localServices];
+    const draggedItem = updated[draggingService];
+    
+    // Remove o item arrastado
+    updated.splice(draggingService, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingService ? index : index;
+    updated.splice(newIndex, 0, draggedItem);
+    
+    setLocalServices(updated);
+    updateNested('services', updated);
+    setDraggingService(index);
   };
 
-  const confirmDeleteSingle = () => {
-    if (deleteSingleModal.index >= 0 && deleteSingleModal.index < localLogos.length) {
-      removeLogo(deleteSingleModal.index);
-      closeDeleteSingleModal();
+  const handleServiceDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingService(null);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.currentTarget.classList.add('drag-over');
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+  };
+
+  // Função para atualizar cores dos serviços
+  const handleServiceColorChange = (index: number, hexColor: string, type: "main" | "badge") => {
+    const normalizedHex = normalizeHexColor(hexColor);
+    const field = type === "main" ? "color" : "badgeColor";
+    updateService(index, { [field]: normalizedHex });
+  };
+
+  // Função para salvar - converte hex para Tailwind antes de salvar
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    try {
+      // Converte cores hex para Tailwind antes de salvar
+      const servicesWithTailwind = localServices.map(service => ({
+        ...service,
+        color: hexToTailwindBgClass(service.color),
+        badgeColor: hexToTailwindBgClass(service.badgeColor)
+      }));
+      
+      // Atualiza temporariamente os dados com Tailwind
+      updateNested('services', servicesWithTailwind);
+      
+      await save();
+      
+      // Reverte para hex após salvar (para continuar mostrando hex na UI)
+      const servicesWithHex = localServices.map(service => ({
+        ...service,
+        color: normalizeHexColor(service.color),
+        badgeColor: normalizeHexColor(service.badgeColor)
+      }));
+      
+      updateNested('services', servicesWithHex);
+      
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
     }
   };
 
-  const filteredLogos = useMemo(() => {
-    if (!searchTerm) return localLogos;
+  // Validações
+  const isServiceValid = (item: ServiceItem): boolean => {
+    return item.title.trim() !== '' && 
+           item.description.trim() !== '' && 
+           item.icon.trim() !== '' &&
+           item.image.trim() !== '';
+  };
+
+  const isServicesLimitReached = localServices.length >= currentPlanLimit;
+  const canAddNewService = !isServicesLimitReached;
+  const servicesCompleteCount = localServices.filter(isServiceValid).length;
+  const servicesTotalCount = localServices.length;
+
+  const headerCompleteCount = [
+    servicesData.header.title.trim() !== '',
+    servicesData.header.subtitle.trim() !== ''
+  ].filter(Boolean).length;
+
+  const servicesValidationError = isServicesLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+    : null;
+
+  // Filtro de busca
+  const filteredServices = useMemo(() => {
+    if (!searchTerm.trim()) return localServices;
+    
     const term = searchTerm.toLowerCase();
-    return localLogos.filter(logo => 
-      logo.alt.toLowerCase().includes(term) ||
-      logo.src.toLowerCase().includes(term) ||
-      logo.url.toLowerCase().includes(term)
+    return localServices.filter(service => 
+      service.title.toLowerCase().includes(term) ||
+      service.subtitle.toLowerCase().includes(term) ||
+      service.badge.toLowerCase().includes(term) ||
+      service.description.toLowerCase().includes(term) ||
+      service.icon.toLowerCase().includes(term)
     );
-  }, [localLogos, searchTerm]);
+  }, [localServices, searchTerm]);
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Configurações gerais
-    total += 4;
-    if (currentData.variant.trim()) completed++;
-    if (currentData.badgeText.trim()) completed++;
-    if (currentData.badgeIcon.trim()) completed++;
-    total++; // showBadge é booleano, sempre considerado como completo
-    completed++;
+    // Header (2 campos)
+    total += 2;
+    completed += headerCompleteCount;
 
-    // Logos
-    total += localLogos.length * 6; // src, alt, width, height, url, id para cada logo
-    localLogos.forEach(logo => {
-      if (logo.src.trim() || getFileFromState(`data.${logo.id}.src`)) completed++;
-      if (logo.alt.trim()) completed++;
-      if (logo.width > 0) completed++;
-      if (logo.height > 0) completed++;
-      if (logo.url.trim()) completed++;
-      if (logo.id) completed++;
+    // Services (9 campos cada)
+    total += localServices.length * 9;
+    localServices.forEach(service => {
+      if (service.title.trim()) completed++;
+      if (service.subtitle.trim()) completed++;
+      if (service.badge.trim()) completed++;
+      if (service.description.trim()) completed++;
+      if (service.icon.trim()) completed++;
+      if (service.image.trim()) completed++;
+      if (service.color.trim()) completed++;
+      if (service.badgeColor.trim()) completed++;
+      if (service.effect.trim()) completed++;
     });
 
     return { completed, total };
   };
 
   const completion = calculateCompletion();
-  const logosCompletos = localLogos.filter(logo => 
-    (logo.src.trim() || getFileFromState(`data.${logo.id}.src`)) && logo.alt.trim()
-  ).length;
-
-  const getImageUrl = (logo: LogoData): string => {
-    const file = getFileFromState(`data.${logo.id}.src`);
-    if (file) return URL.createObjectURL(file);
-    if (logo.src) {
-      return logo.src.startsWith('http') ? logo.src : `https://mavellium.com.br${logo.src.startsWith('/') ? '' : '/'}${logo.src}`;
-    }
-    return "";
-  };
 
   if (loading && !exists) {
-    return <Loading layout={Layers} exists={!!exists} />;
+    return <Loading layout={Settings} exists={!!exists} />;
   }
 
   return (
     <ManageLayout
-      headerIcon={GraduationCap}
-      title="Logos de Plataformas de Cursos"
-      description="Gerencie os logos das plataformas de cursos parceiras"
+      headerIcon={Settings}
+      title="Serviços"
+      description="Gerencie os serviços oferecidos pela sua empresa"
       exists={!!exists}
-      itemName="Logos de Cursos"
+      itemName="Serviços"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Configurações Gerais */}
+        {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
-            title="Configurações Gerais"
-            section="config"
-            icon={Settings}
-            isExpanded={expandedSections.config}
-            onToggle={() => toggleSection("config")}
+            title="Cabeçalho da Seção"
+            section="header"
+            icon={Layers}
+            isExpanded={expandedSections.header}
+            onToggle={() => toggleSection("header")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.config ? "auto" : 0 }}
+            animate={{ height: expandedSections.header ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                  Configurações da Seção de Logos de Cursos
-                </h4>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Configure as opções gerais da seção de logos de plataformas de cursos
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-                <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)] w-full">
-                  <div>
-                    <h4 className="font-medium text-[var(--color-secondary)]">Mostrar Badge</h4>
-                    <p className="text-sm text-[var(--color-secondary)]/70">
-                      Exibir o badge acima dos logos das plataformas
-                    </p>
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                      <Layers className="w-5 h-5" />
+                      Informações do Cabeçalho
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {headerCompleteCount} de 2 campos preenchidos
+                      </span>
+                    </div>
                   </div>
-                  <Switch
-                    checked={currentData.showBadge}
-                    onCheckedChange={(checked) => handleChange('showBadge', checked)}
-                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                      label="Título Principal"
+                      value={servicesData.header.title}
+                      onChange={(e) => updateNested('header.title', e.target.value)}
+                      placeholder="Ex: Nossos Serviços"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
+                    />
+
+                    <Input
+                      label="Subtítulo"
+                      value={servicesData.header.subtitle}
+                      onChange={(e) => updateNested('header.subtitle', e.target.value)}
+                      placeholder="Ex: Soluções especializadas para impulsionar seu negócio"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
                 </div>
-
-                {currentData.showBadge && (
-                  <>
-                    <div>
-                      <IconSelector
-                        value={currentData.badgeIcon}
-                        onChange={(value) => handleChange('badgeIcon', value)}
-                        label="Ícone do Badge"
-                        placeholder="ph:graduation-cap-fill"
-                      />
-                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                        Ícone que aparece no badge acima dos logos
-                      </p>
-                    </div>
-
-                    <div>
-                      <Input
-                        label="Texto do Badge"
-                        value={currentData.badgeText}
-                        onChange={(e) => handleChange('badgeText', e.target.value)}
-                        placeholder="Ex: Plataformas de Cursos Parceiras"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      />
-                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                        Texto que aparece no badge acima dos logos
-                      </p>
-                    </div>
-                  </>
-                )}
               </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Seção Logos */}
+        {/* Seção Serviços */}
         <div className="space-y-4">
           <SectionHeader
-            title="Logos das Plataformas de Cursos"
-            section="logos"
-            icon={BookOpen}
-            isExpanded={expandedSections.logos}
-            onToggle={() => toggleSection("logos")}
+            title="Lista de Serviços"
+            section="services"
+            icon={Settings}
+            isExpanded={expandedSections.services}
+            onToggle={() => toggleSection("services")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.logos ? "auto" : 0 }}
+            animate={{ height: expandedSections.services ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                      Gerenciamento de Logos
-                    </h4>
-                    <p className="text-sm text-[var(--color-secondary)]/70">
-                      Arraste e solte para reordenar os logos das plataformas
-                    </p>
+              <div className="space-y-6">
+                <div className="mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+                    <div>
+                      <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                        Serviços Oferecidos
+                      </h4>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {servicesCompleteCount} de {servicesTotalCount} completos
+                        </span>
+                        <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          Limite: {currentPlanType === 'pro' ? '10' : '5'} serviços
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleAddService}
+                        variant="primary"
+                        className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                        disabled={!canAddNewService}
+                      >
+                        <Plus className="w-4 h-4" />
+                        Adicionar Serviço
+                      </Button>
+                      {isServicesLimitReached && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Limite do plano atingido
+                        </p>
+                      )}
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1">
-                      <CheckCircle2 className="w-4 h-4 text-green-300" />
-                      <span className="text-sm text-[var(--color-secondary)]/70">
-                        {logosCompletos} de {localLogos.length} completos
-                      </span>
+                  {/* Barra de busca */}
+                  <div className="mt-4 space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Buscar Serviços
+                    </label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
+                      <Input
+                        type="text"
+                        placeholder="Buscar serviços por título, subtítulo, badge, descrição ou ícone..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
+                      />
                     </div>
-                    <Button
-                      type="button"
-                      onClick={handleAddLogo}
-                      variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-accent)] hover:bg-[var(--color-accent)]/90 text-white border-none flex items-center gap-2"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar Logo
-                    </Button>
                   </div>
                 </div>
 
-                {/* Barra de busca */}
-                <div className="space-y-2 mb-6">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Buscar Plataformas
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
-                    <Input
-                      type="text"
-                      placeholder="Buscar por nome da plataforma, URL ou link..."
-                      value={searchTerm}
-                      onChange={(e: any) => setSearchTerm(e.target.value)}
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
-                    />
+                {/* Mensagem de erro */}
+                {servicesValidationError && (
+                  <div className={`p-3 rounded-lg ${isServicesLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                    <div className="flex items-start gap-2">
+                      {isServicesLimitReached ? (
+                        <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      )}
+                      <p className={`text-sm ${isServicesLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {servicesValidationError}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </div>
+                )}
 
-              <div className="space-y-4">
-                <AnimatePresence>
-                  {filteredLogos.length === 0 ? (
-                    <Card className="p-8 bg-[var(--color-background)]">
-                      <div className="text-center">
-                        <BookOpen className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
-                        <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                          Nenhuma plataforma encontrada
-                        </h3>
-                        <p className="text-sm text-[var(--color-secondary)]/70">
-                          {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione sua primeira plataforma de cursos'}
-                        </p>
-                      </div>
-                    </Card>
-                  ) : (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={localLogos.map(logo => `logo-curso-${logo.id}`)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {filteredLogos.map((item, index) => (
-                          <div
-                            key={`logo-curso-${item.id}`}
-                            data-logo-id={item.id}
-                          >
-                            <SortableLogoItem
-                              item={item}
-                              index={index}
-                              showValidation={showValidation}
-                              itemList={localLogos}
-                              handleChange={handleLogoChange}
-                              selectedFile={getFileFromState(`data.${item.id}.src`)}
-                              onFileChange={(file) => setFileState(`data.${item.id}.src`, file)}
-                              openDeleteSingleModal={openDeleteSingleModal}
-                            />
+                {/* Lista de Serviços */}
+                {filteredServices.length === 0 ? (
+                  <Card className="p-8 bg-[var(--color-background)]">
+                    <div className="text-center">
+                      <Settings className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                        {searchTerm ? 'Nenhum serviço encontrado' : 'Nenhum serviço adicionado'}
+                      </h3>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro serviço usando o botão acima'}
+                      </p>
+                    </div>
+                  </Card>
+                ) : (
+                  <div className="space-y-4">
+                    {filteredServices.map((service, index) => {
+                      const normalizedColor = normalizeHexColor(service.color);
+                      const normalizedBadgeColor = normalizeHexColor(service.badgeColor);
+                      
+                      return (
+                        <div 
+                          key={service.id || index}
+                          ref={index === localServices.length - 1 && service.title === '' && service.description === '' ? newServiceRef : undefined}
+                          draggable
+                          onDragStart={(e) => handleServiceDragStart(e, index)}
+                          onDragOver={(e) => handleServiceDragOver(e, index)}
+                          onDragEnter={handleDragEnter}
+                          onDragLeave={handleDragLeave}
+                          onDragEnd={handleServiceDragEnd}
+                          onDrop={handleDrop}
+                          className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+                            draggingService === index 
+                              ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                              : 'hover:border-[var(--color-primary)]/50'
+                          }`}
+                          style={{ borderLeftColor: normalizedColor || '#3B82F6', borderLeftWidth: '4px' }}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3 flex-1">
+                              {/* Handle para drag & drop */}
+                              <div 
+                                className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                                draggable
+                                onDragStart={(e) => handleServiceDragStart(e, index)}
+                              >
+                                <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                              </div>
+                              
+                              {/* Indicador de posição */}
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+                                  {index + 1}
+                                </span>
+                                <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+                              </div>
+                              
+                              <div className="flex-1">
+                                <div className="flex items-center gap-3 mb-4">
+                                  <h4 className="font-medium text-[var(--color-secondary)]">
+                                    {service.title || "Serviço sem título"}
+                                  </h4>
+                                  {service.title && service.description && service.icon && service.image ? (
+                                    <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                      Completo
+                                    </span>
+                                  ) : (
+                                    <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                      Incompleto
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                  <div className="space-y-6">
+                                    <div>
+                                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                                        <Target className="w-4 h-4" />
+                                        Imagem do Serviço
+                                      </label>
+                                      <ImageUpload
+                                        label="Imagem de Destaque"
+                                        description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x400px."
+                                        currentImage={service.image}
+                                        selectedFile={fileStates[`services.${index}.image`] || null}
+                                        onFileChange={(file) => setFileState(`services.${index}.image`, file)}
+                                        aspectRatio="aspect-video"
+                                        previewWidth={300}
+                                        previewHeight={150}
+                                      />
+                                    </div>
+
+                                    <div>
+                                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                                        Ícone do Serviço
+                                      </label>
+                                      <IconSelector
+                                        value={service.icon}
+                                        onChange={(value: string) => updateService(index, { icon: value })}
+                                        label="Selecione um ícone para o serviço"
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="lg:col-span-2 space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                          Título do Serviço
+                                        </label>
+                                        <Input
+                                          type="text"
+                                          value={service.title}
+                                          onChange={(e) => updateService(index, { title: e.target.value })}
+                                          placeholder="Ex: Aquisição Cirúrgica"
+                                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                                          <Type className="w-4 h-4" />
+                                          Subtítulo do Serviço
+                                        </label>
+                                        <Input
+                                          type="text"
+                                          value={service.subtitle}
+                                          onChange={(e) => updateService(index, { subtitle: e.target.value })}
+                                          placeholder="Ex: Tráfego pago de alta conversão"
+                                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                                          <Tag className="w-4 h-4" />
+                                          Badge/Etiqueta
+                                        </label>
+                                        <Input
+                                          type="text"
+                                          value={service.badge}
+                                          onChange={(e) => updateService(index, { badge: e.target.value })}
+                                          placeholder="Ex: Popular, Novo, Destaque"
+                                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                                          <Sparkles className="w-4 h-4" />
+                                          Efeito Visual
+                                        </label>
+                                        <select
+                                          value={service.effect}
+                                          onChange={(e) => updateService(index, { effect: e.target.value as any })}
+                                          className="w-full p-2 rounded-lg bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)]"
+                                        >
+                                          {effectOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>
+                                              {option.label}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                                          <Palette className="w-4 h-4" />
+                                          Cor Principal
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                          <Input
+                                            type="text"
+                                            value={service.color}
+                                            onChange={(e) => {
+                                              const hex = normalizeHexColor(e.target.value);
+                                              updateService(index, { color: hex });
+                                            }}
+                                            placeholder="Ex: #3B82F6"
+                                            className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                          />
+                                          <ColorPicker
+                                            color={normalizedColor}
+                                            onChange={(hex: string) => handleServiceColorChange(index, hex, "main")}
+                                          />
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                          Cor do Badge
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                          <Input
+                                            type="text"
+                                            placeholder="Ex: #EF4444"
+                                            value={service.badgeColor}
+                                            onChange={(e) => {
+                                              const hex = normalizeHexColor(e.target.value);
+                                              updateService(index, { badgeColor: hex });
+                                            }}
+                                            className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                          />
+                                          <ColorPicker
+                                            color={normalizedBadgeColor}
+                                            onChange={(hex: string) => handleServiceColorChange(index, hex, "badge")}
+                                          />
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                      <TextArea
+                                        label="Descrição do Serviço"
+                                        placeholder="Ex: Tráfego pago focado em ICPs (Perfis de Cliente Ideal). Ignoramos curiosos e atraímos decisores com Google e Meta Ads de alta intenção."
+                                        value={service.description}
+                                        onChange={(e) => updateService(index, { description: e.target.value })}
+                                        rows={4}
+                                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                type="button"
+                                onClick={() => removeService(index)}
+                                variant="danger"
+                                className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Remover
+                              </Button>
+                            </div>
                           </div>
-                        ))}
-                      </SortableContext>
-                    </DndContext>
-                  )}
-                </AnimatePresence>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </Card>
           </motion.div>
@@ -786,75 +819,26 @@ export default function LogosCursoPage() {
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
-          onAddNew={handleAddLogo}
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Logo de Curso"
-          icon={BookOpen}
+          itemName="Serviços"
+          icon={Settings}
         />
       </form>
 
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
-        onConfirm={() => confirmDelete()}
+        onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={localLogos.length}
-        itemName="Logo de Curso"
-      />
-
-      {/* Modal de confirmação para deletar logo individual */}
-      <DeleteConfirmationModal
-        isOpen={deleteSingleModal.isOpen}
-        onClose={closeDeleteSingleModal}
-        onConfirm={confirmDeleteSingle}
-        type="single"
-        itemTitle={deleteSingleModal.title}
         totalItems={1}
-        itemName="Logo de Curso"
+        itemName="Configuração dos Serviços"
       />
 
-      <FeedbackMessages 
-        success={success} 
-        errorMsg={errorMsg} 
-      />
-
-      {/* Modal de imagem expandida */}
-      <AnimatePresence>
-        {expandedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
-            onClick={() => setExpandedImage(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="relative max-w-6xl max-h-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                onClick={() => setExpandedImage(null)}
-                className="absolute -top-4 -right-4 !p-3 !rounded-full bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 z-10 border-none"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-              <img
-                src={expandedImage}
-                alt="Preview expandido"
-                className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <FeedbackMessages success={success} errorMsg={errorMsg} />
     </ManageLayout>
   );
 }
