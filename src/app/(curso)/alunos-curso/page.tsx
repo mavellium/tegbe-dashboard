@@ -33,7 +33,11 @@ import {
   BarChart3,
   GripVertical,
   ArrowUpDown,
-  Star
+  Star,
+  Text,
+  Palette,
+  Sparkles,
+  Heading
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -44,6 +48,8 @@ import { useJsonManagement } from "@/hooks/useJsonManagement";
 import ColorPicker from "@/components/ColorPicker";
 import { ImageUpload } from "@/components/ImageUpload";
 import { VideoUpload } from "@/components/VideoUpload";
+import { ThemePropertyInput } from "@/components/ThemePropertyInput";
+import { tailwindToHex, hexToTailwindTextClass } from "@/lib/colors";
 
 interface FooterStat {
   id?: string;
@@ -55,7 +61,7 @@ interface FooterStat {
 
 interface Testimonial {
   id: string;
-  type: "video";
+  type: "video" | "image" | "text"; // Adicionado tipo "text"
   clientName: string;
   clientRole: string;
   description: string;
@@ -68,17 +74,23 @@ interface Testimonial {
 }
 
 interface TestimonialsData {
+  badge?: string; // NOVO CAMPO
   titulo: string;
   subtitulo: string;
   showStats: boolean;
+  textColor?: string; // NOVO CAMPO
+  backgroundColor?: string; // NOVO CAMPO
   footerStats: FooterStat[];
   testimonials: Testimonial[];
 }
 
 const defaultData: TestimonialsData = {
+  badge: "DEPOIMENTOS",
   titulo: "Cases de Sucesso",
   subtitulo: "Transformação Digital",
   showStats: true,
+  textColor: "#FFFFFF",
+  backgroundColor: "#020202",
   footerStats: [
     {
       id: "1",
@@ -95,9 +107,12 @@ const mergeWithDefaults = (apiData: any, defaultData: TestimonialsData): Testimo
   if (!apiData) return defaultData;
   
   return {
+    badge: apiData.badge || defaultData.badge,
     titulo: apiData.titulo || defaultData.titulo,
     subtitulo: apiData.subtitulo || defaultData.subtitulo,
     showStats: apiData.showStats ?? defaultData.showStats,
+    textColor: apiData.textColor || defaultData.textColor,
+    backgroundColor: apiData.backgroundColor || defaultData.backgroundColor,
     footerStats: apiData.footerStats?.map((stat: any, index: number) => ({
       id: stat.id || `stat-${index}`,
       value: stat.value || "",
@@ -310,7 +325,9 @@ const TestimonialItem = ({
   onFileChange: (field: string, file: File | null) => void;
   getFileFromState: (key: string) => File | null;
 }) => {
-  const TypeIcon = testimonial.type === "video" ? Video : ImageIcon;
+  const TypeIcon = testimonial.type === "video" ? Video : 
+                   testimonial.type === "image" ? ImageIcon : 
+                   Text;
 
   return (
     <div className="space-y-4">
@@ -325,7 +342,9 @@ const TestimonialItem = ({
               <span className={`px-2 py-1 text-xs rounded-full ${
                 testimonial.type === "video" 
                   ? "bg-blue-500/10 text-blue-500" 
-                  : "bg-purple-500/10 text-purple-500"
+                  : testimonial.type === "image"
+                  ? "bg-purple-500/10 text-purple-500"
+                  : "bg-green-500/10 text-green-500"
               }`}>
                 {testimonial.type.toUpperCase()}
               </span>
@@ -402,9 +421,11 @@ const TestimonialItem = ({
                 <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                   Tipo de Depoimento
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["video"] as const).map((type) => {
-                    const Icon = type === "video" ? Video : ImageIcon;
+                <div className="grid grid-cols-3 gap-2">
+                  {(["video", "image", "text"] as const).map((type) => {
+                    const Icon = type === "video" ? Video : 
+                                type === "image" ? ImageIcon : 
+                                Text;
                     return (
                       <button
                         key={type}
@@ -426,7 +447,7 @@ const TestimonialItem = ({
                             ? "text-[var(--color-primary)]"
                             : "text-[var(--color-secondary)]/70"
                         }`}>
-                          {type === "video" ? "vídeo" : "imagem"}
+                          {type === "video" ? "vídeo" : type === "image" ? "imagem" : "texto"}
                         </span>
                       </button>
                     );
@@ -557,7 +578,7 @@ const TestimonialItem = ({
                     description="Imagem de capa para o vídeo (opcional)"
                   />
                 </>
-              ) : (
+              ) : testimonial.type === "image" ? (
                 <ImageUpload
                   label="Imagem do Depoimento"
                   currentImage={testimonial.src || ''}
@@ -568,12 +589,31 @@ const TestimonialItem = ({
                   previewHeight={450}
                   description="Imagem do depoimento do cliente"
                 />
+              ) : (
+                <div className="p-6 border border-dashed border-[var(--color-border)] rounded-lg text-center">
+                  <Text className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-3" />
+                  <h4 className="font-medium text-[var(--color-secondary)] mb-2">
+                    Depoimento em Texto
+                  </h4>
+                  <p className="text-sm text-[var(--color-secondary)]/70">
+                    Este depoimento não requer upload de mídia. O conteúdo será exibido como texto.
+                  </p>
+                </div>
               )}
 
               <div className="text-xs text-[var(--color-secondary)]/50 space-y-1">
-                <p>• Para vídeos: envie o arquivo .mp4 ou .webm</p>
-                <p>• A thumbnail será gerada automaticamente ou você pode enviar uma imagem personalizada</p>
-                <p>• Para imagens: JPG, PNG ou WebP (recomendado 800x600px)</p>
+                {testimonial.type === "video" && (
+                  <>
+                    <p>• Para vídeos: envie o arquivo .mp4 ou .webm</p>
+                    <p>• A thumbnail será gerada automaticamente ou você pode enviar uma imagem personalizada</p>
+                  </>
+                )}
+                {testimonial.type === "image" && (
+                  <p>• Para imagens: JPG, PNG ou WebP (recomendado 800x600px)</p>
+                )}
+                {testimonial.type === "text" && (
+                  <p>• Depoimento em texto: apenas conteúdo textual, sem mídia</p>
+                )}
               </div>
             </div>
           </div>
@@ -731,6 +771,15 @@ export default function TestimonialsPage() {
     return value instanceof File ? value : null;
   }, [fileStates]);
 
+  // Funções para cores
+  const handleTextColorChange = (hexColor: string) => {
+    updateNested('textColor', hexColor);
+  };
+
+  const handleBackgroundColorChange = (hexColor: string) => {
+    updateNested('backgroundColor', hexColor);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     await save();
@@ -740,12 +789,15 @@ export default function TestimonialsPage() {
     let completed = 0;
     let total = 0;
 
-    // Configurações gerais
-    total += 3;
+    // Configurações gerais (agora com mais campos)
+    total += 6; // badge, titulo, subtitulo, showStats, textColor, backgroundColor
+    if (currentData.badge?.trim()) completed++;
     if (currentData.titulo.trim()) completed++;
     if (currentData.subtitulo.trim()) completed++;
     total++; // showStats é booleano, sempre considerado como completo
     completed++;
+    if (currentData.textColor?.trim()) completed++;
+    if (currentData.backgroundColor?.trim()) completed++;
 
     // FooterStats
     total += footerStats.length * 4; // value, label, icon, color
@@ -789,7 +841,7 @@ export default function TestimonialsPage() {
       itemName="Cases de Sucesso"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Configurações Gerais */}
+        {/* Seção Configurações Gerais - ATUALIZADA */}
         <div className="space-y-4">
           <SectionHeader
             title="Configurações Gerais"
@@ -806,6 +858,22 @@ export default function TestimonialsPage() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Tag className="w-4 h-4" />
+                    Badge
+                  </label>
+                  <Input
+                    value={currentData.badge || ''}
+                    onChange={(e) => updateNested('badge', e.target.value)}
+                    placeholder="Ex: DEPOIMENTOS"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
+                    Texto do badge exibido acima do título
+                  </p>
+                </div>
+
                 <div className="md:col-span-2">
                   <Input
                     label="Título Principal"
@@ -825,6 +893,54 @@ export default function TestimonialsPage() {
                     rows={2}
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Cor do Texto
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={currentData.textColor || "#FFFFFF"}
+                      onChange={(e) => updateNested('textColor', e.target.value)}
+                      placeholder="#FFFFFF"
+                      className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <ColorPicker
+                      color={currentData.textColor || "#FFFFFF"}
+                      onChange={handleTextColorChange}
+                    />
+                    <div 
+                      className="w-10 h-10 rounded-lg border border-[var(--color-border)]"
+                      style={{ backgroundColor: currentData.textColor || "#FFFFFF" }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Cor de Fundo
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={currentData.backgroundColor || "#020202"}
+                      onChange={(e) => updateNested('backgroundColor', e.target.value)}
+                      placeholder="#020202"
+                      className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <ColorPicker
+                      color={currentData.backgroundColor || "#020202"}
+                      onChange={handleBackgroundColorChange}
+                    />
+                    <div 
+                      className="w-10 h-10 rounded-lg border border-[var(--color-border)]"
+                      style={{ backgroundColor: currentData.backgroundColor || "#020202" }}
+                    />
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">
