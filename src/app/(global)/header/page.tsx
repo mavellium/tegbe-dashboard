@@ -26,7 +26,8 @@ import {
   ArrowDownToLine,
   Maximize2,
   Eye,
-  EyeOff
+  EyeOff,
+  Power
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -55,6 +56,7 @@ interface VariantTheme {
 }
 
 interface AnnouncementBar {
+  enabled: boolean;
   content: {
     text: string;
     linkText: string;
@@ -145,6 +147,7 @@ const defaultHeaderData: HeaderData = {
     }
   },
   announcementBar: {
+    enabled: true,
     content: {
       text: "",
       linkText: "",
@@ -219,6 +222,7 @@ const mergeWithDefaults = (apiData: any, defaultData: HeaderData): HeaderData =>
       }
     },
     announcementBar: {
+      enabled: apiData.announcementBar?.enabled ?? defaultData.announcementBar.enabled,
       content: apiData.announcementBar?.content || defaultData.announcementBar.content,
       styles: apiData.announcementBar?.styles || defaultData.announcementBar.styles,
     },
@@ -434,9 +438,10 @@ export default function Page() {
     let completed = 0;
     let total = 0;
 
-    // Announcement Bar (6 campos - removido autoClose e persistent)
+    // Announcement Bar (7 campos - incluindo enabled)
     const ab = headerData.announcementBar;
-    total += 6;
+    total += 7;
+    if (ab.enabled) completed++; // enabled é boolean
     if (ab.content.text.trim()) completed++;
     if (ab.content.linkText.trim()) completed++;
     if (ab.content.linkUrl.trim()) completed++;
@@ -444,7 +449,6 @@ export default function Page() {
     completed++; // showIcon é boolean
     if (ab.styles.variant.trim()) completed++;
     // fullWidth não conta como campo preenchível (é boolean sempre true/false)
-    // Removido: autoClose e persistent
 
     // Geral (5 campos)
     total += 5;
@@ -502,6 +506,44 @@ export default function Page() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="space-y-6">
+                {/* Controle de ativação */}
+                <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)] mb-6">
+                  <div className="flex items-center gap-3">
+                    {headerData.announcementBar.enabled ? (
+                      <Power className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <Power className="w-5 h-5 text-gray-500" />
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Barra de Anúncio Ativa
+                      </label>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        {headerData.announcementBar.enabled 
+                          ? "A barra de anúncio está visível no site" 
+                          : "A barra de anúncio está oculta no site"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateNested('announcementBar.enabled', !headerData.announcementBar.enabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      headerData.announcementBar.enabled 
+                        ? 'bg-green-500' 
+                        : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        headerData.announcementBar.enabled 
+                          ? 'translate-x-6' 
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
                 {/* Conteúdo */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
@@ -518,6 +560,7 @@ export default function Page() {
                       onChange={(e) => updateNested('announcementBar.content.text', e.target.value)}
                       placeholder="🚀 Promoção especial: 50% de desconto em todos os cursos!"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      disabled={!headerData.announcementBar.enabled}
                     />
                   </div>
 
@@ -531,6 +574,7 @@ export default function Page() {
                         onChange={(e) => updateNested('announcementBar.content.linkText', e.target.value)}
                         placeholder="Saiba mais"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        disabled={!headerData.announcementBar.enabled}
                       />
                     </div>
 
@@ -543,6 +587,7 @@ export default function Page() {
                         onChange={(e) => updateNested('announcementBar.content.linkUrl', e.target.value)}
                         placeholder="#"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        disabled={!headerData.announcementBar.enabled}
                       />
                     </div>
                   </div>
@@ -582,7 +627,8 @@ export default function Page() {
                           headerData.announcementBar.content.showIcon 
                             ? 'bg-green-500' 
                             : 'bg-gray-300'
-                        }`}
+                        } ${!headerData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!headerData.announcementBar.enabled}
                       >
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -611,7 +657,10 @@ export default function Page() {
                       <select
                         value={headerData.announcementBar.styles.variant}
                         onChange={(e) => updateNested('announcementBar.styles.variant', e.target.value)}
-                        className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
+                        className={`w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)] ${
+                          !headerData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={!headerData.announcementBar.enabled}
                       >
                         <option value="info">Info (Azul)</option>
                         <option value="warning">Warning (Amarelo)</option>
@@ -633,7 +682,8 @@ export default function Page() {
                             headerData.announcementBar.styles.position === 'top'
                               ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
                               : 'bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]'
-                          }`}
+                          } ${!headerData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={!headerData.announcementBar.enabled}
                         >
                           <ArrowUpToLine className="w-4 h-4" />
                           Topo
@@ -645,7 +695,8 @@ export default function Page() {
                             headerData.announcementBar.styles.position === 'bottom'
                               ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
                               : 'bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]'
-                          }`}
+                          } ${!headerData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={!headerData.announcementBar.enabled}
                         >
                           <ArrowDownToLine className="w-4 h-4" />
                           Rodapé
@@ -703,7 +754,8 @@ export default function Page() {
                           headerData.announcementBar.styles.fullWidth 
                             ? 'bg-green-500' 
                             : 'bg-gray-300'
-                        }`}
+                        } ${!headerData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!headerData.announcementBar.enabled}
                       >
                         <span
                           className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
@@ -723,7 +775,10 @@ export default function Page() {
                         value={headerData.announcementBar.styles.className}
                         onChange={(e) => updateNested('announcementBar.styles.className', e.target.value)}
                         placeholder="minha-classe-personalizada"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        className={`bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] ${
+                          !headerData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={!headerData.announcementBar.enabled}
                       />
                     </div>
                   </div>

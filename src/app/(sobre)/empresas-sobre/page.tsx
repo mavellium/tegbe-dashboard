@@ -16,7 +16,10 @@ import {
   Trash2,
   CheckCircle2,
   Image as ImageIcon,
-  Settings
+  Settings,
+  Target,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -54,12 +57,20 @@ interface Footer {
   linkText: string;
 }
 
+interface CTA {
+  text: string;
+  link: string;
+  showIcon: boolean;
+  icon: string;
+}
+
 interface MarketingData {
   badge: Badge;
   title: string;
   footer: string;
   layout: "marquee" | "grid" | "carousel";
   logos: LogoRow;
+  cta: CTA; // Novo campo CTA
 }
 
 interface SobreData {
@@ -76,6 +87,13 @@ interface EcosystemData {
   sobre: SobreData;
 }
 
+const defaultCTA: CTA = {
+  text: "Falar com um especialista",
+  link: "/contato",
+  showIcon: true,
+  icon: "ph:whatsapp-logo"
+};
+
 const defaultEcosystemData: EcosystemData = {
   marketing: {
     badge: {
@@ -88,7 +106,8 @@ const defaultEcosystemData: EcosystemData = {
     logos: {
       row1: [],
       row2: []
-    }
+    },
+    cta: defaultCTA
   },
   sobre: {
     badge: {
@@ -132,6 +151,14 @@ const mergeWithDefaults = (apiData: any, defaultData: EcosystemData): EcosystemD
       logos: {
         row1: apiData.marketing?.logos?.row1 || defaultData.marketing.logos.row1,
         row2: apiData.marketing?.logos?.row2 || defaultData.marketing.logos.row2
+      },
+      cta: {
+        text: apiData.marketing?.cta?.text || defaultData.marketing.cta.text,
+        link: apiData.marketing?.cta?.link || defaultData.marketing.cta.link,
+        showIcon: apiData.marketing?.cta?.showIcon !== undefined 
+          ? apiData.marketing.cta.showIcon 
+          : defaultData.marketing.cta.showIcon,
+        icon: apiData.marketing?.cta?.icon || defaultData.marketing.cta.icon
       }
     },
     sobre: {
@@ -177,8 +204,8 @@ export default function EcosystemPage() {
   });
 
   const [expandedSections, setExpandedSections] = useState({
-    marketing: false,
-    sobre: true,
+    marketing: true,
+    sobre: false,
   });
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -190,6 +217,10 @@ export default function EcosystemPage() {
 
   const handleSectionChange = (section: "marketing" | "sobre", path: string, value: any) => {
     updateNested(`${section}.${path}`, value);
+  };
+
+  const handleCtaChange = (field: keyof CTA, value: any) => {
+    updateNested(`marketing.cta.${field}`, value);
   };
 
   const handleLogoChange = (
@@ -252,6 +283,13 @@ export default function EcosystemPage() {
     if (marketing.badge.icon.trim()) completed++;
     if (marketing.title.trim()) completed++;
     if (marketing.footer.trim()) completed++;
+
+    // CTA Marketing (4 campos)
+    total += 4;
+    if (marketing.cta.text.trim()) completed++;
+    if (marketing.cta.link.trim()) completed++;
+    if (marketing.cta.icon.trim()) completed++;
+    completed++; // showIcon é boolean
 
     // Logos Marketing - Row 1
     total += marketing.logos.row1.length * 3; // src, alt, width/height
@@ -388,6 +426,101 @@ export default function EcosystemPage() {
     );
   };
 
+  const renderCtaSection = () => {
+    const cta = ecosystemData.marketing.cta;
+    
+    return (
+      <Card className="p-6 bg-[var(--color-background)]">
+        <div className="flex items-center gap-3 mb-6">
+          <Target className="w-5 h-5 text-[var(--color-secondary)]" />
+          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+            Call to Action (CTA)
+          </h4>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Texto do CTA
+                </label>
+                <Input
+                  type="text"
+                  value={cta.text}
+                  onChange={(e) => handleCtaChange("text", e.target.value)}
+                  placeholder="Ex: Falar com um especialista"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Link do CTA
+                </label>
+                <Input
+                  type="text"
+                  value={cta.link}
+                  onChange={(e) => handleCtaChange("link", e.target.value)}
+                  placeholder="Ex: /contato"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Ícone do CTA
+                </label>
+                <IconSelector
+                  value={cta.icon}
+                  onChange={(value) => handleCtaChange("icon", value)}
+                  placeholder="ph:whatsapp-logo"
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
+                <div className="flex items-center gap-3">
+                  {cta.showIcon ? (
+                    <Eye className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <EyeOff className="w-5 h-5 text-gray-500" />
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Mostrar Ícone
+                    </label>
+                    <p className="text-sm text-[var(--color-secondary)]/70">
+                      Exibir ícone ao lado do texto
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCtaChange("showIcon", !cta.showIcon)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    cta.showIcon 
+                      ? 'bg-green-500' 
+                      : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      cta.showIcon 
+                        ? 'translate-x-6' 
+                        : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
   return (
     <ManageLayout
       headerIcon={ShieldCheck}
@@ -412,71 +545,76 @@ export default function EcosystemPage() {
             animate={{ height: expandedSections.marketing ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              {/* Badge e Título */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Texto do Badge"
-                  value={ecosystemData.marketing.badge.text}
-                  onChange={(e) => handleSectionChange("marketing", "badge.text", e.target.value)}
-                  placeholder="Ex: Ecossistema Validado"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    Ícone do Badge
-                  </label>
-                  <IconSelector
-                    value={ecosystemData.marketing.badge.icon}
-                    onChange={(value) => handleSectionChange("marketing", "badge.icon", value)}
-                    placeholder="Selecione um ícone"
+            <div className="space-y-6">
+              <Card className="p-6 bg-[var(--color-background)] space-y-6">
+                {/* Badge e Título */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Texto do Badge"
+                    value={ecosystemData.marketing.badge.text}
+                    onChange={(e) => handleSectionChange("marketing", "badge.text", e.target.value)}
+                    placeholder="Ex: Ecossistema Validado"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Ícone do Badge
+                    </label>
+                    <IconSelector
+                      value={ecosystemData.marketing.badge.icon}
+                      onChange={(value) => handleSectionChange("marketing", "badge.icon", value)}
+                      placeholder="Selecione um ícone"
+                    />
+                  </div>
                 </div>
-              </div>
 
-              {/* Título com HTML */}
-              <div>
-                <TextArea
-                  label="Título (HTML permitido)"
-                  value={ecosystemData.marketing.title}
-                  onChange={(e) => handleSectionChange("marketing", "title", e.target.value)}
-                  placeholder="Não testamos com o seu dinheiro. <br/><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FF0F43] to-[#E31B63]'>Validamos com o deles.</span>"
-                  rows={3}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-                <p className="text-xs text-[var(--color-secondary)]/50 mt-1">
-                  Use HTML para estilização, como spans com classes de gradiente
-                </p>
-              </div>
-
-              {/* Footer e Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Texto do Footer"
-                  value={ecosystemData.marketing.footer}
-                  onChange={(e) => handleSectionChange("marketing", "footer", e.target.value)}
-                  placeholder="Ex: Empresas que escalaram acima de 7 dígitos/ano"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-
+                {/* Título com HTML */}
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    Layout de Exibição
-                  </label>
-                  <select
-                    value={ecosystemData.marketing.layout}
-                    onChange={(e) => handleSectionChange("marketing", "layout", e.target.value)}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-                  >
-                    {layoutOptions.filter(opt => opt.value !== "bento-grid").map((layout) => (
-                      <option key={layout.value} value={layout.value}>
-                        {layout.label}
-                      </option>
-                    ))}
-                  </select>
+                  <TextArea
+                    label="Título (HTML permitido)"
+                    value={ecosystemData.marketing.title}
+                    onChange={(e) => handleSectionChange("marketing", "title", e.target.value)}
+                    placeholder="Não testamos com o seu dinheiro. <br/><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FF0F43] to-[#E31B63]'>Validamos com o deles.</span>"
+                    rows={3}
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/50 mt-1">
+                    Use HTML para estilização, como spans com classes de gradiente
+                  </p>
                 </div>
-              </div>
+
+                {/* Footer e Layout */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input
+                    label="Texto do Footer"
+                    value={ecosystemData.marketing.footer}
+                    onChange={(e) => handleSectionChange("marketing", "footer", e.target.value)}
+                    placeholder="Ex: Empresas que escalaram acima de 7 dígitos/ano"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Layout de Exibição
+                    </label>
+                    <select
+                      value={ecosystemData.marketing.layout}
+                      onChange={(e) => handleSectionChange("marketing", "layout", e.target.value)}
+                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                    >
+                      {layoutOptions.filter(opt => opt.value !== "bento-grid").map((layout) => (
+                        <option key={layout.value} value={layout.value}>
+                          {layout.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </Card>
+
+              {/* CTA Section */}
+              {renderCtaSection()}
 
               {/* Logos - Row 1 */}
               <div className="space-y-4">
@@ -587,7 +725,7 @@ export default function EcosystemPage() {
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           </motion.div>
         </div>
 

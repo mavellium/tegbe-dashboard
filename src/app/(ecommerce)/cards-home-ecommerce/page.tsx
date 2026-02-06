@@ -8,6 +8,7 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import IconSelector from "@/components/IconSelector";
 import { 
   Layout, 
   Type,
@@ -21,24 +22,30 @@ import {
   Plus,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
-  MessageCircle,
-  ArrowRight
+  Palette,
+  Target,
+  ArrowUpDown,
+  MessageSquare
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
+import ColorPicker from "@/components/ColorPicker";
 
 interface ServiceItem {
-  id: number;
+  step: string;
+  id: string;
   title: string;
   description: string;
+  icon: string;
+  color: string;
   wide: boolean;
+  visualType: string;
 }
 
-interface CTAData {
+interface CTASection {
   text: string;
   url: string;
   description: string;
@@ -46,11 +53,13 @@ interface CTAData {
 
 interface SectionData {
   header: {
+    preTitle: string;
     title: string;
     subtitle: string;
+    gradientTitle?: string;
   };
   services: ServiceItem[];
-  cta: CTAData;
+  cta: CTASection; // Novo campo CTA
 }
 
 interface ComoFazemosData {
@@ -60,38 +69,65 @@ interface ComoFazemosData {
   sobre: SectionData;
 }
 
-const defaultSectionData: SectionData = {
-  header: {
-    title: "",
-    subtitle: ""
-  },
-  services: [],
-  cta: {
-    text: "",
-    url: "",
-    description: ""
-  }
+const defaultCTASection: CTASection = {
+  text: "Quero Estruturar e Escalar Meu Negócio",
+  url: "https://api.whatsapp.com/send?phone=5514991779502",
+  description: "Anúncios, operação e dados trabalhando juntos para vender mais."
 };
 
+const defaultSectionData: SectionData = {
+  header: {
+    preTitle: "",
+    title: "",
+    subtitle: "",
+    gradientTitle: ""
+  },
+  services: [],
+  cta: defaultCTASection
+};
+
+// Convertendo os ícones do JSON de exemplo para o formato coleção:nome-do-ícone
 const defaultComoFazemosData: ComoFazemosData = {
   home: {
     header: {
+      preTitle: "",
       title: "",
-      subtitle: ""
+      subtitle: "",
+      gradientTitle: ""
     },
     services: [
       {
-        id: 1,
-        title: "Desenvolvimento Web",
-        description: "Sites e sistemas sob medida",
-        wide: false
+        step: "01",
+        id: "setup-infra",
+        title: "Infraestrutura de Elite",
+        description: "Configuração de servidores e plataforma escalável com foco em tempo de resposta zero.",
+        icon: "lucide:settings",
+        color: "#3B82F6",
+        wide: false,
+        visualType: "technical"
+      },
+      {
+        step: "02",
+        id: "growth-ads",
+        title: "Growth & Performance",
+        description: "Tráfego pago inteligente focado em ROI real e escala agressiva de vendas diárias.",
+        icon: "lucide:trending-up",
+        color: "#10B981",
+        wide: true,
+        visualType: "chart"
+      },
+      {
+        step: "03",
+        id: "ai-employees",
+        title: "Funcionários de IA",
+        description: "Automação total do atendimento e recuperação de carrinhos com IA preditiva.",
+        icon: "lucide:cpu",
+        color: "#8B5CF6",
+        wide: false,
+        visualType: "ai-mesh"
       }
     ],
-    cta: {
-      text: "",
-      url: "",
-      description: ""
-    }
+    cta: defaultCTASection
   },
   marketing: defaultSectionData,
   ecommerce: defaultSectionData,
@@ -115,13 +151,32 @@ const mergeWithDefaults = (apiData: any, defaultData: ComoFazemosData): ComoFaze
       // Merge dos serviços
       let services = apiData[section].services || [];
       
-      // Garantir que cada serviço tenha todos os campos necessários
-      services = services.map((service: any, index: number) => ({
-        id: service.id || Date.now() + index,
-        title: service.title || "",
-        description: service.description || "",
-        wide: service.wide || false
-      }));
+      // Se não houver serviços, usar os padrões apenas para a seção home
+      if (services.length === 0 && section === 'home') {
+        services = defaultData.home.services;
+      }
+      
+      // Garantir que cada serviço tenha todos os campos necessários e converter ícones para formato correto
+      services = services.map((service: any, index: number) => {
+        let icon = service.icon || "lucide:sparkles";
+        
+        // Se o ícone estiver no formato antigo (apenas nome), converter para formato coleção:nome
+        if (icon && !icon.includes(':')) {
+          const kebabCase = icon.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+          icon = `lucide:${kebabCase}`;
+        }
+        
+        return {
+          step: service.step || (index + 1).toString().padStart(2, '0'),
+          id: service.id || `service-${Date.now()}-${index}`,
+          title: service.title || "",
+          description: service.description || "",
+          icon: icon,
+          color: service.color || "#3B82F6",
+          wide: service.wide || false,
+          visualType: service.visualType || ""
+        };
+      });
       
       // Merge do CTA
       const cta = {
@@ -166,8 +221,8 @@ export default function ComoFazemosPage() {
   const [draggingItem, setDraggingItem] = useState<{section: keyof ComoFazemosData, index: number} | null>(null);
 
   const [expandedSections, setExpandedSections] = useState({
-    home: true,
-    marketing: false,
+    home: false,
+    marketing: true,
     ecommerce: false,
     sobre: false,
   });
@@ -238,10 +293,14 @@ export default function ComoFazemosPage() {
     if (services.length >= currentPlanLimit) return false;
     
     const newService: ServiceItem = {
-      id: Date.now() + Math.floor(Math.random() * 1000),
+      step: (services.length + 1).toString().padStart(2, '0'),
+      id: `service-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       title: '',
       description: '',
-      wide: false
+      icon: 'lucide:sparkles',
+      color: '#3B82F6',
+      wide: false,
+      visualType: ''
     };
     
     const updated = [...services, newService];
@@ -311,14 +370,44 @@ export default function ComoFazemosPage() {
     if (updated.length <= 1) {
       // Mantém pelo menos um item vazio
       const emptyItem: ServiceItem = {
-        id: Date.now(),
+        step: '01',
+        id: `service-${Date.now()}`,
         title: '',
         description: '',
-        wide: false
+        icon: 'lucide:sparkles',
+        color: '#3B82F6',
+        wide: false,
+        visualType: ''
       };
       updated[0] = emptyItem;
     } else {
       updated.splice(index, 1);
+      
+      // Reordenar steps
+      const reordered = updated.map((item, i) => ({
+        ...item,
+        step: (i + 1).toString().padStart(2, '0')
+      }));
+      
+      switch(section) {
+        case 'home':
+          setLocalServicesHome(reordered);
+          updateNested('home.services', reordered);
+          break;
+        case 'marketing':
+          setLocalServicesMarketing(reordered);
+          updateNested('marketing.services', reordered);
+          break;
+        case 'ecommerce':
+          setLocalServicesEcommerce(reordered);
+          updateNested('ecommerce.services', reordered);
+          break;
+        case 'sobre':
+          setLocalServicesSobre(reordered);
+          updateNested('sobre.services', reordered);
+          break;
+      }
+      return;
     }
     
     switch(section) {
@@ -364,22 +453,28 @@ export default function ComoFazemosPage() {
     const newIndex = index > draggingItem.index ? index : index;
     updated.splice(newIndex, 0, draggedItem);
     
+    // Reordenar steps
+    const reordered = updated.map((item, i) => ({
+      ...item,
+      step: (i + 1).toString().padStart(2, '0')
+    }));
+    
     switch(section) {
       case 'home':
-        setLocalServicesHome(updated);
-        updateNested('home.services', updated);
+        setLocalServicesHome(reordered);
+        updateNested('home.services', reordered);
         break;
       case 'marketing':
-        setLocalServicesMarketing(updated);
-        updateNested('marketing.services', updated);
+        setLocalServicesMarketing(reordered);
+        updateNested('marketing.services', reordered);
         break;
       case 'ecommerce':
-        setLocalServicesEcommerce(updated);
-        updateNested('ecommerce.services', updated);
+        setLocalServicesEcommerce(reordered);
+        updateNested('ecommerce.services', reordered);
         break;
       case 'sobre':
-        setLocalServicesSobre(updated);
-        updateNested('sobre.services', updated);
+        setLocalServicesSobre(reordered);
+        updateNested('sobre.services', reordered);
         break;
     }
     
@@ -409,7 +504,7 @@ export default function ComoFazemosPage() {
     updateNested(path, value);
   };
 
-  const handleCTAChange = (section: keyof ComoFazemosData, field: keyof CTAData, value: string) => {
+  const handleCtaChange = (section: keyof ComoFazemosData, field: keyof CTASection, value: string) => {
     const path = `${section}.cta.${field}`;
     updateNested(path, value);
   };
@@ -426,7 +521,10 @@ export default function ComoFazemosPage() {
 
   // Validações
   const isServiceValid = (item: ServiceItem): boolean => {
-    return item.title.trim() !== '' && item.description.trim() !== '';
+    return item.title.trim() !== '' && 
+           item.description.trim() !== '' && 
+           item.icon.trim() !== '' && 
+           item.color.trim() !== '';
   };
 
   const getSectionValidation = (section: keyof ComoFazemosData) => {
@@ -457,17 +555,22 @@ export default function ComoFazemosPage() {
     sections.forEach(section => {
       const sectionData = pageData[section];
       
-      // Header (2 campos)
-      total += 2;
+      // Header (home: 3 campos, outras: 4 campos)
+      total += section === 'home' ? 3 : 4;
+      if (sectionData.header.preTitle.trim()) completed++;
       if (sectionData.header.title.trim()) completed++;
       if (sectionData.header.subtitle.trim()) completed++;
+      if (section !== 'home' && sectionData.header.gradientTitle?.trim()) completed++;
       
-      // Serviços (3 campos cada)
+      // Serviços (6 campos cada)
       const services = getSectionData(section);
-      total += services.length * 3;
+      total += services.length * 6;
       services.forEach(service => {
         if (service.title.trim()) completed++;
         if (service.description.trim()) completed++;
+        if (service.icon.trim()) completed++;
+        if (service.color.trim()) completed++;
+        if (service.visualType.trim()) completed++;
         if (service.wide !== undefined) completed++;
       });
       
@@ -489,7 +592,7 @@ export default function ComoFazemosPage() {
     return (
       <Card className="p-6 bg-[var(--color-background)]">
         <div className="flex items-center gap-3 mb-6">
-          <Layout className="w-5 h-5 text-[var(--color-secondary)]" />
+          <Target className="w-5 h-5 text-[var(--color-secondary)]" />
           <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
             Configurações do Cabeçalho - {sectionTitle}
           </h4>
@@ -499,19 +602,47 @@ export default function ComoFazemosPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                Título
+                Pré-título
               </label>
               <Input
                 type="text"
+                value={header.preTitle || ""}
+                onChange={(e) => handleHeaderChange(section, "preTitle", e.target.value)}
+                placeholder="Ex: O Padrão Tegbe"
+                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                Título (HTML permitido)
+              </label>
+              <TextArea
                 value={header.title || ""}
                 onChange={(e) => handleHeaderChange(section, "title", e.target.value)}
-                placeholder="Ex: Nossos Serviços"
+                placeholder="Ex: Não é mágica.<br />É Metodologia."
+                rows={3}
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
             </div>
           </div>
 
           <div className="space-y-4">
+            {section !== 'home' && (
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Título com Gradiente (HTML)
+                </label>
+                <TextArea
+                  value={header.gradientTitle || ""}
+                  onChange={(e) => handleHeaderChange(section, "gradientTitle", e.target.value)}
+                  placeholder="Ex: Não é mágica.<br /><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FF0F43] to-[#A30030]'>É Metodologia.</span>"
+                  rows={3}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Subtítulo
@@ -519,7 +650,7 @@ export default function ComoFazemosPage() {
               <TextArea
                 value={header.subtitle || ""}
                 onChange={(e) => handleHeaderChange(section, "subtitle", e.target.value)}
-                placeholder="Ex: Soluções completas para o seu negócio digital"
+                placeholder="Ex: Metodologia validada em mais de R$ 40 milhões faturados."
                 rows={2}
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
@@ -530,59 +661,56 @@ export default function ComoFazemosPage() {
     );
   };
 
-  const renderCTASection = (section: keyof ComoFazemosData, sectionTitle: string) => {
-    const cta = pageData[section]?.cta || defaultSectionData.cta;
+  const renderCtaSection = (section: keyof ComoFazemosData, sectionTitle: string) => {
+    const cta = pageData[section]?.cta || defaultCTASection;
     
     return (
       <Card className="p-6 bg-[var(--color-background)]">
         <div className="flex items-center gap-3 mb-6">
-          <MessageCircle className="w-5 h-5 text-[var(--color-secondary)]" />
+          <MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />
           <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-            Call to Action - {sectionTitle}
+            Call to Action (CTA) - {sectionTitle}
           </h4>
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Texto do Botão
+                  Texto do CTA
                 </label>
                 <Input
                   type="text"
-                  value={cta.text || ""}
-                  onChange={(e) => handleCTAChange(section, "text", e.target.value)}
+                  value={cta.text}
+                  onChange={(e) => handleCtaChange(section, "text", e.target.value)}
                   placeholder="Ex: Quero Estruturar e Escalar Meu Negócio"
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  URL de Destino
+                  URL do CTA
                 </label>
-                <div className="flex items-center gap-2">
-                  <ExternalLink className="w-4 h-4 text-[var(--color-secondary)]" />
-                  <Input
-                    type="text"
-                    value={cta.url || ""}
-                    onChange={(e) => handleCTAChange(section, "url", e.target.value)}
-                    placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  value={cta.url}
+                  onChange={(e) => handleCtaChange(section, "url", e.target.value)}
+                  placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                   Descrição do CTA
                 </label>
                 <TextArea
-                  value={cta.description || ""}
-                  onChange={(e) => handleCTAChange(section, "description", e.target.value)}
+                  value={cta.description}
+                  onChange={(e) => handleCtaChange(section, "description", e.target.value)}
                   placeholder="Ex: Anúncios, operação e dados trabalhando juntos para vender mais."
                   rows={4}
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
@@ -686,7 +814,7 @@ export default function ComoFazemosPage() {
                 
                 return (
                   <div 
-                    key={`service-${section}-${item.id}`}
+                    key={`service-${section}-${index}`}
                     ref={isLast ? sectionRef : null}
                     draggable
                     onDragStart={(e) => handleDragStart(e, section, index)}
@@ -715,7 +843,7 @@ export default function ComoFazemosPage() {
                         {/* Indicador de posição */}
                         <div className="flex flex-col items-center">
                           <span className="text-xs font-medium text-[var(--color-secondary)]">
-                            {index + 1}
+                            {item.step || (index + 1).toString().padStart(2, '0')}
                           </span>
                           <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
                         </div>
@@ -724,15 +852,14 @@ export default function ComoFazemosPage() {
                           <div className="flex items-center gap-3 mb-4">
                             <div className="flex flex-col">
                               <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]">
-                                <span>ID: {item.id}</span>
-                                <span>•</span>
+                                <ArrowUpDown className="w-4 h-4" />
                                 <span>Posição: {index + 1}</span>
                               </div>
                               <div className="flex items-center gap-2 mt-1">
                                 <h4 className="font-medium text-[var(--color-secondary)]">
                                   {item.title || "Sem título"}
                                 </h4>
-                                {item.title && item.description ? (
+                                {item.title && item.description && item.icon ? (
                                   <span className="px-2 py-1 text-xs bg-[var(--color-background-body)] text-[var(--color-secondary)] rounded-full border border-[var(--color-border)]">
                                     Completo
                                   </span>
@@ -754,9 +881,28 @@ export default function ComoFazemosPage() {
                                 <Input
                                   value={item.title}
                                   onChange={(e) => updateService(section, index, { title: e.target.value })}
-                                  placeholder="Ex: Desenvolvimento Web"
+                                  placeholder="Ex: Infraestrutura de Elite"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                                  <Palette className="w-4 h-4" />
+                                  Cor
+                                </label>
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={item.color}
+                                    onChange={(e) => updateService(section, index, { color: e.target.value })}
+                                    placeholder="#3B82F6"
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  />
+                                  <ColorPicker
+                                    color={item.color}
+                                    onChange={(color) => updateService(section, index, { color })}
+                                  />
+                                </div>
                               </div>
                               
                               <div className="p-3 bg-[var(--color-background-body)] rounded-lg">
@@ -802,6 +948,30 @@ export default function ComoFazemosPage() {
                                   onChange={(e) => updateService(section, index, { description: e.target.value })}
                                   placeholder="Descrição detalhada do serviço..."
                                   rows={5}
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Ícone
+                                </label>
+                                <IconSelector
+                                  value={item.icon}
+                                  onChange={(value) => updateService(section, index, { icon: value })}
+                                  label=""
+                                  placeholder="Ex: mdi:check-decagram, lucide:settings"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Tipo Visual
+                                </label>
+                                <Input
+                                  value={item.visualType}
+                                  onChange={(e) => updateService(section, index, { visualType: e.target.value })}
+                                  placeholder="Ex: technical, chart, ai-mesh"
                                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                 />
                               </div>
@@ -874,8 +1044,8 @@ export default function ComoFazemosPage() {
         >
           <div className="space-y-6 mt-4">
             {renderHeaderSection(section, sectionTitle)}
+            {renderCtaSection(section, sectionTitle)}
             {renderServicesSection(section, sectionTitle, Icon)}
-            {renderCTASection(section, sectionTitle)}
           </div>
         </motion.div>
       </div>

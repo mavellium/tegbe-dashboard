@@ -1,153 +1,262 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { TextArea } from "@/components/TextArea";
-import { Button } from "@/components/Button";
+import { ImageUpload } from "@/components/ImageUpload";
+import IconSelector from "@/components/IconSelector";
 import { 
+  Layout, 
   Settings, 
+  Image as ImageIcon, 
+  Tag, 
+  Link as LinkIcon,
+  Palette,
   GripVertical,
   AlertCircle,
   CheckCircle2,
   XCircle,
   Trash2,
   Plus,
+  Megaphone,
+  ArrowUpToLine,
+  ArrowDownToLine,
+  Maximize2,
+  Eye,
+  EyeOff,
+  Power,
   Target,
-  Tag,
-  Type,
-  Sparkles,
-  Palette,
-  Search,
-  Layers
+  Calendar
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { SectionHeader } from "@/components/SectionHeader";
-import { ImageUpload } from "@/components/ImageUpload";
-import IconSelector from "@/components/IconSelector";
-import ColorPicker from "@/components/ColorPicker";
-import { hexToTailwindBgClass, normalizeHexColor } from "@/lib/colors";
+import { ThemePropertyInput } from "@/components/ThemePropertyInput";
+import { extractHexFromTailwind, hexToTailwindClass } from "@/lib/colorUtils";
 import Loading from "@/components/Loading";
+import { useJsonManagement } from "@/hooks/useJsonManagement";
+import { Button } from "@/components/Button";
 
-interface ServiceItem {
-  id?: string;
-  title: string;
-  subtitle: string;
-  badge: string;
-  description: string;
+interface LinkItem {
+  name: string;
+  href: string;
+}
+
+interface VariantTheme {
+  primary: string;
+  hoverBg: string;
+  textOnPrimary: string;
+  accentText: string;
+  hoverText: string;
+  border: string;
+  glow: string;
+  underline: string;
+}
+
+interface AnnouncementBar {
+  enabled: boolean;
+  content: {
+    text: string;
+    linkText: string;
+    linkUrl: string;
+    icon: string;
+    showIcon: boolean;
+  };
+  styles: {
+    variant: string;
+    customBackgroundColor: string | null;
+    customTextColor: string | null;
+    position: string;
+    fullWidth: boolean;
+    className: string;
+  };
+}
+
+interface CTA {
+  enabled: boolean;
+  text: string;
+  link: string;
+  showIcon: boolean;
   icon: string;
-  image: string;
-  color: string; // Armazenado como hex
-  badgeColor: string; // Armazenado como hex
-  effect: "none" | "glow" | "pulse" | "shadow" | "gradient";
 }
 
-interface ServicesData {
+type HeaderData = {
   id?: string;
-  header: {
-    title: string;
-    subtitle: string;
+  general: {
+    logo: string;
+    logoAlt: string;
+    consultantBadge: string;
+    ctaLink: string;
+    ctaText: string;
   };
-  services: ServiceItem[];
-}
+  links: LinkItem[];
+  variants: {
+    ecommerce: VariantTheme;
+    marketing: VariantTheme;
+    sobre: VariantTheme;
+    cursos: VariantTheme;
+  };
+  announcementBar: AnnouncementBar;
+  cta: CTA; // Novo campo CTA
+};
 
-const defaultServicesData: ServicesData = {
-  header: {
-    title: "Nossos Serviços",
-    subtitle: "Soluções especializadas para impulsionar seu negócio"
+const defaultHeaderData: HeaderData = {
+  general: {
+    logo: "",
+    logoAlt: "",
+    consultantBadge: "",
+    ctaLink: "",
+    ctaText: ""
   },
-  services: [
-    {
-      id: "service-1",
-      title: "Aquisição Cirúrgica",
-      subtitle: "Tráfego pago de alta conversão",
-      badge: "Popular",
-      description: "Tráfego pago focado em ICPs (Perfis de Cliente Ideal). Ignoramos curiosos e atraímos decisores com Google e Meta Ads de alta intenção.",
-      icon: "target",
-      image: "",
-      color: "#3B82F6", // Armazenado como hex
-      badgeColor: "#EF4444", // Armazenado como hex
-      effect: "none"
+  links: [
+    { name: "Home", href: "/" },
+  ],
+  variants: {
+    ecommerce: {
+      primary: "bg-[#FFCC00]",
+      hoverBg: "hover:bg-[#FFDB15]",
+      textOnPrimary: "text-black",
+      accentText: "text-[#FFCC00]",
+      hoverText: "group-hover:text-[#FFCC00]",
+      border: "border-yellow-500/30",
+      glow: "shadow-[0_0_20px_rgba(255,204,0,0.4)]",
+      underline: "bg-[#FFCC00]"
+    },
+    marketing: {
+      primary: "bg-[#E31B63]",
+      hoverBg: "hover:bg-[#FF1758]",
+      textOnPrimary: "text-white",
+      accentText: "text-[#E31B63]",
+      hoverText: "group-hover:text-[#E31B63]",
+      border: "border-rose-500/30",
+      glow: "shadow-[0_0_20px_rgba(227,27,99,0.4)]",
+      underline: "bg-[#E31B63]"
+    },
+    sobre: {
+      primary: "bg-[#0071E3]",
+      hoverBg: "hover:bg-[#2B8CFF]",
+      textOnPrimary: "text-white",
+      accentText: "text-[#0071E3]",
+      hoverText: "group-hover:text-[#0071E3]",
+      border: "border-blue-500/30",
+      glow: "shadow-[0_0_20px_rgba(0,113,227,0.4)]",
+      underline: "bg-[#0071E3]"
+    },
+    cursos: {
+      primary: "bg-[#FFD700]",
+      hoverBg: "hover:bg-[#E5C100]",
+      textOnPrimary: "text-black",
+      accentText: "text-[#FFD700]",
+      hoverText: "group-hover:text-[#FFD700]",
+      border: "border-[#FFD700]/30",
+      glow: "shadow-[0_0_25px_rgba(255,215,0,0.3)]",
+      underline: "bg-[#FFD700]"
     }
-  ]
+  },
+  announcementBar: {
+    enabled: true,
+    content: {
+      text: "",
+      linkText: "",
+      linkUrl: "#",
+      icon: "ph:megaphone-simple-fill",
+      showIcon: true
+    },
+    styles: {
+      variant: "warning",
+      customBackgroundColor: null,
+      customTextColor: null,
+      position: "top",
+      fullWidth: true,
+      className: ""
+    }
+  },
+  cta: {
+    enabled: true,
+    text: "Agendar Consultoria",
+    link: "/contato",
+    showIcon: true,
+    icon: "ph:calendar-check",
+  }
 };
 
-const effectOptions = [
-  { value: "none", label: "Sem Efeito" },
-  { value: "glow", label: "Brilho Suave" },
-  { value: "pulse", label: "Pulsação Leve" },
-  { value: "shadow", label: "Sombra Elevada" },
-  { value: "gradient", label: "Gradiente" },
-];
-
-// Função para extrair hex de uma classe Tailwind
-const extractHexFromTailwindString = (tailwindClass: string): string => {
-  if (!tailwindClass) return "#3B82F6";
-  
-  // Se já for hex, normaliza e retorna
-  if (tailwindClass.startsWith("#")) {
-    return normalizeHexColor(tailwindClass);
-  }
-  
-  // Se for classe Tailwind com hex customizado [hex]
-  const hexMatch = tailwindClass.match(/\[#([0-9A-Fa-f]{3,6})\]/);
-  if (hexMatch) {
-    return normalizeHexColor(`#${hexMatch[1]}`);
-  }
-  
-  // Para classes Tailwind nomeadas, mapeamos para hex
-  const colorMap: Record<string, string> = {
-    // Blue
-    "bg-blue-500": "#3B82F6", "text-blue-500": "#3B82F6",
-    "bg-blue-600": "#2563EB", "text-blue-600": "#2563EB",
-    // Red
-    "bg-red-500": "#EF4444", "text-red-500": "#EF4444",
-    "bg-red-600": "#DC2626", "text-red-600": "#DC2626",
-    // Purple
-    "bg-purple-500": "#8B5CF6", "text-purple-500": "#8B5CF6",
-    // Green
-    "bg-green-500": "#10B981", "text-green-500": "#10B981",
-    // Fallback
-    "bg-[#3B82F6]": "#3B82F6", "text-[#3B82F6]": "#3B82F6",
-  };
-  
-  return colorMap[tailwindClass] || "#3B82F6";
-};
-
-const mergeWithDefaults = (apiData: any, defaultData: ServicesData): ServicesData => {
+const mergeWithDefaults = (apiData: any, defaultData: HeaderData): HeaderData => {
   if (!apiData) return defaultData;
   
   return {
     id: apiData.id,
-    header: {
-      title: apiData.header?.title || defaultData.header.title,
-      subtitle: apiData.header?.subtitle || defaultData.header.subtitle,
+    general: {
+      logo: apiData.general?.logo || defaultData.general.logo,
+      logoAlt: apiData.general?.logoAlt || defaultData.general.logoAlt,
+      consultantBadge: apiData.general?.consultantBadge || defaultData.general.consultantBadge,
+      ctaLink: apiData.general?.ctaLink || defaultData.general.ctaLink,
+      ctaText: apiData.general?.ctaText || defaultData.general.ctaText,
     },
-    services: apiData.services?.map((service: any, index: number) => ({
-      id: service.id || `service-${index + 1}`,
-      title: service.title || `Serviço ${index + 1}`,
-      subtitle: service.subtitle || "",
-      badge: service.badge || "",
-      description: service.description || "",
-      icon: service.icon || "",
-      image: service.image || "",
-      // Converte classes Tailwind para hex se necessário
-      color: extractHexFromTailwindString(service.color || defaultData.services[0].color),
-      badgeColor: extractHexFromTailwindString(service.badgeColor || defaultData.services[0].badgeColor),
-      effect: service.effect || "none",
-    })) || defaultData.services
+    links: apiData.links || defaultData.links,
+    variants: {
+      ecommerce: {
+        primary: apiData.variants?.ecommerce?.primary || defaultData.variants.ecommerce.primary,
+        hoverBg: apiData.variants?.ecommerce?.hoverBg || defaultData.variants.ecommerce.hoverBg,
+        textOnPrimary: apiData.variants?.ecommerce?.textOnPrimary || defaultData.variants.ecommerce.textOnPrimary,
+        accentText: apiData.variants?.ecommerce?.accentText || defaultData.variants.ecommerce.accentText,
+        hoverText: apiData.variants?.ecommerce?.hoverText || defaultData.variants.ecommerce.hoverText,
+        border: apiData.variants?.ecommerce?.border || defaultData.variants.ecommerce.border,
+        glow: apiData.variants?.ecommerce?.glow || defaultData.variants.ecommerce.glow,
+        underline: apiData.variants?.ecommerce?.underline || defaultData.variants.ecommerce.underline,
+      },
+      marketing: {
+        primary: apiData.variants?.marketing?.primary || defaultData.variants.marketing.primary,
+        hoverBg: apiData.variants?.marketing?.hoverBg || defaultData.variants.marketing.hoverBg,
+        textOnPrimary: apiData.variants?.marketing?.textOnPrimary || defaultData.variants.marketing.textOnPrimary,
+        accentText: apiData.variants?.marketing?.accentText || defaultData.variants.marketing.accentText,
+        hoverText: apiData.variants?.marketing?.hoverText || defaultData.variants.marketing.hoverText,
+        border: apiData.variants?.marketing?.border || defaultData.variants.marketing.border,
+        glow: apiData.variants?.marketing?.glow || defaultData.variants.marketing.glow,
+        underline: apiData.variants?.marketing?.underline || defaultData.variants.marketing.underline,
+      },
+      sobre: {
+        primary: apiData.variants?.sobre?.primary || defaultData.variants.sobre.primary,
+        hoverBg: apiData.variants?.sobre?.hoverBg || defaultData.variants.sobre.hoverBg,
+        textOnPrimary: apiData.variants?.sobre?.textOnPrimary || defaultData.variants.sobre.textOnPrimary,
+        accentText: apiData.variants?.sobre?.accentText || defaultData.variants.sobre.accentText,
+        hoverText: apiData.variants?.sobre?.hoverText || defaultData.variants.sobre.hoverText,
+        border: apiData.variants?.sobre?.border || defaultData.variants.sobre.border,
+        glow: apiData.variants?.sobre?.glow || defaultData.variants.sobre.glow,
+        underline: apiData.variants?.sobre?.underline || defaultData.variants.sobre.underline,
+      },
+      cursos: {
+        primary: apiData.variants?.cursos?.primary || defaultData.variants.cursos.primary,
+        hoverBg: apiData.variants?.cursos?.hoverBg || defaultData.variants.cursos.hoverBg,
+        textOnPrimary: apiData.variants?.cursos?.textOnPrimary || defaultData.variants.cursos.textOnPrimary,
+        accentText: apiData.variants?.cursos?.accentText || defaultData.variants.cursos.accentText,
+        hoverText: apiData.variants?.cursos?.hoverText || defaultData.variants.cursos.hoverText,
+        border: apiData.variants?.cursos?.border || defaultData.variants.cursos.border,
+        glow: apiData.variants?.cursos?.glow || defaultData.variants.cursos.glow,
+        underline: apiData.variants?.cursos?.underline || defaultData.variants.cursos.underline,
+      }
+    },
+    announcementBar: {
+      enabled: apiData.announcementBar?.enabled ?? defaultData.announcementBar.enabled,
+      content: apiData.announcementBar?.content || defaultData.announcementBar.content,
+      styles: apiData.announcementBar?.styles || defaultData.announcementBar.styles,
+    },
+    cta: {
+      enabled: apiData.cta?.enabled ?? defaultData.cta.enabled,
+      text: apiData.cta?.text || defaultData.cta.text,
+      link: apiData.cta?.link || defaultData.cta.link,
+      showIcon: apiData.cta?.showIcon ?? defaultData.cta.showIcon,
+      icon: apiData.cta?.icon || defaultData.cta.icon,
+    },
   };
 };
 
-export default function ServicesPage() {
+export default function Page() {
   const {
-    data: servicesData,
+    data: pageData,
     exists,
     loading,
     success,
@@ -160,23 +269,26 @@ export default function ServicesPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<ServicesData>({
-    apiPath: "/api/tegbe-institucional/json/services-marketing",
-    defaultData: defaultServicesData,
+  } = useJsonManagement<HeaderData>({
+    apiPath: "/api/tegbe-institucional/json/header",
+    defaultData: defaultHeaderData,
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estado local para gerenciar os serviços
-  const [localServices, setLocalServices] = useState<ServiceItem[]>([]);
-  const [draggingService, setDraggingService] = useState<number | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  // Estado local para gerenciar os links
+  const [localLinks, setLocalLinks] = useState<LinkItem[]>([]);
+  const [draggingLink, setDraggingLink] = useState<number | null>(null);
+
   const [expandedSections, setExpandedSections] = useState({
-    header: true,
-    services: false,
+    announcement: true,
+    general: false,
+    links: false,
+    colors: false,
+    cta: false, // Nova seção CTA
   });
 
   // Referências para novos itens
-  const newServiceRef = useRef<HTMLDivElement>(null);
+  const newLinkRef = useRef<HTMLDivElement>(null);
 
   // Controle de planos
   const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
@@ -184,10 +296,10 @@ export default function ServicesPage() {
 
   // Sincroniza os dados quando carregam do banco
   useEffect(() => {
-    if (servicesData.services) {
-      setLocalServices(servicesData.services);
+    if (pageData.links) {
+      setLocalLinks(pageData.links);
     }
-  }, [servicesData.services]);
+  }, [pageData.links]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -196,31 +308,23 @@ export default function ServicesPage() {
     }));
   };
 
-  // Funções para serviços
-  const handleAddService = () => {
-    if (localServices.length >= currentPlanLimit) {
+  // Funções para links
+  const handleAddLink = () => {
+    if (localLinks.length >= currentPlanLimit) {
       return false;
     }
     
-    const newItem: ServiceItem = {
-      id: `service-${Date.now()}`,
-      title: '',
-      subtitle: '',
-      badge: '',
-      description: '',
-      icon: '',
-      image: '',
-      color: '#3B82F6',
-      badgeColor: '#EF4444',
-      effect: 'none'
+    const newItem: LinkItem = {
+      name: '',
+      href: ''
     };
     
-    const updated = [...localServices, newItem];
-    setLocalServices(updated);
-    updateNested('services', updated);
+    const updated = [...localLinks, newItem];
+    setLocalLinks(updated);
+    updateNested('links', updated);
     
     setTimeout(() => {
-      newServiceRef.current?.scrollIntoView({ 
+      newLinkRef.current?.scrollIntoView({ 
         behavior: 'smooth',
         block: 'nearest'
       });
@@ -229,71 +333,63 @@ export default function ServicesPage() {
     return true;
   };
 
-  const updateService = (index: number, updates: Partial<ServiceItem>) => {
-    const updated = [...localServices];
+  const updateLink = (index: number, updates: Partial<LinkItem>) => {
+    const updated = [...localLinks];
     if (index >= 0 && index < updated.length) {
       updated[index] = { ...updated[index], ...updates };
-      setLocalServices(updated);
-      updateNested('services', updated);
+      setLocalLinks(updated);
+      updateNested('links', updated);
     }
   };
 
-  const removeService = (index: number) => {
-    const updated = [...localServices];
+  const removeLink = (index: number) => {
+    const updated = [...localLinks];
     
     if (updated.length <= 1) {
       // Mantém pelo menos um item vazio
-      const emptyItem: ServiceItem = {
-        id: `service-${Date.now()}`,
-        title: '',
-        subtitle: '',
-        badge: '',
-        description: '',
-        icon: '',
-        image: '',
-        color: '#3B82F6',
-        badgeColor: '#EF4444',
-        effect: 'none'
+      const emptyItem: LinkItem = {
+        name: '',
+        href: ''
       };
-      setLocalServices([emptyItem]);
-      updateNested('services', [emptyItem]);
+      setLocalLinks([emptyItem]);
+      updateNested('links', [emptyItem]);
     } else {
       updated.splice(index, 1);
-      setLocalServices(updated);
-      updateNested('services', updated);
+      setLocalLinks(updated);
+      updateNested('links', updated);
     }
   };
 
-  // Funções de drag & drop para serviços
-  const handleServiceDragStart = (e: React.DragEvent, index: number) => {
+  // Funções de drag & drop para links
+  const handleLinkDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    setDraggingService(index);
+    setDraggingLink(index);
   };
 
-  const handleServiceDragOver = (e: React.DragEvent, index: number) => {
+  const handleLinkDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     
-    if (draggingService === null || draggingService === index) return;
+    if (draggingLink === null || draggingLink === index) return;
     
-    const updated = [...localServices];
-    const draggedItem = updated[draggingService];
+    const updated = [...localLinks];
+    const draggedItem = updated[draggingLink];
     
     // Remove o item arrastado
-    updated.splice(draggingService, 1);
+    updated.splice(draggingLink, 1);
     
     // Insere na nova posição
-    const newIndex = index > draggingService ? index : index;
+    const newIndex = index > draggingLink ? index : index;
     updated.splice(newIndex, 0, draggedItem);
     
-    setLocalServices(updated);
-    updateNested('services', updated);
-    setDraggingService(index);
+    setLocalLinks(updated);
+    updateNested('links', updated);
+    setDraggingLink(index);
   };
 
-  const handleServiceDragEnd = (e: React.DragEvent) => {
+  const handleLinkDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    setDraggingService(null);
+    setDraggingLink(null);
   };
 
   const handleDragEnter = (e: React.DragEvent) => {
@@ -309,101 +405,113 @@ export default function ServicesPage() {
     e.currentTarget.classList.remove('drag-over');
   };
 
-  // Função para atualizar cores dos serviços
-  const handleServiceColorChange = (index: number, hexColor: string, type: "main" | "badge") => {
-    const normalizedHex = normalizeHexColor(hexColor);
-    const field = type === "main" ? "color" : "badgeColor";
-    updateService(index, { [field]: normalizedHex });
+  // Função para atualizar cores
+  const handleColorsChange = (property: keyof VariantTheme, hexColor: string) => {
+    const tailwindClass = hexToTailwindClass(property as any, hexColor);
+    
+    const updatedVariants = { ...pageData.variants };
+    
+    (Object.keys(updatedVariants) as Array<keyof typeof updatedVariants>).forEach((variant) => {
+      updatedVariants[variant] = {
+        ...updatedVariants[variant],
+        [property]: tailwindClass
+      };
+    });
+
+    updateNested('variants', updatedVariants);
   };
 
-  // Função para salvar - converte hex para Tailwind antes de salvar
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
     try {
-      // Converte cores hex para Tailwind antes de salvar
-      const servicesWithTailwind = localServices.map(service => ({
-        ...service,
-        color: hexToTailwindBgClass(service.color),
-        badgeColor: hexToTailwindBgClass(service.badgeColor)
-      }));
-      
-      // Atualiza temporariamente os dados com Tailwind
-      updateNested('services', servicesWithTailwind);
-      
       await save();
-      
-      // Reverte para hex após salvar (para continuar mostrando hex na UI)
-      const servicesWithHex = localServices.map(service => ({
-        ...service,
-        color: normalizeHexColor(service.color),
-        badgeColor: normalizeHexColor(service.badgeColor)
-      }));
-      
-      updateNested('services', servicesWithHex);
-      
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
   };
 
   // Validações
-  const isServiceValid = (item: ServiceItem): boolean => {
-    return item.title.trim() !== '' && 
-           item.description.trim() !== '' && 
-           item.icon.trim() !== '' &&
-           item.image.trim() !== '';
+  const isLinkValid = (item: LinkItem): boolean => {
+    return item.name.trim() !== '' && item.href.trim() !== '';
   };
 
-  const isServicesLimitReached = localServices.length >= currentPlanLimit;
-  const canAddNewService = !isServicesLimitReached;
-  const servicesCompleteCount = localServices.filter(isServiceValid).length;
-  const servicesTotalCount = localServices.length;
+  const isLinksLimitReached = localLinks.length >= currentPlanLimit;
+  const canAddNewLink = !isLinksLimitReached;
+  const linksCompleteCount = localLinks.filter(isLinkValid).length;
+  const linksTotalCount = localLinks.length;
 
-  const headerCompleteCount = [
-    servicesData.header.title.trim() !== '',
-    servicesData.header.subtitle.trim() !== ''
+  const isGeneralValid = (): boolean => {
+    return pageData.general.logo.trim() !== '' && 
+           pageData.general.logoAlt.trim() !== '' &&
+           pageData.general.ctaLink.trim() !== '' &&
+           pageData.general.ctaText.trim() !== '';
+  };
+
+  const generalCompleteCount = [
+    pageData.general.logo.trim() !== '',
+    pageData.general.logoAlt.trim() !== '',
+    pageData.general.consultantBadge.trim() !== '',
+    pageData.general.ctaLink.trim() !== '',
+    pageData.general.ctaText.trim() !== ''
   ].filter(Boolean).length;
 
-  const servicesValidationError = isServicesLimitReached 
+  const isCtaValid = (): boolean => {
+    return pageData.cta.text.trim() !== '' && 
+           pageData.cta.link.trim() !== '';
+  };
+
+  const ctaCompleteCount = [
+    pageData.cta.enabled,
+    pageData.cta.text.trim() !== '',
+    pageData.cta.link.trim() !== '',
+    pageData.cta.icon.trim() !== '',
+    pageData.cta.showIcon
+  ].filter(Boolean).length;
+
+  const linksValidationError = isLinksLimitReached 
     ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
     : null;
-
-  // Filtro de busca
-  const filteredServices = useMemo(() => {
-    if (!searchTerm.trim()) return localServices;
-    
-    const term = searchTerm.toLowerCase();
-    return localServices.filter(service => 
-      service.title.toLowerCase().includes(term) ||
-      service.subtitle.toLowerCase().includes(term) ||
-      service.badge.toLowerCase().includes(term) ||
-      service.description.toLowerCase().includes(term) ||
-      service.icon.toLowerCase().includes(term)
-    );
-  }, [localServices, searchTerm]);
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Header (2 campos)
-    total += 2;
-    completed += headerCompleteCount;
+    // Announcement Bar (7 campos - incluindo enabled)
+    const ab = pageData.announcementBar;
+    total += 7;
+    if (ab.enabled) completed++;
+    if (ab.content.text.trim()) completed++;
+    if (ab.content.linkText.trim()) completed++;
+    if (ab.content.linkUrl.trim()) completed++;
+    if (ab.content.icon.trim()) completed++;
+    completed++; // showIcon é boolean
+    if (ab.styles.variant.trim()) completed++;
 
-    // Services (9 campos cada)
-    total += localServices.length * 9;
-    localServices.forEach(service => {
-      if (service.title.trim()) completed++;
-      if (service.subtitle.trim()) completed++;
-      if (service.badge.trim()) completed++;
-      if (service.description.trim()) completed++;
-      if (service.icon.trim()) completed++;
-      if (service.image.trim()) completed++;
-      if (service.color.trim()) completed++;
-      if (service.badgeColor.trim()) completed++;
-      if (service.effect.trim()) completed++;
+    // Geral (5 campos)
+    total += 5;
+    completed += generalCompleteCount;
+
+    // Links (2 campos cada)
+    total += localLinks.length * 2;
+    localLinks.forEach(link => {
+      if (link.name.trim()) completed++;
+      if (link.href.trim()) completed++;
     });
+
+    // Cores (8 propriedades * 4 variantes = 32 campos)
+    total += 32;
+    const variantKeys: (keyof VariantTheme)[] = ['primary', 'hoverBg', 'textOnPrimary', 'accentText', 'hoverText', 'border', 'glow', 'underline'];
+    
+    Object.values(pageData.variants).forEach(variant => {
+      variantKeys.forEach(key => {
+        if (variant[key]?.trim()) completed++;
+      });
+    });
+
+    // CTA (5 campos)
+    total += 5;
+    completed += ctaCompleteCount;
 
     return { completed, total };
   };
@@ -411,65 +519,310 @@ export default function ServicesPage() {
   const completion = calculateCompletion();
 
   if (loading && !exists) {
-    return <Loading layout={Settings} exists={!!exists} />;
+    return <Loading layout={Layout} exists={!!exists} />;
   }
 
   return (
     <ManageLayout
-      headerIcon={Settings}
-      title="Serviços"
-      description="Gerencie os serviços oferecidos pela sua empresa"
+      headerIcon={Layout}
+      title="Personalização do Header"
+      description="Configure o header do site incluindo logo, links e cores"
       exists={!!exists}
-      itemName="Serviços"
+      itemName="Header"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Header */}
+        {/* Seção Announcement Bar */}
         <div className="space-y-4">
           <SectionHeader
-            title="Cabeçalho da Seção"
-            section="header"
-            icon={Layers}
-            isExpanded={expandedSections.header}
-            onToggle={() => toggleSection("header")}
+            title="Barra de Anúncio"
+            section="announcement"
+            icon={Megaphone}
+            isExpanded={expandedSections.announcement}
+            onToggle={() => toggleSection("announcement")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.header ? "auto" : 0 }}
+            animate={{ height: expandedSections.announcement ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
-                      <Layers className="w-5 h-5" />
-                      Informações do Cabeçalho
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm text-[var(--color-secondary)]/70">
-                        {headerCompleteCount} de 2 campos preenchidos
-                      </span>
+              <div className="space-y-6">
+                {/* Controle de ativação */}
+                <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)] mb-6">
+                  <div className="flex items-center gap-3">
+                    {pageData.announcementBar.enabled ? (
+                      <Power className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <Power className="w-5 h-5 text-gray-500" />
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Barra de Anúncio Ativa
+                      </label>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        {pageData.announcementBar.enabled 
+                          ? "A barra de anúncio está visível no site" 
+                          : "A barra de anúncio está oculta no site"}
+                      </p>
                     </div>
                   </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Input
-                      label="Título Principal"
-                      value={servicesData.header.title}
-                      onChange={(e) => updateNested('header.title', e.target.value)}
-                      placeholder="Ex: Nossos Serviços"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
+                  <button
+                    type="button"
+                    onClick={() => updateNested('announcementBar.enabled', !pageData.announcementBar.enabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      pageData.announcementBar.enabled 
+                        ? 'bg-green-500' 
+                        : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        pageData.announcementBar.enabled 
+                          ? 'translate-x-6' 
+                          : 'translate-x-1'
+                      }`}
                     />
+                  </button>
+                </div>
 
+                {/* Conteúdo */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                    <Megaphone className="w-5 h-5" />
+                    Conteúdo
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Texto do Anúncio
+                    </label>
                     <Input
-                      label="Subtítulo"
-                      value={servicesData.header.subtitle}
-                      onChange={(e) => updateNested('header.subtitle', e.target.value)}
-                      placeholder="Ex: Soluções especializadas para impulsionar seu negócio"
+                      value={pageData.announcementBar.content.text}
+                      onChange={(e) => updateNested('announcementBar.content.text', e.target.value)}
+                      placeholder="🚀 Promoção especial: 50% de desconto em todos os cursos!"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      disabled={!pageData.announcementBar.enabled}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Texto do Link
+                      </label>
+                      <Input
+                        value={pageData.announcementBar.content.linkText}
+                        onChange={(e) => updateNested('announcementBar.content.linkText', e.target.value)}
+                        placeholder="Saiba mais"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        disabled={!pageData.announcementBar.enabled}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        URL do Link
+                      </label>
+                      <Input
+                        value={pageData.announcementBar.content.linkUrl}
+                        onChange={(e) => updateNested('announcementBar.content.linkUrl', e.target.value)}
+                        placeholder="#"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        disabled={!pageData.announcementBar.enabled}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Ícone
+                      </label>
+                      <IconSelector
+                        value={pageData.announcementBar.content.icon}
+                        onChange={(value) => updateNested('announcementBar.content.icon', value)}
+                        placeholder="ph:megaphone-simple-fill"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
+                      <div className="flex items-center gap-3">
+                        {pageData.announcementBar.content.showIcon ? (
+                          <Eye className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <EyeOff className="w-5 h-5 text-gray-500" />
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Mostrar Ícone
+                          </label>
+                          <p className="text-sm text-[var(--color-secondary)]/70">
+                            Exibir ícone ao lado do texto
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateNested('announcementBar.content.showIcon', !pageData.announcementBar.content.showIcon)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          pageData.announcementBar.content.showIcon 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-300'
+                        } ${!pageData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!pageData.announcementBar.enabled}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            pageData.announcementBar.content.showIcon 
+                              ? 'translate-x-6' 
+                              : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Estilos */}
+                <div className="space-y-4 pt-4 border-t border-[var(--color-border)]">
+                  <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                    <Palette className="w-5 h-5" />
+                    Estilos
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Variante
+                      </label>
+                      <select
+                        value={pageData.announcementBar.styles.variant}
+                        onChange={(e) => updateNested('announcementBar.styles.variant', e.target.value)}
+                        className={`w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)] ${
+                          !pageData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={!pageData.announcementBar.enabled}
+                      >
+                        <option value="info">Info (Azul)</option>
+                        <option value="warning">Warning (Amarelo)</option>
+                        <option value="success">Success (Verde)</option>
+                        <option value="error">Error (Vermelho)</option>
+                        <option value="custom">Customizado</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Posição
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateNested('announcementBar.styles.position', 'top')}
+                          className={`flex-1 flex items-center justify-center gap-2 p-2 rounded border ${
+                            pageData.announcementBar.styles.position === 'top'
+                              ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                              : 'bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]'
+                          } ${!pageData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={!pageData.announcementBar.enabled}
+                        >
+                          <ArrowUpToLine className="w-4 h-4" />
+                          Topo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateNested('announcementBar.styles.position', 'bottom')}
+                          className={`flex-1 flex items-center justify-center gap-2 p-2 rounded border ${
+                            pageData.announcementBar.styles.position === 'bottom'
+                              ? 'bg-[var(--color-primary)] text-white border-[var(--color-primary)]'
+                              : 'bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]'
+                          } ${!pageData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          disabled={!pageData.announcementBar.enabled}
+                        >
+                          <ArrowDownToLine className="w-4 h-4" />
+                          Rodapé
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {pageData.announcementBar.styles.variant === 'custom' && (
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-[var(--color-secondary)]">Cores Personalizadas</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <ThemePropertyInput
+                          property="customBackgroundColor"
+                          label="Cor de Fundo"
+                          description="Cor de fundo da barra de anúncio"
+                          currentHex={pageData.announcementBar.styles.customBackgroundColor || '#FFCC00'}
+                          tailwindClass=""
+                          onThemeChange={(prop, hex) => updateNested('announcementBar.styles.customBackgroundColor', hex)}
+                        />
+
+                        <ThemePropertyInput
+                          property="customTextColor"
+                          label="Cor do Texto"
+                          description="Cor do texto da barra de anúncio"
+                          currentHex={pageData.announcementBar.styles.customTextColor || '#000000'}
+                          tailwindClass=""
+                          onThemeChange={(prop, hex) => updateNested('announcementBar.styles.customTextColor', hex)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
+                      <div className="flex items-center gap-3">
+                        {pageData.announcementBar.styles.fullWidth ? (
+                          <Maximize2 className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <Maximize2 className="w-5 h-5 text-gray-500" />
+                        )}
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Largura Total
+                          </label>
+                          <p className="text-sm text-[var(--color-secondary)]/70">
+                            Ocupar toda a largura da tela
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => updateNested('announcementBar.styles.fullWidth', !pageData.announcementBar.styles.fullWidth)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          pageData.announcementBar.styles.fullWidth 
+                            ? 'bg-green-500' 
+                            : 'bg-gray-300'
+                        } ${!pageData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        disabled={!pageData.announcementBar.enabled}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            pageData.announcementBar.styles.fullWidth 
+                              ? 'translate-x-6' 
+                              : 'translate-x-1'
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Classe CSS Personalizada
+                      </label>
+                      <Input
+                        value={pageData.announcementBar.styles.className}
+                        onChange={(e) => updateNested('announcementBar.styles.className', e.target.value)}
+                        placeholder="minha-classe-personalizada"
+                        className={`bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] ${
+                          !pageData.announcementBar.enabled ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        disabled={!pageData.announcementBar.enabled}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -477,19 +830,108 @@ export default function ServicesPage() {
           </motion.div>
         </div>
 
-        {/* Seção Serviços */}
+        {/* Seção Geral */}
         <div className="space-y-4">
           <SectionHeader
-            title="Lista de Serviços"
-            section="services"
+            title="Configurações Gerais"
+            section="general"
             icon={Settings}
-            isExpanded={expandedSections.services}
-            onToggle={() => toggleSection("services")}
+            isExpanded={expandedSections.general}
+            onToggle={() => toggleSection("general")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.services ? "auto" : 0 }}
+            animate={{ height: expandedSections.general ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5" />
+                      Logos
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {generalCompleteCount} de 5 campos preenchidos
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <ImageUpload
+                    label="Logo do Site"
+                    description="Imagem principal do site (recomendado: PNG transparente)"
+                    currentImage={pageData.general.logo}
+                    selectedFile={fileStates['general.logo'] || null}
+                    onFileChange={(file) => setFileState('general.logo', file)}
+                    aspectRatio="aspect-[4/1]"
+                    previewWidth={200}
+                    previewHeight={200}
+                  />
+
+                  <Input
+                    label="Texto Alternativo do Logo"
+                    value={pageData.general.logoAlt}
+                    onChange={(e) => updateNested('general.logoAlt', e.target.value)}
+                    placeholder="Ex: Tegbe Logo"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <ImageUpload
+                    label="Badge de Consultor"
+                    description="Selo de consultoria certificada"
+                    currentImage={pageData.general.consultantBadge}
+                    selectedFile={fileStates['general.consultantBadge'] || null}
+                    onFileChange={(file) => setFileState('general.consultantBadge', file)}
+                    aspectRatio="aspect-square"
+                    previewWidth={100}
+                    previewHeight={100}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                    <Tag className="w-5 h-5" />
+                    Call to Action (CTA)
+                  </h3>
+                  
+                  <Input
+                    label="Link do CTA"
+                    value={pageData.general.ctaLink}
+                    onChange={(e) => updateNested('general.ctaLink', e.target.value)}
+                    placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <Input
+                    label="Texto do CTA"
+                    value={pageData.general.ctaText}
+                    onChange={(e) => updateNested('general.ctaText', e.target.value)}
+                    placeholder="Ex: Agendar agora"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Links */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Links de Navegação"
+            section="links"
+            icon={LinkIcon}
+            isExpanded={expandedSections.links}
+            onToggle={() => toggleSection("links")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.links ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
@@ -498,31 +940,31 @@ export default function ServicesPage() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
                     <div>
                       <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                        Serviços Oferecidos
+                        Menu de Navegação
                       </h4>
                       <div className="flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {servicesCompleteCount} de {servicesTotalCount} completos
+                          {linksCompleteCount} de {linksTotalCount} completos
                         </span>
                         <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          Limite: {currentPlanType === 'pro' ? '10' : '5'} serviços
+                          Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
                         </span>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <Button
                         type="button"
-                        onClick={handleAddService}
+                        onClick={handleAddLink}
                         variant="primary"
                         className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
-                        disabled={!canAddNewService}
+                        disabled={!canAddNewLink}
                       >
                         <Plus className="w-4 h-4" />
-                        Adicionar Serviço
+                        Adicionar Link
                       </Button>
-                      {isServicesLimitReached && (
+                      {isLinksLimitReached && (
                         <p className="text-xs text-red-500 flex items-center gap-1">
                           <AlertCircle className="w-3 h-3" />
                           Limite do plano atingido
@@ -530,287 +972,377 @@ export default function ServicesPage() {
                       )}
                     </div>
                   </div>
-                  
-                  {/* Barra de busca */}
-                  <div className="mt-4 space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Buscar Serviços
-                    </label>
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
-                      <Input
-                        type="text"
-                        placeholder="Buscar serviços por título, subtítulo, badge, descrição ou ícone..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
-                      />
-                    </div>
-                  </div>
+                  <p className="text-sm text-[var(--color-secondary)]/70">
+                    Configure os links do menu principal. Cada link deve ter um nome e uma URL.
+                  </p>
                 </div>
 
                 {/* Mensagem de erro */}
-                {servicesValidationError && (
-                  <div className={`p-3 rounded-lg ${isServicesLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                {linksValidationError && (
+                  <div className={`p-3 rounded-lg ${isLinksLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
                     <div className="flex items-start gap-2">
-                      {isServicesLimitReached ? (
+                      {isLinksLimitReached ? (
                         <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                       ) : (
                         <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                       )}
-                      <p className={`text-sm ${isServicesLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                        {servicesValidationError}
+                      <p className={`text-sm ${isLinksLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {linksValidationError}
                       </p>
                     </div>
                   </div>
                 )}
 
-                {/* Lista de Serviços */}
-                {filteredServices.length === 0 ? (
-                  <Card className="p-8 bg-[var(--color-background)]">
-                    <div className="text-center">
-                      <Settings className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                        {searchTerm ? 'Nenhum serviço encontrado' : 'Nenhum serviço adicionado'}
-                      </h3>
-                      <p className="text-sm text-[var(--color-secondary)]/70">
-                        {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro serviço usando o botão acima'}
-                      </p>
-                    </div>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredServices.map((service, index) => {
-                      const normalizedColor = normalizeHexColor(service.color);
-                      const normalizedBadgeColor = normalizeHexColor(service.badgeColor);
-                      
-                      return (
-                        <div 
-                          key={service.id || index}
-                          ref={index === localServices.length - 1 && service.title === '' && service.description === '' ? newServiceRef : undefined}
-                          draggable
-                          onDragStart={(e) => handleServiceDragStart(e, index)}
-                          onDragOver={(e) => handleServiceDragOver(e, index)}
-                          onDragEnter={handleDragEnter}
-                          onDragLeave={handleDragLeave}
-                          onDragEnd={handleServiceDragEnd}
-                          onDrop={handleDrop}
-                          className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                            draggingService === index 
-                              ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
-                              : 'hover:border-[var(--color-primary)]/50'
-                          }`}
-                          style={{ borderLeftColor: normalizedColor || '#3B82F6', borderLeftWidth: '4px' }}
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3 flex-1">
-                              {/* Handle para drag & drop */}
-                              <div 
-                                className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
-                                draggable
-                                onDragStart={(e) => handleServiceDragStart(e, index)}
-                              >
-                                <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
-                              </div>
-                              
-                              {/* Indicador de posição */}
-                              <div className="flex flex-col items-center">
-                                <span className="text-xs font-medium text-[var(--color-secondary)]/70">
-                                  {index + 1}
+                <div className="space-y-4">
+                  {localLinks.map((link, index) => (
+                    <div 
+                      key={`link-${index}`}
+                      ref={index === localLinks.length - 1 ? newLinkRef : undefined}
+                      draggable
+                      onDragStart={(e) => handleLinkDragStart(e, index)}
+                      onDragOver={(e) => handleLinkDragOver(e, index)}
+                      onDragEnter={handleDragEnter}
+                      onDragLeave={handleDragLeave}
+                      onDragEnd={handleLinkDragEnd}
+                      onDrop={handleDrop}
+                      className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+                        draggingLink === index 
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                          : 'hover:border-[var(--color-primary)]/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          {/* Handle para drag & drop */}
+                          <div 
+                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                            draggable
+                            onDragStart={(e) => handleLinkDragStart(e, index)}
+                          >
+                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                          </div>
+                          
+                          {/* Indicador de posição */}
+                          <div className="flex flex-col items-center">
+                            <span className="text-xs font-medium text-[var(--color-secondary)]/70">
+                              {index + 1}
+                            </span>
+                            <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-4">
+                              <h4 className="font-medium text-[var(--color-secondary)]">
+                                {link.name || "Link sem nome"}
+                              </h4>
+                              {link.name && link.href ? (
+                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                  Completo
                                 </span>
-                                <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
-                              </div>
-                              
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-4">
-                                  <h4 className="font-medium text-[var(--color-secondary)]">
-                                    {service.title || "Serviço sem título"}
-                                  </h4>
-                                  {service.title && service.description && service.icon && service.image ? (
-                                    <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
-                                      Completo
-                                    </span>
-                                  ) : (
-                                    <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                                      Incompleto
-                                    </span>
-                                  )}
-                                </div>
-                                
-                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                  <div className="space-y-6">
-                                    <div>
-                                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                                        <Target className="w-4 h-4" />
-                                        Imagem do Serviço
-                                      </label>
-                                      <ImageUpload
-                                        label="Imagem de Destaque"
-                                        description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x400px."
-                                        currentImage={service.image}
-                                        selectedFile={fileStates[`services.${index}.image`] || null}
-                                        onFileChange={(file) => setFileState(`services.${index}.image`, file)}
-                                        aspectRatio="aspect-video"
-                                        previewWidth={300}
-                                        previewHeight={150}
-                                      />
-                                    </div>
-
-                                    <div>
-                                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                                        Ícone do Serviço
-                                      </label>
-                                      <IconSelector
-                                        value={service.icon}
-                                        onChange={(value: string) => updateService(index, { icon: value })}
-                                        label="Selecione um ícone para o serviço"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="lg:col-span-2 space-y-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                      <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                          Título do Serviço
-                                        </label>
-                                        <Input
-                                          type="text"
-                                          value={service.title}
-                                          onChange={(e) => updateService(index, { title: e.target.value })}
-                                          placeholder="Ex: Aquisição Cirúrgica"
-                                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
-                                        />
-                                      </div>
-
-                                      <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                                          <Type className="w-4 h-4" />
-                                          Subtítulo do Serviço
-                                        </label>
-                                        <Input
-                                          type="text"
-                                          value={service.subtitle}
-                                          onChange={(e) => updateService(index, { subtitle: e.target.value })}
-                                          placeholder="Ex: Tráfego pago de alta conversão"
-                                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                      <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                                          <Tag className="w-4 h-4" />
-                                          Badge/Etiqueta
-                                        </label>
-                                        <Input
-                                          type="text"
-                                          value={service.badge}
-                                          onChange={(e) => updateService(index, { badge: e.target.value })}
-                                          placeholder="Ex: Popular, Novo, Destaque"
-                                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                        />
-                                      </div>
-
-                                      <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                                          <Sparkles className="w-4 h-4" />
-                                          Efeito Visual
-                                        </label>
-                                        <select
-                                          value={service.effect}
-                                          onChange={(e) => updateService(index, { effect: e.target.value as any })}
-                                          className="w-full p-2 rounded-lg bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)]"
-                                        >
-                                          {effectOptions.map((option) => (
-                                            <option key={option.value} value={option.value}>
-                                              {option.label}
-                                            </option>
-                                          ))}
-                                        </select>
-                                      </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                      <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                                          <Palette className="w-4 h-4" />
-                                          Cor Principal
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                          <Input
-                                            type="text"
-                                            value={service.color}
-                                            onChange={(e) => {
-                                              const hex = normalizeHexColor(e.target.value);
-                                              updateService(index, { color: hex });
-                                            }}
-                                            placeholder="Ex: #3B82F6"
-                                            className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                          />
-                                          <ColorPicker
-                                            color={normalizedColor}
-                                            onChange={(hex: string) => handleServiceColorChange(index, hex, "main")}
-                                          />
-                                        </div>
-                                      </div>
-
-                                      <div className="space-y-2">
-                                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                          Cor do Badge
-                                        </label>
-                                        <div className="flex items-center gap-2">
-                                          <Input
-                                            type="text"
-                                            placeholder="Ex: #EF4444"
-                                            value={service.badgeColor}
-                                            onChange={(e) => {
-                                              const hex = normalizeHexColor(e.target.value);
-                                              updateService(index, { badgeColor: hex });
-                                            }}
-                                            className="flex-1 font-mono bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                          />
-                                          <ColorPicker
-                                            color={normalizedBadgeColor}
-                                            onChange={(hex: string) => handleServiceColorChange(index, hex, "badge")}
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      <TextArea
-                                        label="Descrição do Serviço"
-                                        placeholder="Ex: Tráfego pago focado em ICPs (Perfis de Cliente Ideal). Ignoramos curiosos e atraímos decisores com Google e Meta Ads de alta intenção."
-                                        value={service.description}
-                                        onChange={(e) => updateService(index, { description: e.target.value })}
-                                        rows={4}
-                                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                      />
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
+                              ) : (
+                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                  Incompleto
+                                </span>
+                              )}
                             </div>
                             
-                            <div className="flex flex-col gap-2">
-                              <Button
-                                type="button"
-                                onClick={() => removeService(index)}
-                                variant="danger"
-                                className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                                Remover
-                              </Button>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Nome do Link
+                                </label>
+                                <Input
+                                  value={link.name}
+                                  onChange={(e) => updateLink(index, { name: e.target.value })}
+                                  placeholder="Ex: Home"
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  URL do Link
+                                </label>
+                                <Input
+                                  value={link.href}
+                                  onChange={(e) => updateLink(index, { href: e.target.value })}
+                                  placeholder="Ex: /"
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
-                      );
-                    })}
+                        
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => removeLink(index)}
+                            variant="danger"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Cores */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Cores do Tema (Aplicadas a todas as páginas)"
+            section="colors"
+            icon={Palette}
+            isExpanded={expandedSections.colors}
+            onToggle={() => toggleSection("colors")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.colors ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="mb-4">
+                  <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                    Configuração das Cores
+                  </h4>
+                  <p className="text-sm text-[var(--color-secondary)]/70">
+                    As cores configuradas aqui serão aplicadas a todas as páginas (E-commerce, Marketing, Sobre, Cursos).
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ThemePropertyInput
+                    property="primary"
+                    label="Cor Primária (Background)"
+                    description="Cor de fundo principal para botões e elementos destacados"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.primary)}
+                    tailwindClass={pageData.variants.ecommerce.primary}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="hoverBg"
+                    label="Background no Hover"
+                    description="Cor de fundo quando o usuário passa o mouse"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.hoverBg)}
+                    tailwindClass={pageData.variants.ecommerce.hoverBg}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="textOnPrimary"
+                    label="Texto sobre Cor Primária"
+                    description="Cor do texto quando sobre fundo primário"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.textOnPrimary)}
+                    tailwindClass={pageData.variants.ecommerce.textOnPrimary}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="accentText"
+                    label="Texto de Destaque"
+                    description="Cor para texto destacado e links"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.accentText)}
+                    tailwindClass={pageData.variants.ecommerce.accentText}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="hoverText"
+                    label="Texto no Hover"
+                    description="Cor do texto quando o usuário passa o mouse"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.hoverText)}
+                    tailwindClass={pageData.variants.ecommerce.hoverText}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="border"
+                    label="Cor da Borda"
+                    description="Cor para bordas e separadores"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.border)}
+                    tailwindClass={pageData.variants.ecommerce.border}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="glow"
+                    label="Efeito Glow (Sombra)"
+                    description="Cor da sombra para efeitos de destaque"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.glow)}
+                    tailwindClass={pageData.variants.ecommerce.glow}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+
+                  <ThemePropertyInput
+                    property="underline"
+                    label="Sublinhado"
+                    description="Cor para sublinhados e destaques lineares"
+                    currentHex={extractHexFromTailwind(pageData.variants.ecommerce.underline)}
+                    tailwindClass={pageData.variants.ecommerce.underline}
+                    onThemeChange={(prop, hex) => handleColorsChange(prop as any, hex)}
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção CTA (Nova Seção) */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Call to Action (CTA)"
+            section="cta"
+            icon={Target}
+            isExpanded={expandedSections.cta}
+            onToggle={() => toggleSection("cta")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cta ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+                      Configuração do Call to Action
+                    </h4>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {ctaCompleteCount} de 5 campos preenchidos
+                      </span>
+                    </div>
                   </div>
-                )}
+                  <p className="text-sm text-[var(--color-secondary)]/70">
+                    Configure o botão de ação principal que aparece no header.
+                  </p>
+                </div>
+
+                {/* Controle de ativação */}
+                <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)] mb-6">
+                  <div className="flex items-center gap-3">
+                    {pageData.cta.enabled ? (
+                      <Power className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <Power className="w-5 h-5 text-gray-500" />
+                    )}
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        CTA Ativo
+                      </label>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateNested('cta.enabled', !pageData.cta.enabled)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      pageData.cta.enabled 
+                        ? 'bg-green-500' 
+                        : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        pageData.cta.enabled 
+                          ? 'translate-x-6' 
+                          : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Texto do CTA
+                    </label>
+                    <Input
+                      value={pageData.cta.text}
+                      onChange={(e) => updateNested('cta.text', e.target.value)}
+                      placeholder="Ex: Agendar Consultoria"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      disabled={!pageData.cta.enabled}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Link do CTA
+                    </label>
+                    <Input
+                      value={pageData.cta.link}
+                      onChange={(e) => updateNested('cta.link', e.target.value)}
+                      placeholder="Ex: /contato"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      disabled={!pageData.cta.enabled}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                      Ícone do CTA
+                    </label>
+                    <IconSelector
+                      value={pageData.cta.icon}
+                      onChange={(value) => updateNested('cta.icon', value)}
+                      placeholder="ph:calendar-check"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
+                    <div className="flex items-center gap-3">
+                      {pageData.cta.showIcon ? (
+                        <Eye className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <EyeOff className="w-5 h-5 text-gray-500" />
+                      )}
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                          Mostrar Ícone
+                        </label>
+                        <p className="text-sm text-[var(--color-secondary)]/70">
+                          Exibir ícone ao lado do texto
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => updateNested('cta.showIcon', !pageData.cta.showIcon)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        pageData.cta.showIcon 
+                          ? 'bg-green-500' 
+                          : 'bg-gray-300'
+                      } ${!pageData.cta.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={!pageData.cta.enabled}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          pageData.cta.showIcon 
+                            ? 'translate-x-6' 
+                            : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
               </div>
             </Card>
           </motion.div>
@@ -822,9 +1354,10 @@ export default function ServicesPage() {
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
+          completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Serviços"
-          icon={Settings}
+          itemName="Header"
+          icon={Layout}
         />
       </form>
 
@@ -835,7 +1368,7 @@ export default function ServicesPage() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Configuração dos Serviços"
+        itemName="Configuração do Header"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />

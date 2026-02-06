@@ -24,7 +24,8 @@ import {
   ChevronUp,
   Palette,
   Target,
-  ArrowUpDown
+  ArrowUpDown,
+  MessageSquare
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -38,10 +39,16 @@ interface ServiceItem {
   id: string;
   title: string;
   description: string;
-  icon: string; // Formato: coleção:nome-do-ícone (ex: mdi:check-decagram, lucide:arrow-right)
+  icon: string;
   color: string;
   wide: boolean;
   visualType: string;
+}
+
+interface CTASection {
+  text: string;
+  url: string;
+  description: string;
 }
 
 interface SectionData {
@@ -52,6 +59,7 @@ interface SectionData {
     gradientTitle?: string;
   };
   services: ServiceItem[];
+  cta: CTASection; // Novo campo CTA
 }
 
 interface ComoFazemosData {
@@ -61,6 +69,12 @@ interface ComoFazemosData {
   sobre: SectionData;
 }
 
+const defaultCTASection: CTASection = {
+  text: "Quero Estruturar e Escalar Meu Negócio",
+  url: "https://api.whatsapp.com/send?phone=5514991779502",
+  description: "Anúncios, operação e dados trabalhando juntos para vender mais."
+};
+
 const defaultSectionData: SectionData = {
   header: {
     preTitle: "",
@@ -68,7 +82,8 @@ const defaultSectionData: SectionData = {
     subtitle: "",
     gradientTitle: ""
   },
-  services: []
+  services: [],
+  cta: defaultCTASection
 };
 
 // Convertendo os ícones do JSON de exemplo para o formato coleção:nome-do-ícone
@@ -86,7 +101,7 @@ const defaultComoFazemosData: ComoFazemosData = {
         id: "setup-infra",
         title: "Infraestrutura de Elite",
         description: "Configuração de servidores e plataforma escalável com foco em tempo de resposta zero.",
-        icon: "lucide:settings", // Convertido de "Settings" para "lucide:settings"
+        icon: "lucide:settings",
         color: "#3B82F6",
         wide: false,
         visualType: "technical"
@@ -96,7 +111,7 @@ const defaultComoFazemosData: ComoFazemosData = {
         id: "growth-ads",
         title: "Growth & Performance",
         description: "Tráfego pago inteligente focado em ROI real e escala agressiva de vendas diárias.",
-        icon: "lucide:trending-up", // Convertido de "TrendingUp" para "lucide:trending-up"
+        icon: "lucide:trending-up",
         color: "#10B981",
         wide: true,
         visualType: "chart"
@@ -106,12 +121,13 @@ const defaultComoFazemosData: ComoFazemosData = {
         id: "ai-employees",
         title: "Funcionários de IA",
         description: "Automação total do atendimento e recuperação de carrinhos com IA preditiva.",
-        icon: "lucide:cpu", // Convertido de "Cpu" para "lucide:cpu"
+        icon: "lucide:cpu",
         color: "#8B5CF6",
         wide: false,
         visualType: "ai-mesh"
       }
-    ]
+    ],
+    cta: defaultCTASection
   },
   marketing: defaultSectionData,
   ecommerce: defaultSectionData,
@@ -146,7 +162,6 @@ const mergeWithDefaults = (apiData: any, defaultData: ComoFazemosData): ComoFaze
         
         // Se o ícone estiver no formato antigo (apenas nome), converter para formato coleção:nome
         if (icon && !icon.includes(':')) {
-          // Converter nome PascalCase para kebab-case e adicionar prefixo lucide:
           const kebabCase = icon.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
           icon = `lucide:${kebabCase}`;
         }
@@ -163,7 +178,13 @@ const mergeWithDefaults = (apiData: any, defaultData: ComoFazemosData): ComoFaze
         };
       });
       
-      result[section] = { header, services };
+      // Merge do CTA
+      const cta = {
+        ...defaultData[section].cta,
+        ...apiData[section].cta
+      };
+      
+      result[section] = { header, services, cta };
     } else {
       result[section] = defaultData[section];
     }
@@ -483,6 +504,11 @@ export default function ComoFazemosPage() {
     updateNested(path, value);
   };
 
+  const handleCtaChange = (section: keyof ComoFazemosData, field: keyof CTASection, value: string) => {
+    const path = `${section}.cta.${field}`;
+    updateNested(path, value);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
@@ -523,7 +549,7 @@ export default function ComoFazemosPage() {
     let completed = 0;
     let total = 0;
 
-    // Para cada seção, contar campos do header e dos serviços
+    // Para cada seção, contar campos do header, serviços e CTA
     const sections: (keyof ComoFazemosData)[] = ['home', 'marketing', 'ecommerce', 'sobre'];
     
     sections.forEach(section => {
@@ -545,8 +571,14 @@ export default function ComoFazemosPage() {
         if (service.icon.trim()) completed++;
         if (service.color.trim()) completed++;
         if (service.visualType.trim()) completed++;
-        if (service.wide !== undefined) completed++; // wide é booleano
+        if (service.wide !== undefined) completed++;
       });
+      
+      // CTA (3 campos)
+      total += 3;
+      if (sectionData.cta.text.trim()) completed++;
+      if (sectionData.cta.url.trim()) completed++;
+      if (sectionData.cta.description.trim()) completed++;
     });
 
     return { completed, total };
@@ -622,6 +654,68 @@ export default function ComoFazemosPage() {
                 rows={2}
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderCtaSection = (section: keyof ComoFazemosData, sectionTitle: string) => {
+    const cta = pageData[section]?.cta || defaultCTASection;
+    
+    return (
+      <Card className="p-6 bg-[var(--color-background)]">
+        <div className="flex items-center gap-3 mb-6">
+          <MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />
+          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
+            Call to Action (CTA) - {sectionTitle}
+          </h4>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Texto do CTA
+                </label>
+                <Input
+                  type="text"
+                  value={cta.text}
+                  onChange={(e) => handleCtaChange(section, "text", e.target.value)}
+                  placeholder="Ex: Quero Estruturar e Escalar Meu Negócio"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  URL do CTA
+                </label>
+                <Input
+                  type="text"
+                  value={cta.url}
+                  onChange={(e) => handleCtaChange(section, "url", e.target.value)}
+                  placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                  Descrição do CTA
+                </label>
+                <TextArea
+                  value={cta.description}
+                  onChange={(e) => handleCtaChange(section, "description", e.target.value)}
+                  placeholder="Ex: Anúncios, operação e dados trabalhando juntos para vender mais."
+                  rows={4}
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -950,6 +1044,7 @@ export default function ComoFazemosPage() {
         >
           <div className="space-y-6 mt-4">
             {renderHeaderSection(section, sectionTitle)}
+            {renderCtaSection(section, sectionTitle)}
             {renderServicesSection(section, sectionTitle, Icon)}
           </div>
         </motion.div>
