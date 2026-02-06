@@ -75,10 +75,6 @@ async function deleteFromBunny(url: string): Promise<void> {
         'AccessKey': accessKey,
       },
     });
-
-    if (!response.ok && response.status !== 404) {
-      console.error(`❌ Failed to delete file: ${response.status}`);
-    }
   } catch (error) {
     console.error("❌ Error deleting file from Bunny:", error);
   }
