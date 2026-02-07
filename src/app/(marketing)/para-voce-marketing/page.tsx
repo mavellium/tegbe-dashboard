@@ -12,7 +12,6 @@ import IconSelector from "@/components/IconSelector";
 import { 
   XCircle,
   Filter,
-  Type,
   Settings,
   Layers,
   ChevronDown,
@@ -34,12 +33,6 @@ import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 
-interface MetadataData {
-  component: string;
-  strategy: string;
-  theme: string;
-}
-
 interface HeaderData {
   badge: string;
   title_main: string;
@@ -58,48 +51,66 @@ interface RejectionCard {
 }
 
 interface MarketingAntiHeroData {
-  metadata: MetadataData;
   header: HeaderData;
   rejection_cards: RejectionCard[];
 }
 
 const defaultData: MarketingAntiHeroData = {
-  metadata: {
-    component: "MarketingAntiHero",
-    strategy: "Reverse Psychology Qualification",
-    theme: "Dark Crimson / Alert Mode"
-  },
   header: {
-    badge: "Filtro de Qualificação",
-    title_main: "A Tegbe",
-    title_highlight: "NÃO",
-    title_suffix: "é para você se...",
-    description: "Buscamos parceiros de crescimento, não aventuras. Se sua empresa se encaixa nos perfis abaixo, nossa engenharia não vai funcionar."
+    badge: "",
+    title_main: "",
+    title_highlight: "",
+    title_suffix: "",
+    description: ""
   },
   rejection_cards: [
     {
       id: 1,
-      icon: "mdi:camera-off",
-      title: "Busca Marketing de Vaidade",
-      description: "Você quer apenas 'postar no Instagram' para ganhar likes e inflar o ego, sem se preocupar com o Lucro Real que sobra no caixa da empresa no final do mês.",
-      highlight_terms: ["Lucro Real"],
-      status_label: "Incompatível"
+      icon: "",
+      title: "",
+      description: "",
+      highlight_terms: [],
+      status_label: ""
     },
     {
       id: 2,
-      icon: "mdi:chart-line-variant",
-      title: "Resiste aos Dados",
-      description: "Você prefere seguir sua intuição ou fazer 'o que todo mundo faz' ao invés de aceitar estratégias baseadas em números frios e testes A/B validados.",
-      highlight_terms: ["números frios"],
-      status_label: "Incompatível"
+      icon: "",
+      title: "",
+      description: "",
+      highlight_terms: [],
+      status_label: ""
     },
     {
       id: 3,
-      icon: "ph:armchair-bold",
-      title: "Ama a Zona de Conforto",
-      description: "Seu negócio não tem estrutura, equipe ou vontade real de escalar o atendimento quando o volume de leads qualificados triplicar.",
-      highlight_terms: ["vontade real de escalar"],
-      status_label: "Incompatível"
+      icon: "",
+      title: "",
+      description: "",
+      highlight_terms: [],
+      status_label: ""
+    },
+    {
+      id: 4,
+      icon: "",
+      title: "",
+      description: "",
+      highlight_terms: [],
+      status_label: ""
+    },
+    {
+      id: 5,
+      icon: "",
+      title: "",
+      description: "",
+      highlight_terms: [],
+      status_label: ""
+    },
+    {
+      id: 6,
+      icon: "",
+      title: "",
+      description: "",
+      highlight_terms: [],
+      status_label: ""
     }
   ]
 };
@@ -108,11 +119,6 @@ const mergeWithDefaults = (apiData: any, defaultData: MarketingAntiHeroData): Ma
   if (!apiData) return defaultData;
   
   return {
-    metadata: {
-      component: apiData.metadata?.component || defaultData.metadata.component,
-      strategy: apiData.metadata?.strategy || defaultData.metadata.strategy,
-      theme: apiData.metadata?.theme || defaultData.metadata.theme
-    },
     header: {
       badge: apiData.header?.badge || defaultData.header.badge,
       title_main: apiData.header?.title_main || defaultData.header.title_main,
@@ -126,7 +132,6 @@ const mergeWithDefaults = (apiData: any, defaultData: MarketingAntiHeroData): Ma
 
 export default function MarketingAntiHeroPage() {
   const [expandedSections, setExpandedSections] = useState({
-    metadata: true,
     header: false,
     rejectionCards: false
   });
@@ -169,11 +174,11 @@ export default function MarketingAntiHeroPage() {
   const handleAddRejectionCard = () => {
     const newCard: RejectionCard = {
       id: Date.now(),
-      icon: "mdi:alert-circle",
+      icon: "",
       title: "",
       description: "",
       highlight_terms: [],
-      status_label: "Incompatível"
+      status_label: ""
     };
     const updated = [...currentData.rejection_cards, newCard];
     handleChange('rejection_cards', updated);
@@ -287,12 +292,6 @@ export default function MarketingAntiHeroPage() {
     let completed = 0;
     let total = 0;
 
-    // Metadata
-    total += 3;
-    Object.values(currentData.metadata).forEach(value => {
-      if (value?.trim()) completed++;
-    });
-
     // Header
     total += 5;
     Object.values(currentData.header).forEach(value => {
@@ -331,57 +330,6 @@ export default function MarketingAntiHeroPage() {
       itemName="Marketing Anti Hero"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Metadata */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Metadados do Componente"
-            section="metadata"
-            icon={Settings}
-            isExpanded={expandedSections.metadata}
-            onToggle={() => toggleSection("metadata")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.metadata ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <Input
-                    label="Nome do Componente"
-                    value={currentData.metadata.component}
-                    onChange={(e) => handleChange('metadata.component', e.target.value)}
-                    placeholder="MarketingAntiHero"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-
-                <div>
-                  <Input
-                    label="Estratégia"
-                    value={currentData.metadata.strategy}
-                    onChange={(e) => handleChange('metadata.strategy', e.target.value)}
-                    placeholder="Reverse Psychology Qualification"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-
-                <div>
-                  <Input
-                    label="Tema Visual"
-                    value={currentData.metadata.theme}
-                    onChange={(e) => handleChange('metadata.theme', e.target.value)}
-                    placeholder="Dark Crimson / Alert Mode"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
         {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
@@ -419,7 +367,7 @@ export default function MarketingAntiHeroPage() {
                         label="Título (Parte 1)"
                         value={currentData.header.title_main}
                         onChange={(e) => handleChange('header.title_main', e.target.value)}
-                        placeholder="A Tegbe"
+                        placeholder="Este Serviço"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                     </div>
@@ -429,7 +377,7 @@ export default function MarketingAntiHeroPage() {
                         label="Título (Destaque)"
                         value={currentData.header.title_highlight}
                         onChange={(e) => handleChange('header.title_highlight', e.target.value)}
-                        placeholder="NÃO"
+                        placeholder="Não é Para Você"
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                     </div>
@@ -439,7 +387,7 @@ export default function MarketingAntiHeroPage() {
                         label="Título (Final)"
                         value={currentData.header.title_suffix}
                         onChange={(e) => handleChange('header.title_suffix', e.target.value)}
-                        placeholder="é para você se..."
+                        placeholder="Se..."
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                     </div>
@@ -454,7 +402,7 @@ export default function MarketingAntiHeroPage() {
                     label="Descrição"
                     value={currentData.header.description}
                     onChange={(e) => handleChange('header.description', e.target.value)}
-                    placeholder="Buscamos parceiros de crescimento, não aventuras..."
+                    placeholder="Somos especialistas em performance marketing para negócios que buscam escalabilidade real..."
                     rows={3}
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
@@ -509,7 +457,7 @@ export default function MarketingAntiHeroPage() {
                   </Button>
                 </div>
                 <p className="text-sm text-[var(--color-secondary)]/70 mt-2">
-                  Lista de perfis que não são compatíveis com a metodologia da Tegbe
+                  Lista de perfis que não são compatíveis com a metodologia
                 </p>
               </div>
 
@@ -575,7 +523,7 @@ export default function MarketingAntiHeroPage() {
                                   <IconSelector
                                     value={card.icon}
                                     onChange={(value) => handleUpdateCard(index, { icon: value })}
-                                    placeholder="mdi:camera-off"
+                                    placeholder="mdi:currency-usd-off"
                                   />
                                 </div>
                                 
@@ -586,7 +534,7 @@ export default function MarketingAntiHeroPage() {
                                   <Input
                                     value={card.title}
                                     onChange={(e) => handleUpdateCard(index, { title: e.target.value })}
-                                    placeholder="Busca Marketing de Vaidade"
+                                    placeholder="Ex: Procura soluções baratas ou preços abaixo do mercado"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
                                 </div>
@@ -598,7 +546,7 @@ export default function MarketingAntiHeroPage() {
                                   <Input
                                     value={card.status_label}
                                     onChange={(e) => handleUpdateCard(index, { status_label: e.target.value })}
-                                    placeholder="Incompatível"
+                                    placeholder="Não Qualificado"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
                                 </div>
@@ -649,7 +597,7 @@ export default function MarketingAntiHeroPage() {
                                     <Input
                                       value={term}
                                       onChange={(e) => handleUpdateHighlightTerm(index, termIndex, e.target.value)}
-                                      placeholder="Ex: Lucro Real, números frios..."
+                                      placeholder="Ex: baratas, preço baixo, R$ 5.000"
                                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                     />
                                     <Button

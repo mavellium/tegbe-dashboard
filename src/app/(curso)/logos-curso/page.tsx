@@ -1,559 +1,222 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState, useCallback, useId, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useListManagement } from "@/hooks/useListManagement";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
+import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
-  BookOpen, 
-  GripVertical, 
-  ArrowUpDown, 
-  Plus, 
-  AlertCircle, 
-  CheckCircle2, 
+  BookOpen,
+  Layers,
+  Settings,
+  CheckCircle2,
+  Plus,
   Trash2,
-  XCircle,
-  Search,
-  Link
+  GripVertical,
+  ArrowUpDown,
+  Eye,
+  EyeOff
 } from "lucide-react";
-import { ManageLayout } from "@/components/Manage/ManageLayout";
+import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
-import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
+import { SectionHeader } from "@/components/SectionHeader";
+import Loading from "@/components/Loading";
+import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ImageUpload } from "@/components/ImageUpload";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 interface CursoItem {
-  id?: string;
-  name: string;
+  id: string;
   image: string;
+  name: string;
   url: string;
-  file?: File | null;
+  website: string;
 }
 
-function SortableCursoItem({
-  curso,
-  index,
-  originalIndex,
-  isLastInOriginalList,
-  isLastAndEmpty,
-  showValidation,
-  cursoList,
-  handleChange,
-  handleFileChange,
-  openDeleteSingleModal,
-  getImageUrl,
-  setNewItemRef,
-}: {
-  curso: CursoItem;
-  index: number;
-  originalIndex: number;
-  isLastInOriginalList: boolean;
-  isLastAndEmpty: boolean;
-  showValidation: boolean;
-  cursoList: CursoItem[];
-  handleChange: (index: number, field: keyof CursoItem, value: any) => void;
-  handleFileChange: (index: number, file: File | null) => void;
-  openDeleteSingleModal: (index: number, name: string) => void;
-  getImageUrl: (curso: CursoItem) => string;
-  setNewItemRef?: (node: HTMLDivElement | null) => void;
-}) {
-  const stableId = useId();
-  const sortableId = curso.id || `curso-${index}-${stableId}`;
+interface CursosData {
+  id: string;
+  type: string;
+  subtype: string;
+  values: CursoItem[];
+}
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: sortableId });
+const defaultCursosData: CursosData = {
+  id: "cursos-parceiros",
+  type: "",
+  subtype: "",
+  values: [
+    {
+      id: "",
+      image: "",
+      name: "",
+      url: "",
+      website: ""
+    }
+  ]
+};
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+const mergeWithDefaults = (apiData: any, defaultData: CursosData): CursosData => {
+  if (!apiData) return defaultData;
+  
+  return {
+    id: apiData.id || defaultData.id,
+    type: apiData.type || defaultData.type,
+    subtype: apiData.subtype || defaultData.subtype,
+    values: apiData.values || defaultData.values
   };
+};
 
-  const hasName = curso.name.trim() !== "";
-  const hasImage = Boolean(curso.image?.trim() !== "" || curso.file);
-  const hasUrl = curso.url.trim() !== "";
-  const imageUrl = getImageUrl(curso);
+// Função para gerar slug a partir do nome
+const generateSlug = (name: string): string => {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .substring(0, 50);
+};
 
-  const setRefs = useCallback(
-    (node: HTMLDivElement | null) => {
-      setNodeRef(node);
-      
-      if (isLastAndEmpty && setNewItemRef) {
-        setNewItemRef(node);
-      }
-    },
-    [setNodeRef, isLastAndEmpty, setNewItemRef]
-  );
+// Função para gerar ID único
+const generateUniqueId = (name: string, index: number): string => {
+  if (name.trim()) {
+    const slug = generateSlug(name);
+    return `${slug}-${Date.now()}-${index}`;
+  }
+  return `curso-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 9)}`;
+};
 
-  return (
-    <div
-      ref={setRefs}
-      style={style}
-      className={`relative ${isDragging ? 'z-50' : ''}`}
-    >
-      <Card className={`mb-4 overflow-hidden transition-all duration-300 ${
-        isLastInOriginalList && showValidation && !hasName ? 'ring-2 ring-[var(--color-danger)]' : ''
-      } ${isDragging ? 'shadow-lg scale-105' : ''} bg-[var(--color-background)] border-l-4 border-[var(--color-primary)]`}>
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                className="cursor-grab active:cursor-grabbing text-[var(--color-secondary)]/70 hover:text-[var(--color-primary)] transition-colors p-2 rounded-lg hover:bg-[var(--color-background)]/50"
-                {...attributes}
-                {...listeners}
-              >
-                <GripVertical className="w-5 h-5" />
-              </button>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]/70">
-                  <ArrowUpDown className="w-4 h-4" />
-                  <span>Posição: {index + 1}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  {hasName ? (
-                    <h4 className="font-medium text-[var(--color-secondary)]">
-                      {curso.name}
-                    </h4>
-                  ) : (
-                    <h4 className="font-medium text-[var(--color-secondary)]/50">
-                      Curso sem nome
-                    </h4>
-                  )}
-                  {hasName && hasImage && hasUrl ? (
-                    <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
-                      Completo
-                    </span>
-                  ) : (
-                    <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                      Incompleto
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <Button
-              type="button"
-              onClick={() => openDeleteSingleModal(originalIndex, curso.name)}
-              variant="danger"
-              className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
-              disabled={cursoList.length <= 1}
-            >
-              <Trash2 className="w-4 h-4" />
-              Remover
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                  <BookOpen className="w-4 h-4" />
-                  Logo do Curso
-                </label>
-                <ImageUpload
-                  label="Logo do Curso"
-                  description="Formatos suportados: PNG (transparente), SVG, JPG. Use arquivos de alta qualidade."
-                  currentImage={curso.image || ""}
-                  selectedFile={curso.file || null}
-                  onFileChange={(file) => handleFileChange(originalIndex, file)}
-                  aspectRatio="aspect-square"
-                  previewWidth={200}
-                  previewHeight={200}
-                />
-              </div>
-            </div>
-
-            <div className="lg:col-span-2 space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                  Nome do Curso/Plataforma *
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Ex: React JS, Node.js, TypeScript"
-                  value={curso.name}
-                  onChange={(e: any) => handleChange(originalIndex, "name", e.target.value)}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                  <Link className="w-4 h-4" />
-                  URL do Curso/Plataforma *
-                </label>
-                <Input
-                  type="url"
-                  placeholder="https://exemplo.com/curso"
-                  value={curso.url}
-                  onChange={(e: any) => handleChange(originalIndex, "url", e.target.value)}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                  Link para a página do curso ou plataforma
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                  URL da Imagem (opcional)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="https://exemplo.com/imagem.png"
-                  value={curso.image || ""}
-                  onChange={(e: any) => handleChange(originalIndex, "image", e.target.value)}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                  Se não fizer upload, insira a URL da imagem aqui
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-export default function CursosPage({ 
-  type = "logos-curso", 
-  subtype = "tegbe-institucional"
-}: { 
-  type: string; 
-  subtype: string; 
-}) {
-  const defaultCurso = useMemo(() => ({ 
-    name: "", 
-    image: "",
-    url: "",
-    file: null,
-  }), []);
-
-  const [localCursos, setLocalCursos] = useState<CursoItem[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const apiBase = `/api/${subtype}/form`;
-
+export default function CursosPage() {
   const {
-    list: cursoList,
-    setList: setCursoList,
+    data: pageData,
     exists,
     loading,
-    setLoading,
     success,
-    setSuccess,
     errorMsg,
-    setErrorMsg,
-    showValidation,
     deleteModal,
-    currentPlanLimit,
-    currentPlanType,
-    openDeleteSingleModal,
+    updateNested,
+    save,
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useListManagement<CursoItem>({
-    type,
-    apiPath: `${apiBase}/${type}`,
-    defaultItem: defaultCurso,
-    validationFields: ["name", "image", "url"]
+    fileStates,
+    setFileState,
+  } = useJsonManagement<CursosData>({
+    apiPath: "/api/tegbe-institucional/json/cursos",
+    defaultData: defaultCursosData,
+    mergeFunction: mergeWithDefaults,
   });
 
-  // Sincroniza cursos locais
-  useEffect(() => {
-    setLocalCursos(cursoList);
-  }, [cursoList]);
+  const [expandedSections, setExpandedSections] = useState({
+    basic: true,
+    cursos: false,
+  });
 
-  const newCursoRef = useRef<HTMLDivElement>(null);
+  const [showHiddenIds, setShowHiddenIds] = useState(false);
 
-  const setNewItemRef = useCallback((node: HTMLDivElement | null) => {
-    if (node) {
-      newCursoRef.current = node;
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
+  // Funções para gerenciar cursos
+  const handleAddCurso = () => {
+    const newId = generateUniqueId("", pageData.values.length);
+    const newCurso: CursoItem = {
+      id: newId,
+      image: "",
+      name: "",
+      url: "",
+      website: ""
+    };
+    const updatedCursos = [...pageData.values, newCurso];
+    updateNested('values', updatedCursos);
+  };
+
+  const handleUpdateCurso = (index: number, updates: Partial<CursoItem>) => {
+    const updatedCursos = [...pageData.values];
+    
+    // Se estiver atualizando o nome, gera automaticamente o ID se estiver vazio
+    if (updates.name && !updatedCursos[index].id) {
+      updates.id = generateUniqueId(updates.name, index);
     }
-  }, []);
+    
+    updatedCursos[index] = { ...updatedCursos[index], ...updates };
+    updateNested('values', updatedCursos);
+  };
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const handleRemoveCurso = (index: number) => {
+    const updatedCursos = pageData.values.filter((_, i) => i !== index);
+    updateNested('values', updatedCursos);
+  };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+  // Função para mover curso para cima
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const updatedCursos = [...pageData.values];
+    const [item] = updatedCursos.splice(index, 1);
+    updatedCursos.splice(index - 1, 0, item);
+    updateNested('values', updatedCursos);
+  };
 
-    if (!over) return;
-
-    if (active.id !== over.id) {
-      const oldIndex = localCursos.findIndex((item) => 
-        item.id === active.id || item.id?.includes(active.id as string)
-      );
-      const newIndex = localCursos.findIndex((item) => 
-        item.id === over.id || item.id?.includes(over.id as string)
-      );
-
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newList = arrayMove(localCursos, oldIndex, newIndex);
-        setLocalCursos(newList);
-        setCursoList(newList);
-      }
-    }
+  // Função para mover curso para baixo
+  const handleMoveDown = (index: number) => {
+    if (index === pageData.values.length - 1) return;
+    const updatedCursos = [...pageData.values];
+    const [item] = updatedCursos.splice(index, 1);
+    updatedCursos.splice(index + 1, 0, item);
+    updateNested('values', updatedCursos);
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-
-    setLoading(true);
-    setSuccess(false);
-    setErrorMsg("");
-
+    
+    // Garantir que todos os cursos tenham IDs
+    const updatedCursos = pageData.values.map((curso, index) => {
+      if (!curso.id || curso.id.trim() === "") {
+        return {
+          ...curso,
+          id: generateUniqueId(curso.name || "", index)
+        };
+      }
+      return curso;
+    });
+    
+    updateNested('values', updatedCursos);
+    
     try {
-      // Filtra apenas cursos que têm nome, URL e (imagem OU arquivo)
-      const filteredList = localCursos.filter(
-        curso => curso.name.trim() !== "" && 
-                curso.url.trim() !== "" && 
-                (curso.image?.trim() !== "" || curso.file)
-      );
-
-      if (!filteredList.length) {
-        setErrorMsg("Adicione ao menos um curso completo com nome, URL e imagem.");
-        return;
-      }
-
-      const fd = new FormData();
-
-      if (exists) fd.append("id", exists.id);
-
-      fd.append(
-        "values",
-        JSON.stringify(
-          filteredList.map(({ file, ...rest }) => rest)
-        )
-      );
-
-      filteredList.forEach((curso, i) => {
-        if (curso.file) {
-          fd.append(`file${i}`, curso.file);
-        }
-      });
-
-      const method = exists ? "PUT" : "POST";
-
-      const res = await fetch(`${apiBase}/${type}`, {
-        method,
-        body: fd,
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Erro ao salvar cursos");
-      }
-
-      const saved = await res.json();
-
-      const normalized = saved.values.map((v: any, i: number) => ({
-        ...v,
-        id: v.id || `curso-${Date.now()}-${i}`,
-        file: null,
-      }));
-
-      setLocalCursos(normalized);
-      setCursoList(normalized);
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err: any) {
-      console.error(err);
-      setErrorMsg(err.message);
-    } finally {
-      setLoading(false);
+      await save();
+    } catch (err) {
+      console.error("Erro ao salvar:", err);
     }
   };
 
-  const handleChange = (index: number, field: keyof CursoItem, value: any) => {
-    const newList = [...localCursos];
-    newList[index] = { ...newList[index], [field]: value };
-    
-    // Se estiver alterando a URL da imagem, remove o arquivo selecionado
-    if (field === "image" && value.trim() !== "") {
-      newList[index].file = null;
-    }
-    
-    setLocalCursos(newList);
-    setCursoList(newList);
+  // Função auxiliar para obter File do fileStates
+  const getFileFromState = (key: string): File | null => {
+    const value = fileStates[key];
+    return value instanceof File ? value : null;
   };
-
-  const handleFileChange = (index: number, file: File | null) => {
-    const newList = [...localCursos];
-    
-    if (file) {
-      // Se está fazendo upload de arquivo, limpa a URL da imagem
-      newList[index] = { 
-        ...newList[index], 
-        file, 
-        image: "" 
-      };
-    } else {
-      // Se está removendo o arquivo, mantém a URL da imagem
-      newList[index] = { 
-        ...newList[index], 
-        file: null 
-      };
-    }
-    
-    setLocalCursos(newList);
-    setCursoList(newList);
-  };
-
-  const getImageUrl = (curso: CursoItem): string => {
-    if (curso.file) {
-      return URL.createObjectURL(curso.file);
-    }
-    if (curso.image) {
-      if (curso.image.startsWith('http') || curso.image.startsWith('//')) {
-        return curso.image;
-      } else {
-        return `https://mavellium.com.br${curso.image.startsWith('/') ? '' : '/'}${curso.image}`;
-      }
-    }
-    return "";
-  };
-
-  const updateCursos = async (list: CursoItem[]) => {
-    if (!exists) return;
-
-    const filteredList = list.filter(
-      curso => curso.name.trim() || curso.image?.trim() || curso.url.trim() || curso.file
-    );
-
-    const fd = new FormData();
-    
-    fd.append("id", exists.id);
-    
-    filteredList.forEach((curso, i) => {
-      fd.append(`values[${i}][name]`, curso.name);
-      fd.append(`values[${i}][image]`, curso.image || "");
-      fd.append(`values[${i}][url]`, curso.url);
-      
-      if (curso.file) {
-        fd.append(`file${i}`, curso.file);
-      }
-      
-      if (curso.id) {
-        fd.append(`values[${i}][id]`, curso.id);
-      }
-    });
-
-    const res = await fetch(`${apiBase}/${type}`, {
-      method: "PUT",
-      body: fd,
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error || "Falha ao atualizar dados");
-    }
-
-    const updated = await res.json();
-    return updated;
-  };
-
-  const handleAddCurso = () => {
-    if (localCursos.length >= currentPlanLimit) {
-      return false;
-    }
-    
-    const newItem: CursoItem = {
-      name: '',
-      image: '',
-      url: '',
-      file: null,
-    };
-    
-    const updated = [...localCursos, newItem];
-    setLocalCursos(updated);
-    setCursoList(updated);
-    
-    setTimeout(() => {
-      newCursoRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'nearest'
-      });
-    }, 100);
-    
-    return true;
-  };
-
-  const filteredCursos = useMemo(() => {
-    let filtered = [...localCursos];
-    
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(curso => 
-        curso.name.toLowerCase().includes(term) ||
-        curso.url.toLowerCase().includes(term)
-      );
-    }
-    
-    return filtered;
-  }, [localCursos, searchTerm]);
-
-  const isCursosLimitReached = localCursos.length >= currentPlanLimit;
-  const canAddNewCurso = !isCursosLimitReached;
-  const cursosCompleteCount = localCursos.filter(curso => 
-    curso.name.trim() !== '' && 
-    curso.url.trim() !== '' && 
-    (curso.image?.trim() !== '' || curso.file)
-  ).length;
-  const cursosTotalCount = localCursos.length;
-
-  const cursosValidationError = isCursosLimitReached 
-    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
-    : null;
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Cursos (cada curso tem 3 campos obrigatórios)
-    total += localCursos.length * 3;
-    localCursos.forEach(curso => {
+    // Informações básicas
+    total += 2; // type e subtype
+    if (pageData.type.trim()) completed++;
+    if (pageData.subtype.trim()) completed++;
+
+    // Cursos
+    total += pageData.values.length * 3; // image, name são obrigatórios, id é automático
+    pageData.values.forEach(curso => {
+      if (curso.image.trim()) completed++;
       if (curso.name.trim()) completed++;
-      if (curso.url.trim()) completed++;
-      if (curso.image?.trim() || curso.file) completed++;
+      if (curso.id.trim()) completed++; // ID é gerado automaticamente, mas conta como completo se existir
     });
 
     return { completed, total };
@@ -561,146 +224,322 @@ export default function CursosPage({
 
   const completion = calculateCompletion();
 
-  const stableIds = useMemo(
-    () => localCursos.map((item, index) => item.id ?? `curso-${index}`),
-    [localCursos]
-  );
+  if (loading && !exists) {
+    return <Loading layout={Layers} exists={!!exists} />;
+  }
 
   return (
     <ManageLayout
       headerIcon={BookOpen}
       title="Cursos & Plataformas"
-      description="Gerencie os cursos e plataformas de ensino parceiras"
+      description="Gerenciamento de cursos e plataformas parceiras"
       exists={!!exists}
       itemName="Cursos"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Cabeçalho de Controle */}
-        <Card className="p-6 bg-[var(--color-background)]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div>
-              <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                Gerenciamento de Cursos
-              </h3>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-green-300" />
-                  <span className="text-sm text-[var(--color-secondary)]/70">
-                    {cursosCompleteCount} de {cursosTotalCount} completos
-                  </span>
-                </div>
-                <span className="text-sm text-[var(--color-secondary)]/50">•</span>
-                <span className="text-sm text-[var(--color-secondary)]/70">
-                  Limite: {currentPlanType === 'pro' ? '20' : '10'} itens
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Barra de busca */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-[var(--color-secondary)]">
-              Buscar Cursos
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)]/70" />
-              <Input
-                type="text"
-                placeholder="Buscar cursos por nome ou URL..."
-                value={searchTerm}
-                onChange={(e: any) => setSearchTerm(e.target.value)}
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] pl-10"
-              />
-            </div>
-          </div>
-        </Card>
-
-        {/* Mensagem de erro */}
-        {cursosValidationError && (
-          <div className={`p-3 rounded-lg ${isCursosLimitReached 
-            ? 'bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/30' 
-            : 'bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30'}`}>
-            <div className="flex items-start gap-2">
-              {isCursosLimitReached ? (
-                <XCircle className="w-5 h-5 text-[var(--color-danger)] flex-shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-5 h-5 text-[var(--color-warning)] flex-shrink-0 mt-0.5" />
-              )}
-              <p className={`text-sm ${isCursosLimitReached 
-                ? 'text-[var(--color-danger)]' 
-                : 'text-[var(--color-warning)]'}`}>
-                {cursosValidationError}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Lista de Cursos */}
+        {/* Seção Básica */}
         <div className="space-y-4">
-          <AnimatePresence>
-            {filteredCursos.length === 0 ? (
-              <Card className="p-8 bg-[var(--color-background)]">
-                <div className="text-center">
-                  <BookOpen className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                    Nenhum curso encontrado
-                  </h3>
-                  <p className="text-sm text-[var(--color-secondary)]/70">
-                    {searchTerm ? 'Tente ajustar sua busca ou limpe o filtro' : 'Adicione seu primeiro curso usando o botão abaixo'}
-                  </p>
-                </div>
-              </Card>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={stableIds}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {filteredCursos.map((curso, index) => {
-                    const originalIndex = localCursos.findIndex(l => l.id === curso.id) || index;
-                    const hasName = curso.name.trim() !== "";
-                    const hasImage = Boolean(curso.image?.trim() !== "" || curso.file);
-                    const hasUrl = curso.url.trim() !== "";
-                    const isLastInOriginalList = originalIndex === localCursos.length - 1;
-                    const isLastAndEmpty = isLastInOriginalList && !hasName && !hasImage && !hasUrl;
+          <SectionHeader
+            title="Configurações da Seção"
+            section="basic"
+            icon={Settings}
+            isExpanded={expandedSections.basic}
+            onToggle={() => toggleSection("basic")}
+          />
 
-                    return (
-                      <SortableCursoItem
-                        key={stableIds[index]}
-                        curso={curso}
-                        index={index}
-                        originalIndex={originalIndex}
-                        isLastInOriginalList={isLastInOriginalList}
-                        isLastAndEmpty={isLastAndEmpty}
-                        showValidation={showValidation}
-                        cursoList={localCursos}
-                        handleChange={handleChange}
-                        handleFileChange={handleFileChange}
-                        openDeleteSingleModal={openDeleteSingleModal}
-                        getImageUrl={getImageUrl}
-                        setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
-                      />
-                    );
-                  })}
-                </SortableContext>
-              </DndContext>
-            )}
-          </AnimatePresence>
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.basic ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Input
+                    label="ID da Seção"
+                    value={pageData.id}
+                    onChange={(e) => updateNested('id', e.target.value)}
+                    placeholder="Ex: cursos-parceiros"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <Input
+                    label="Tipo de Conteúdo"
+                    value={pageData.type}
+                    onChange={(e) => updateNested('type', e.target.value)}
+                    placeholder="Ex: cursos"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+
+                  <Input
+                    label="Subcategoria"
+                    value={pageData.subtype}
+                    onChange={(e) => updateNested('subtype', e.target.value)}
+                    placeholder="Ex: plataformas-ensino"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
+
+        {/* Seção Cursos */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Cursos & Plataformas"
+            section="cursos"
+            icon={BookOpen}
+            isExpanded={expandedSections.cursos}
+            onToggle={() => toggleSection("cursos")}
+          />
+
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.cursos ? "auto" : 0 }}
+            className="overflow-hidden"
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                      Lista de Cursos e Plataformas
+                    </h4>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {pageData.values.filter(c => c.image && c.name).length} de {pageData.values.length} completos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleAddCurso}
+                    variant="primary"
+                    className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Novo Curso
+                  </Button>
+                </div>
+                <p className="text-sm text-[var(--color-secondary)]/70 mt-2">
+                  Gerencie os cursos e plataformas de ensino parceiras. IDs são gerados automaticamente.
+                </p>
+              </div>
+
+              <div className="space-y-6">
+                {pageData.values.map((curso, index) => (
+                  <div 
+                    key={curso.id || index}
+                    className="p-6 border border-[var(--color-border)] rounded-lg space-y-6 hover:border-[var(--color-primary)]/50 transition-all duration-200"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        {/* Controles de ordenação e indicador de posição */}
+                        <div className="flex flex-col items-center">
+                          <button
+                            type="button"
+                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                          >
+                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                          </button>
+                          
+                          <div className="flex flex-col items-center mt-2">
+                            <div className="p-1 px-2 rounded bg-[var(--color-primary)]/10">
+                              <span className="text-xs font-medium text-[var(--color-primary)]">
+                                {index + 1}
+                              </span>
+                            </div>
+                            
+                            <div className="flex flex-col gap-1 mt-1">
+                              <button
+                                type="button"
+                                onClick={() => handleMoveUp(index)}
+                                disabled={index === 0}
+                                className={`p-0.5 rounded ${index === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--color-border)]'}`}
+                              >
+                                <ArrowUpDown className="w-3 h-3 rotate-90" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleMoveDown(index)}
+                                disabled={index === pageData.values.length - 1}
+                                className={`p-0.5 rounded ${index === pageData.values.length - 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[var(--color-border)]'}`}
+                              >
+                                <ArrowUpDown className="w-3 h-3 -rotate-90" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-1">
+                                <h4 className="font-medium text-[var(--color-secondary)]">
+                                  {curso.name || "Novo Curso"}
+                                </h4>
+                                {curso.image && curso.name ? (
+                                  <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                    Completo
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                    Incompleto
+                                  </span>
+                                )}
+                                <span className="px-2 py-1 text-xs bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full">
+                                  Item {index + 1} de {pageData.values.length}
+                                </span>
+                              </div>
+                              {showHiddenIds && curso.id && (
+                                <div className="mt-2">
+                                  <span className="text-xs font-mono text-[var(--color-secondary)]/50 bg-[var(--color-background-body)] px-2 py-1 rounded">
+                                    ID: {curso.id}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Coluna 1: Imagem */}
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Logo/Imagem *
+                                </label>
+                                <ImageUpload
+                                  label=""
+                                  currentImage={curso.image || ''}
+                                  selectedFile={getFileFromState(`values.${index}.image`)}
+                                  onFileChange={(file) => setFileState(`values.${index}.image`, file)}
+                                  aspectRatio="aspect-square"
+                                  previewWidth={200}
+                                  previewHeight={200}
+                                  description="Logo do curso ou plataforma"
+                                />
+                                <Input
+                                  type="text"
+                                  value={curso.image || ""}
+                                  onChange={(e) => handleUpdateCurso(index, { image: e.target.value })}
+                                  placeholder="https://exemplo.com/logo.png"
+                                  className="mt-2 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Coluna 2: Informações básicas */}
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Nome do Curso/Plataforma *
+                                </label>
+                                <Input
+                                  value={curso.name}
+                                  onChange={(e) => handleUpdateCurso(index, { name: e.target.value })}
+                                  placeholder="Ex: React JS, Node.js, TypeScript"
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  required
+                                />
+                                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                                  O ID será gerado automaticamente a partir do nome
+                                </p>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  URL do Curso (opcional)
+                                </label>
+                                <Input
+                                  type="url"
+                                  value={curso.url}
+                                  onChange={(e) => handleUpdateCurso(index, { url: e.target.value })}
+                                  placeholder="https://exemplo.com/curso"
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                                  Link para a página do curso ou plataforma
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Coluna 3: Website e ações */}
+                            <div className="space-y-4">
+                              <div className="space-y-2">
+                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                  Website (opcional)
+                                </label>
+                                <Input
+                                  type="url"
+                                  value={curso.website}
+                                  onChange={(e) => handleUpdateCurso(index, { website: e.target.value })}
+                                  placeholder="https://exemplo.com"
+                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                />
+                                <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                                  Site principal da plataforma
+                                </p>
+                              </div>
+                              
+                              <div className="pt-4">
+                                <Button
+                                  type="button"
+                                  onClick={() => handleRemoveCurso(index)}
+                                  variant="danger"
+                                  className="w-full bg-red-600 hover:bg-red-700 border-none flex items-center justify-center gap-2"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Remover Curso
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {pageData.values.length === 0 && (
+                <div className="text-center py-12 border-2 border-dashed border-[var(--color-border)] rounded-lg">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[var(--color-background-body)] mb-4">
+                    <BookOpen className="w-8 h-8 text-[var(--color-secondary)]/50" />
+                  </div>
+                  <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
+                    Nenhum curso definido
+                  </h4>
+                  <p className="text-sm text-[var(--color-secondary)]/70 mb-6">
+                    Comece adicionando cursos ou plataformas parceiras
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={handleAddCurso}
+                    variant="primary"
+                    className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Primeiro Curso
+                  </Button>
+                </div>
+              )}
+            </Card>
+          </motion.div>
         </div>
 
         <FixedActionBar
           onDeleteAll={openDeleteAllModal}
           onSubmit={handleSubmit}
-          onAddNew={handleAddCurso}
-          isAddDisabled={!canAddNewCurso}
+          isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
+          completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Curso"
+          itemName="Cursos"
           icon={BookOpen}
         />
       </form>
@@ -708,14 +547,17 @@ export default function CursosPage({
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
-        onConfirm={() => confirmDelete(updateCursos)}
+        onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={localCursos.length}
-        itemName="Curso"
+        totalItems={1}
+        itemName="Cursos"
       />
 
-      <FeedbackMessages success={success} errorMsg={errorMsg} />
+      <FeedbackMessages 
+        success={success} 
+        errorMsg={errorMsg} 
+      />
     </ManageLayout>
   );
 }
