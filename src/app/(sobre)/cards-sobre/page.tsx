@@ -24,8 +24,8 @@ import {
   ChevronUp,
   Palette,
   Target,
-  ArrowUpDown,
-  MessageSquare
+  MessageSquare,
+  RefreshCw 
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -33,6 +33,8 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import ColorPicker from "@/components/ColorPicker";
+
+// --- INTERFACES ---
 
 interface ServiceItem {
   step: string;
@@ -51,6 +53,24 @@ interface CTASection {
   description: string;
 }
 
+interface FlywheelPhase {
+  title: string;
+  color: string;
+}
+
+interface FlywheelData {
+  title: string;
+  description: string;
+  subtitle: string;
+  benefits: string[];
+  phases: FlywheelPhase[];
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+  };
+}
+
 interface SectionData {
   header: {
     preTitle: string;
@@ -59,7 +79,8 @@ interface SectionData {
     gradientTitle?: string;
   };
   services: ServiceItem[];
-  cta: CTASection; // Novo campo CTA
+  cta: CTASection;
+  flywheel?: FlywheelData;
 }
 
 interface ComoFazemosData {
@@ -69,10 +90,30 @@ interface ComoFazemosData {
   sobre: SectionData;
 }
 
+// --- DEFAULTS ---
+
 const defaultCTASection: CTASection = {
   text: "Quero Estruturar e Escalar Meu Negócio",
   url: "https://api.whatsapp.com/send?phone=5514991779502",
   description: "Anúncios, operação e dados trabalhando juntos para vender mais."
+};
+
+const defaultFlywheel: FlywheelData = {
+  title: "Marketing Flywheel",
+  description: "Sistema de crescimento contínuo que transforma clientes satisfeitos em promotores da marca.",
+  subtitle: "Sistema de Crescimento Contínuo",
+  benefits: ["Crescimento Orgânico", "Retenção Elevada", "Custo de Aquisição Reduzido"],
+  phases: [
+    { title: "ATRAIR", color: "#3B82F6" },
+    { title: "ENGAJAR", color: "#8B5CF6" },
+    { title: "ENCANTAR", color: "#EC4899" },
+    { title: "EXPANDIR", color: "#10B981" }
+  ],
+  colors: {
+    primary: "#3B82F6",
+    secondary: "#8B5CF6",
+    accent: "#EC4899"
+  }
 };
 
 const defaultSectionData: SectionData = {
@@ -86,50 +127,20 @@ const defaultSectionData: SectionData = {
   cta: defaultCTASection
 };
 
-// Convertendo os ícones do JSON de exemplo para o formato coleção:nome-do-ícone
 const defaultComoFazemosData: ComoFazemosData = {
   home: {
-    header: {
-      preTitle: "",
-      title: "",
-      subtitle: "",
-      gradientTitle: ""
-    },
+    header: { preTitle: "", title: "", subtitle: "", gradientTitle: "" },
     services: [
-      {
-        step: "01",
-        id: "setup-infra",
-        title: "Infraestrutura de Elite",
-        description: "Configuração de servidores e plataforma escalável com foco em tempo de resposta zero.",
-        icon: "lucide:settings",
-        color: "#3B82F6",
-        wide: false,
-        visualType: "technical"
-      },
-      {
-        step: "02",
-        id: "growth-ads",
-        title: "Growth & Performance",
-        description: "Tráfego pago inteligente focado em ROI real e escala agressiva de vendas diárias.",
-        icon: "lucide:trending-up",
-        color: "#10B981",
-        wide: true,
-        visualType: "chart"
-      },
-      {
-        step: "03",
-        id: "ai-employees",
-        title: "Funcionários de IA",
-        description: "Automação total do atendimento e recuperação de carrinhos com IA preditiva.",
-        icon: "lucide:cpu",
-        color: "#8B5CF6",
-        wide: false,
-        visualType: "ai-mesh"
-      }
+      { step: "01", id: "setup-infra", title: "Infraestrutura de Elite", description: "Configuração de servidores...", icon: "lucide:settings", color: "#3B82F6", wide: false, visualType: "technical" },
+      { step: "02", id: "growth-ads", title: "Growth & Performance", description: "Tráfego pago inteligente...", icon: "lucide:trending-up", color: "#10B981", wide: true, visualType: "chart" },
+      { step: "03", id: "ai-employees", title: "Funcionários de IA", description: "Automação total...", icon: "lucide:cpu", color: "#8B5CF6", wide: false, visualType: "ai-mesh" }
     ],
     cta: defaultCTASection
   },
-  marketing: defaultSectionData,
+  marketing: {
+    ...defaultSectionData,
+    flywheel: defaultFlywheel
+  },
   ecommerce: defaultSectionData,
   sobre: defaultSectionData
 };
@@ -142,30 +153,19 @@ const mergeWithDefaults = (apiData: any, defaultData: ComoFazemosData): ComoFaze
   
   sections.forEach(section => {
     if (apiData[section]) {
-      // Merge do header
-      const header = {
-        ...defaultData[section].header,
-        ...apiData[section].header
-      };
+      const header = { ...defaultData[section].header, ...apiData[section].header };
       
-      // Merge dos serviços
       let services = apiData[section].services || [];
-      
-      // Se não houver serviços, usar os padrões apenas para a seção home
       if (services.length === 0 && section === 'home') {
         services = defaultData.home.services;
       }
       
-      // Garantir que cada serviço tenha todos os campos necessários e converter ícones para formato correto
       services = services.map((service: any, index: number) => {
         let icon = service.icon || "lucide:sparkles";
-        
-        // Se o ícone estiver no formato antigo (apenas nome), converter para formato coleção:nome
         if (icon && !icon.includes(':')) {
           const kebabCase = icon.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
           icon = `lucide:${kebabCase}`;
         }
-        
         return {
           step: service.step || (index + 1).toString().padStart(2, '0'),
           id: service.id || `service-${Date.now()}-${index}`,
@@ -178,13 +178,16 @@ const mergeWithDefaults = (apiData: any, defaultData: ComoFazemosData): ComoFaze
         };
       });
       
-      // Merge do CTA
-      const cta = {
-        ...defaultData[section].cta,
-        ...apiData[section].cta
-      };
+      const cta = { ...defaultData[section].cta, ...apiData[section].cta };
+
+      let flywheel = undefined;
+      if (section === 'marketing') {
+         flywheel = apiData[section].flywheel 
+            ? { ...defaultFlywheel, ...apiData[section].flywheel }
+            : defaultFlywheel;
+      }
       
-      result[section] = { header, services, cta };
+      result[section] = { header, services, cta, flywheel };
     } else {
       result[section] = defaultData[section];
     }
@@ -212,7 +215,6 @@ export default function ComoFazemosPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estados locais para gerenciar as listas
   const [localServicesHome, setLocalServicesHome] = useState<ServiceItem[]>([]);
   const [localServicesMarketing, setLocalServicesMarketing] = useState<ServiceItem[]>([]);
   const [localServicesEcommerce, setLocalServicesEcommerce] = useState<ServiceItem[]>([]);
@@ -227,49 +229,23 @@ export default function ComoFazemosPage() {
     sobre: false,
   });
 
-  // Referências para novos itens
   const newServiceHomeRef = useRef<HTMLDivElement>(null);
   const newServiceMarketingRef = useRef<HTMLDivElement>(null);
   const newServiceEcommerceRef = useRef<HTMLDivElement>(null);
   const newServiceSobreRef = useRef<HTMLDivElement>(null);
 
-  // Controle de planos
   const currentPlanType = 'pro';
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
-  // Sincroniza os dados quando carregam do banco
-  useEffect(() => {
-    if (pageData.home?.services) {
-      setLocalServicesHome(pageData.home.services);
-    }
-  }, [pageData.home?.services]);
-
-  useEffect(() => {
-    if (pageData.marketing?.services) {
-      setLocalServicesMarketing(pageData.marketing.services);
-    }
-  }, [pageData.marketing?.services]);
-
-  useEffect(() => {
-    if (pageData.ecommerce?.services) {
-      setLocalServicesEcommerce(pageData.ecommerce.services);
-    }
-  }, [pageData.ecommerce?.services]);
-
-  useEffect(() => {
-    if (pageData.sobre?.services) {
-      setLocalServicesSobre(pageData.sobre.services);
-    }
-  }, [pageData.sobre?.services]);
+  useEffect(() => { if (pageData.home?.services) setLocalServicesHome(pageData.home.services); }, [pageData.home?.services]);
+  useEffect(() => { if (pageData.marketing?.services) setLocalServicesMarketing(pageData.marketing.services); }, [pageData.marketing?.services]);
+  useEffect(() => { if (pageData.ecommerce?.services) setLocalServicesEcommerce(pageData.ecommerce.services); }, [pageData.ecommerce?.services]);
+  useEffect(() => { if (pageData.sobre?.services) setLocalServicesSobre(pageData.sobre.services); }, [pageData.sobre?.services]);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Funções auxiliares para cada seção
   const getSectionData = (section: keyof ComoFazemosData): ServiceItem[] => {
     switch(section) {
       case 'home': return localServicesHome;
@@ -295,44 +271,22 @@ export default function ComoFazemosPage() {
     const newService: ServiceItem = {
       step: (services.length + 1).toString().padStart(2, '0'),
       id: `service-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      title: '',
-      description: '',
-      icon: 'lucide:sparkles',
-      color: '#3B82F6',
-      wide: false,
-      visualType: ''
+      title: '', description: '', icon: 'lucide:sparkles', color: '#3B82F6', wide: false, visualType: ''
     };
     
     const updated = [...services, newService];
     
-    // Atualiza o estado local e o estado global
     switch(section) {
-      case 'home':
-        setLocalServicesHome(updated);
-        updateNested('home.services', updated);
-        break;
-      case 'marketing':
-        setLocalServicesMarketing(updated);
-        updateNested('marketing.services', updated);
-        break;
-      case 'ecommerce':
-        setLocalServicesEcommerce(updated);
-        updateNested('ecommerce.services', updated);
-        break;
-      case 'sobre':
-        setLocalServicesSobre(updated);
-        updateNested('sobre.services', updated);
-        break;
+      case 'home': setLocalServicesHome(updated); updateNested('home.services', updated); break;
+      case 'marketing': setLocalServicesMarketing(updated); updateNested('marketing.services', updated); break;
+      case 'ecommerce': setLocalServicesEcommerce(updated); updateNested('ecommerce.services', updated); break;
+      case 'sobre': setLocalServicesSobre(updated); updateNested('sobre.services', updated); break;
     }
     
     setTimeout(() => {
       const ref = getSectionRef(section);
-      ref.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'nearest'
-      });
+      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
-    
     return true;
   };
 
@@ -341,24 +295,11 @@ export default function ComoFazemosPage() {
     const updated = [...services];
     if (index >= 0 && index < updated.length) {
       updated[index] = { ...updated[index], ...updates };
-      
       switch(section) {
-        case 'home':
-          setLocalServicesHome(updated);
-          updateNested('home.services', updated);
-          break;
-        case 'marketing':
-          setLocalServicesMarketing(updated);
-          updateNested('marketing.services', updated);
-          break;
-        case 'ecommerce':
-          setLocalServicesEcommerce(updated);
-          updateNested('ecommerce.services', updated);
-          break;
-        case 'sobre':
-          setLocalServicesSobre(updated);
-          updateNested('sobre.services', updated);
-          break;
+        case 'home': setLocalServicesHome(updated); updateNested('home.services', updated); break;
+        case 'marketing': setLocalServicesMarketing(updated); updateNested('marketing.services', updated); break;
+        case 'ecommerce': setLocalServicesEcommerce(updated); updateNested('ecommerce.services', updated); break;
+        case 'sobre': setLocalServicesSobre(updated); updateNested('sobre.services', updated); break;
       }
     }
   };
@@ -368,69 +309,23 @@ export default function ComoFazemosPage() {
     const updated = [...services];
     
     if (updated.length <= 1) {
-      // Mantém pelo menos um item vazio
       const emptyItem: ServiceItem = {
-        step: '01',
-        id: `service-${Date.now()}`,
-        title: '',
-        description: '',
-        icon: 'lucide:sparkles',
-        color: '#3B82F6',
-        wide: false,
-        visualType: ''
+        step: '01', id: `service-${Date.now()}`, title: '', description: '', icon: 'lucide:sparkles', color: '#3B82F6', wide: false, visualType: ''
       };
       updated[0] = emptyItem;
     } else {
       updated.splice(index, 1);
-      
-      // Reordenar steps
-      const reordered = updated.map((item, i) => ({
-        ...item,
-        step: (i + 1).toString().padStart(2, '0')
-      }));
-      
-      switch(section) {
-        case 'home':
-          setLocalServicesHome(reordered);
-          updateNested('home.services', reordered);
-          break;
-        case 'marketing':
-          setLocalServicesMarketing(reordered);
-          updateNested('marketing.services', reordered);
-          break;
-        case 'ecommerce':
-          setLocalServicesEcommerce(reordered);
-          updateNested('ecommerce.services', reordered);
-          break;
-        case 'sobre':
-          setLocalServicesSobre(reordered);
-          updateNested('sobre.services', reordered);
-          break;
-      }
-      return;
+      updated.forEach((item, i) => { item.step = (i + 1).toString().padStart(2, '0'); });
     }
     
     switch(section) {
-      case 'home':
-        setLocalServicesHome(updated);
-        updateNested('home.services', updated);
-        break;
-      case 'marketing':
-        setLocalServicesMarketing(updated);
-        updateNested('marketing.services', updated);
-        break;
-      case 'ecommerce':
-        setLocalServicesEcommerce(updated);
-        updateNested('ecommerce.services', updated);
-        break;
-      case 'sobre':
-        setLocalServicesSobre(updated);
-        updateNested('sobre.services', updated);
-        break;
+      case 'home': setLocalServicesHome(updated); updateNested('home.services', updated); break;
+      case 'marketing': setLocalServicesMarketing(updated); updateNested('marketing.services', updated); break;
+      case 'ecommerce': setLocalServicesEcommerce(updated); updateNested('ecommerce.services', updated); break;
+      case 'sobre': setLocalServicesSobre(updated); updateNested('sobre.services', updated); break;
     }
   };
 
-  // Funções de drag & drop
   const handleDragStart = (e: React.DragEvent, section: keyof ComoFazemosData, index: number) => {
     e.dataTransfer.setData('text/plain', `${section}-${index}`);
     e.currentTarget.classList.add('dragging');
@@ -439,142 +334,122 @@ export default function ComoFazemosPage() {
 
   const handleDragOver = (e: React.DragEvent, section: keyof ComoFazemosData, index: number) => {
     e.preventDefault();
-    
     if (!draggingItem || draggingItem.section !== section) return;
-    
     const services = getSectionData(section);
     const updated = [...services];
     const draggedItem = updated[draggingItem.index];
-    
-    // Remove o item arrastado
     updated.splice(draggingItem.index, 1);
-    
-    // Insere na nova posição
-    const newIndex = index > draggingItem.index ? index : index;
+    const newIndex = index;
     updated.splice(newIndex, 0, draggedItem);
-    
-    // Reordenar steps
-    const reordered = updated.map((item, i) => ({
-      ...item,
-      step: (i + 1).toString().padStart(2, '0')
-    }));
+    updated.forEach((item, i) => { item.step = (i + 1).toString().padStart(2, '0'); });
     
     switch(section) {
-      case 'home':
-        setLocalServicesHome(reordered);
-        updateNested('home.services', reordered);
-        break;
-      case 'marketing':
-        setLocalServicesMarketing(reordered);
-        updateNested('marketing.services', reordered);
-        break;
-      case 'ecommerce':
-        setLocalServicesEcommerce(reordered);
-        updateNested('ecommerce.services', reordered);
-        break;
-      case 'sobre':
-        setLocalServicesSobre(reordered);
-        updateNested('sobre.services', reordered);
-        break;
+      case 'home': setLocalServicesHome(updated); updateNested('home.services', updated); break;
+      case 'marketing': setLocalServicesMarketing(updated); updateNested('marketing.services', updated); break;
+      case 'ecommerce': setLocalServicesEcommerce(updated); updateNested('ecommerce.services', updated); break;
+      case 'sobre': setLocalServicesSobre(updated); updateNested('sobre.services', updated); break;
     }
-    
     setDraggingItem({ section, index: newIndex });
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('dragging');
-    setDraggingItem(null);
+  const handleDragEnd = (e: React.DragEvent) => { e.currentTarget.classList.remove('dragging'); setDraggingItem(null); };
+  const handleDragEnter = (e: React.DragEvent) => { e.currentTarget.classList.add('drag-over'); };
+  const handleDragLeave = (e: React.DragEvent) => { e.currentTarget.classList.remove('drag-over'); };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); };
+
+  const handleHeaderChange = (section: keyof ComoFazemosData, field: string, value: string) => updateNested(`${section}.header.${field}`, value);
+  const handleCtaChange = (section: keyof ComoFazemosData, field: keyof CTASection, value: string) => updateNested(`${section}.cta.${field}`, value);
+  const handleFlywheelChange = (field: string, value: any) => updateNested(`marketing.flywheel.${field}`, value);
+  
+  // FIX: Separando a lógica para evitar erro de Spread Types em tipos de união
+  const updateFlywheelArray = (arrayName: 'benefits' | 'phases', index: number, value: any, field?: string) => {
+    const currentFlywheel = pageData.marketing.flywheel || defaultFlywheel;
+    
+    if (arrayName === 'benefits') {
+      const array = [...currentFlywheel.benefits];
+      array[index] = value;
+      updateNested(`marketing.flywheel.benefits`, array);
+    } else {
+      const array = [...currentFlywheel.phases];
+      if (field) {
+        // cast seguro pois estamos no bloco 'phases'
+        array[index] = { ...array[index], [field]: value };
+        updateNested(`marketing.flywheel.phases`, array);
+      }
+    }
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
+  // FIX: Separando a lógica para evitar erro de Spread Types
+  const addFlywheelItem = (arrayName: 'benefits' | 'phases') => {
+    const currentFlywheel = pageData.marketing.flywheel || defaultFlywheel;
+    
+    if (arrayName === 'benefits') {
+      const array = [...currentFlywheel.benefits, ""];
+      updateNested(`marketing.flywheel.benefits`, array);
+    } else {
+      const array = [...currentFlywheel.phases, { title: "Nova Fase", color: "#000000" }];
+      updateNested(`marketing.flywheel.phases`, array);
+    }
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleHeaderChange = (section: keyof ComoFazemosData, field: string, value: string) => {
-    const path = `${section}.header.${field}`;
-    updateNested(path, value);
-  };
-
-  const handleCtaChange = (section: keyof ComoFazemosData, field: keyof CTASection, value: string) => {
-    const path = `${section}.cta.${field}`;
-    updateNested(path, value);
+  // FIX: Separando a lógica para evitar erro de Spread Types
+  const removeFlywheelItem = (arrayName: 'benefits' | 'phases', index: number) => {
+    const currentFlywheel = pageData.marketing.flywheel || defaultFlywheel;
+    
+    if (arrayName === 'benefits') {
+      const array = [...currentFlywheel.benefits];
+      array.splice(index, 1);
+      updateNested(`marketing.flywheel.benefits`, array);
+    } else {
+      const array = [...currentFlywheel.phases];
+      array.splice(index, 1);
+      updateNested(`marketing.flywheel.phases`, array);
+    }
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
-    }
+    try { await save(); } catch (err) { console.error("Erro ao salvar:", err); }
   };
 
-  // Validações
-  const isServiceValid = (item: ServiceItem): boolean => {
-    return item.title.trim() !== '' && 
-           item.description.trim() !== '' && 
-           item.icon.trim() !== '' && 
-           item.color.trim() !== '';
-  };
-
+  const isServiceValid = (item: ServiceItem) => item.title.trim() !== '' && item.description.trim() !== '' && item.icon.trim() !== '' && item.color.trim() !== '';
+  
   const getSectionValidation = (section: keyof ComoFazemosData) => {
     const services = getSectionData(section);
     const isLimitReached = services.length >= currentPlanLimit;
-    const canAddNew = !isLimitReached;
-    const completeCount = services.filter(isServiceValid).length;
-    const totalCount = services.length;
-    
     return {
       isLimitReached,
-      canAddNew,
-      completeCount,
-      totalCount,
-      validationError: isLimitReached 
-        ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
-        : null
+      canAddNew: !isLimitReached,
+      completeCount: services.filter(isServiceValid).length,
+      totalCount: services.length,
+      validationError: isLimitReached ? `Limite do plano atingido.` : null
     };
   };
 
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
-
-    // Para cada seção, contar campos do header, serviços e CTA
     const sections: (keyof ComoFazemosData)[] = ['home', 'marketing', 'ecommerce', 'sobre'];
     
     sections.forEach(section => {
       const sectionData = pageData[section];
-      
-      // Header (home: 3 campos, outras: 4 campos)
       total += section === 'home' ? 3 : 4;
-      if (sectionData.header.preTitle.trim()) completed++;
-      if (sectionData.header.title.trim()) completed++;
-      if (sectionData.header.subtitle.trim()) completed++;
+      if (sectionData.header.preTitle?.trim()) completed++;
+      if (sectionData.header.title?.trim()) completed++;
+      if (sectionData.header.subtitle?.trim()) completed++;
       if (section !== 'home' && sectionData.header.gradientTitle?.trim()) completed++;
       
-      // Serviços (6 campos cada)
       const services = getSectionData(section);
       total += services.length * 6;
-      services.forEach(service => {
-        if (service.title.trim()) completed++;
-        if (service.description.trim()) completed++;
-        if (service.icon.trim()) completed++;
-        if (service.color.trim()) completed++;
-        if (service.visualType.trim()) completed++;
-        if (service.wide !== undefined) completed++;
+      services.forEach(s => {
+        if (s.title.trim()) completed++;
+        if (s.description.trim()) completed++;
+        if (s.icon.trim()) completed++;
+        if (s.color.trim()) completed++;
+        if (s.visualType.trim()) completed++;
+        if (s.wide !== undefined) completed++;
       });
       
-      // CTA (3 campos)
       total += 3;
       if (sectionData.cta.text.trim()) completed++;
       if (sectionData.cta.url.trim()) completed++;
@@ -588,72 +463,33 @@ export default function ComoFazemosPage() {
 
   const renderHeaderSection = (section: keyof ComoFazemosData, sectionTitle: string) => {
     const header = pageData[section]?.header || defaultSectionData.header;
-    
     return (
       <Card className="p-6 bg-[var(--color-background)]">
         <div className="flex items-center gap-3 mb-6">
           <Target className="w-5 h-5 text-[var(--color-secondary)]" />
-          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-            Configurações do Cabeçalho - {sectionTitle}
-          </h4>
+          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">Cabeçalho - {sectionTitle}</h4>
         </div>
-        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                Pré-título
-              </label>
-              <Input
-                type="text"
-                value={header.preTitle || ""}
-                onChange={(e) => handleHeaderChange(section, "preTitle", e.target.value)}
-                placeholder="Ex: O Padrão Tegbe"
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-              />
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Pré-título</label>
+              <Input type="text" value={header.preTitle || ""} onChange={(e) => handleHeaderChange(section, "preTitle", e.target.value)} placeholder="Ex: O Padrão Tegbe" className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                Título (HTML permitido)
-              </label>
-              <TextArea
-                value={header.title || ""}
-                onChange={(e) => handleHeaderChange(section, "title", e.target.value)}
-                placeholder="Ex: Não é mágica.<br />É Metodologia."
-                rows={3}
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-              />
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Título (HTML)</label>
+              <TextArea value={header.title || ""} onChange={(e) => handleHeaderChange(section, "title", e.target.value)} placeholder="Ex: Não é mágica.<br />É Metodologia." rows={3} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
             </div>
           </div>
-
           <div className="space-y-4">
             {section !== 'home' && (
               <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Título com Gradiente (HTML)
-                </label>
-                <TextArea
-                  value={header.gradientTitle || ""}
-                  onChange={(e) => handleHeaderChange(section, "gradientTitle", e.target.value)}
-                  placeholder="Ex: Não é mágica.<br /><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FF0F43] to-[#A30030]'>É Metodologia.</span>"
-                  rows={3}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Título Gradiente (HTML)</label>
+                <TextArea value={header.gradientTitle || ""} onChange={(e) => handleHeaderChange(section, "gradientTitle", e.target.value)} placeholder="HTML com classes tailwind" rows={3} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
               </div>
             )}
-
             <div>
-              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                Subtítulo
-              </label>
-              <TextArea
-                value={header.subtitle || ""}
-                onChange={(e) => handleHeaderChange(section, "subtitle", e.target.value)}
-                placeholder="Ex: Metodologia validada em mais de R$ 40 milhões faturados."
-                rows={2}
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-              />
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Subtítulo</label>
+              <TextArea value={header.subtitle || ""} onChange={(e) => handleHeaderChange(section, "subtitle", e.target.value)} placeholder="Ex: Metodologia validada..." rows={2} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
             </div>
           </div>
         </div>
@@ -663,59 +499,168 @@ export default function ComoFazemosPage() {
 
   const renderCtaSection = (section: keyof ComoFazemosData, sectionTitle: string) => {
     const cta = pageData[section]?.cta || defaultCTASection;
-    
     return (
       <Card className="p-6 bg-[var(--color-background)]">
         <div className="flex items-center gap-3 mb-6">
           <MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />
-          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-            Call to Action (CTA) - {sectionTitle}
-          </h4>
+          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">Call to Action (CTA) - {sectionTitle}</h4>
         </div>
-        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Texto do CTA</label>
+              <Input type="text" value={cta.text} onChange={(e) => handleCtaChange(section, "text", e.target.value)} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">URL do CTA</label>
+              <Input type="text" value={cta.url} onChange={(e) => handleCtaChange(section, "url", e.target.value)} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Descrição do CTA</label>
+              <TextArea value={cta.description} onChange={(e) => handleCtaChange(section, "description", e.target.value)} rows={4} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  };
+
+  const renderFlywheelSection = () => {
+    const flywheel = pageData.marketing?.flywheel || defaultFlywheel;
+
+    return (
+      <Card className="p-6 bg-[var(--color-background)] border-l-4 border-l-[var(--color-primary)]">
+        <div className="flex items-center gap-3 mb-6">
+          <RefreshCw className="w-5 h-5 text-[var(--color-primary)]" />
+          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">Marketing Flywheel (Exclusivo)</h4>
+        </div>
+
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Texto do CTA
-                </label>
-                <Input
-                  type="text"
-                  value={cta.text}
-                  onChange={(e) => handleCtaChange(section, "text", e.target.value)}
-                  placeholder="Ex: Quero Estruturar e Escalar Meu Negócio"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Título do Flywheel</label>
+                <Input value={flywheel.title} onChange={(e) => handleFlywheelChange("title", e.target.value)} className="bg-[var(--color-background-body)] border-[var(--color-border)]" />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  URL do CTA
-                </label>
-                <Input
-                  type="text"
-                  value={cta.url}
-                  onChange={(e) => handleCtaChange(section, "url", e.target.value)}
-                  placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Subtítulo</label>
+                <Input value={flywheel.subtitle} onChange={(e) => handleFlywheelChange("subtitle", e.target.value)} className="bg-[var(--color-background-body)] border-[var(--color-border)]" />
               </div>
             </div>
+            <div>
+              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Descrição</label>
+              <TextArea value={flywheel.description} onChange={(e) => handleFlywheelChange("description", e.target.value)} rows={4} className="bg-[var(--color-background-body)] border-[var(--color-border)]" />
+            </div>
+          </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Descrição do CTA
-                </label>
-                <TextArea
-                  value={cta.description}
-                  onChange={(e) => handleCtaChange(section, "description", e.target.value)}
-                  placeholder="Ex: Anúncios, operação e dados trabalhando juntos para vender mais."
-                  rows={4}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
+          <div className="border-t border-[var(--color-border)] my-4" />
+
+          <div>
+            <h5 className="text-sm font-semibold text-[var(--color-secondary)] mb-4">Cores do Sistema</h5>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {Object.entries(flywheel.colors).map(([key, value]) => (
+                <div key={key} className="space-y-2">
+                  <label className="block text-xs font-medium text-[var(--color-secondary)] capitalize">{key}</label>
+                  <div className="flex gap-2">
+                    <Input 
+                      value={value} 
+                      onChange={(e) => updateNested(`marketing.flywheel.colors.${key}`, e.target.value)} 
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] h-10" 
+                    />
+                    <ColorPicker 
+                      color={value} 
+                      onChange={(color) => updateNested(`marketing.flywheel.colors.${key}`, color)} 
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--color-border)] my-4" />
+
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h5 className="text-sm font-semibold text-[var(--color-secondary)]">Benefícios (Lista)</h5>
+              {/* FIX: variant ghost removido, substituído por secondary com classes para simular ghost */}
+              <Button 
+                type="button" 
+                onClick={() => addFlywheelItem('benefits')} 
+                variant="secondary" 
+                className="h-8 text-xs flex items-center gap-1 bg-transparent border-none shadow-none text-[var(--color-secondary)] hover:bg-[var(--color-background-body)]"
+              >
+                <Plus className="w-3 h-3" /> Adicionar
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {flywheel.benefits.map((benefit, idx) => (
+                <div key={`benefit-${idx}`} className="flex gap-2 items-center">
+                  <Input 
+                    value={benefit} 
+                    onChange={(e) => updateFlywheelArray('benefits', idx, e.target.value)} 
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)]"
+                    placeholder="Ex: Crescimento Orgânico"
+                  />
+                  <button type="button" onClick={() => removeFlywheelItem('benefits', idx)} className="text-red-500 hover:text-red-700">
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="border-t border-[var(--color-border)] my-4" />
+
+          <div>
+            <div className="flex justify-between items-center mb-4">
+              <h5 className="text-sm font-semibold text-[var(--color-secondary)]">Fases do Ciclo</h5>
+              {/* FIX: variant ghost removido */}
+              <Button 
+                type="button" 
+                onClick={() => addFlywheelItem('phases')} 
+                variant="secondary" 
+                className="h-8 text-xs flex items-center gap-1 bg-transparent border-none shadow-none text-[var(--color-secondary)] hover:bg-[var(--color-background-body)]"
+              >
+                <Plus className="w-3 h-3" /> Adicionar Fase
+              </Button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {flywheel.phases.map((phase, idx) => (
+                <div key={`phase-${idx}`} className="p-3 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)] space-y-3 relative group">
+                  <button 
+                    type="button" 
+                    onClick={() => removeFlywheelItem('phases', idx)} 
+                    className="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                  <div>
+                    <label className="text-xs text-[var(--color-secondary)]">Nome da Fase</label>
+                    <Input 
+                      value={phase.title} 
+                      onChange={(e) => updateFlywheelArray('phases', idx, e.target.value, 'title')} 
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[var(--color-secondary)]">Cor</label>
+                    <div className="flex gap-2 mt-1">
+                      <div className="w-6 h-8 rounded border border-[var(--color-border)]" style={{ backgroundColor: phase.color }} />
+                      <Input 
+                        value={phase.color} 
+                        onChange={(e) => updateFlywheelArray('phases', idx, e.target.value, 'color')} 
+                        className="h-8 text-sm flex-1"
+                      />
+                      <ColorPicker 
+                        color={phase.color} 
+                        onChange={(color) => updateFlywheelArray('phases', idx, color, 'color')} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -735,55 +680,23 @@ export default function ComoFazemosPage() {
             <div>
               <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">Serviços - {sectionTitle}</h4>
               <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                  <span className="text-sm text-[var(--color-secondary)]">
-                    {completeCount} de {totalCount} completos
-                  </span>
-                </div>
-                <span className="text-sm text-[var(--color-secondary)]">•</span>
-                <span className="text-sm text-[var(--color-secondary)]">
-                  Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
-                </span>
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
+                <span className="text-sm text-[var(--color-secondary)]">{completeCount} de {totalCount} completos</span>
               </div>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <Button
-                type="button"
-                onClick={() => handleAddService(section)}
-                variant="primary"
-                className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white border-none flex items-center gap-2"
-                disabled={!canAddNew}
-              >
-                <Plus className="w-4 h-4" />
-                Adicionar Serviço
+              <Button type="button" onClick={() => handleAddService(section)} variant="primary" className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)] text-white border-none flex items-center gap-2" disabled={!canAddNew}>
+                <Plus className="w-4 h-4" /> Adicionar Serviço
               </Button>
-              {isLimitReached && (
-                <p className="text-xs text-[var(--color-secondary)] flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" />
-                  Limite do plano atingido
-                </p>
-              )}
+              {isLimitReached && <p className="text-xs text-[var(--color-secondary)] flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Limite atingido</p>}
             </div>
           </div>
 
           {validationError && (
-            <div className={`p-3 rounded-lg ${
-              isLimitReached 
-                ? 'bg-[var(--color-background)] border border-[var(--color-border)]' 
-                : 'bg-[var(--color-background)] border border-[var(--color-border)]'
-            }`}>
-              <div className="flex items-start gap-2">
-                {isLimitReached ? (
-                  <XCircle className="w-5 h-5 text-[var(--color-secondary)] flex-shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="w-5 h-5 text-[var(--color-secondary)] flex-shrink-0 mt-0.5" />
-                )}
-                <p className={`text-sm ${isLimitReached ? 'text-[var(--color-secondary)]' : 'text-[var(--color-secondary)]'}`}>
-                  {validationError}
-                </p>
-              </div>
-            </div>
+             <div className="p-3 rounded-lg bg-[var(--color-background)] border border-[var(--color-border)] flex items-start gap-2">
+               <AlertCircle className="w-5 h-5 text-[var(--color-secondary)]" />
+               <p className="text-sm text-[var(--color-secondary)]">{validationError}</p>
+             </div>
           )}
 
           <div className="space-y-4">
@@ -792,204 +705,70 @@ export default function ComoFazemosPage() {
                 <div className="p-3 bg-[var(--color-background-body)] rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
                   <Icon className="w-8 h-8 text-[var(--color-secondary)]" />
                 </div>
-                <h5 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                  Nenhum serviço cadastrado
-                </h5>
-                <p className="text-[var(--color-secondary)] mb-6 max-w-md mx-auto">
-                  Adicione serviços para mostrar como sua empresa trabalha nesta seção.
-                </p>
-                <Button
-                  type="button"
-                  onClick={() => handleAddService(section)}
-                  variant="primary"
-                  className="flex items-center gap-2 mx-auto"
-                >
-                  <Plus className="w-4 h-4" />
-                  Adicionar Primeiro Serviço
-                </Button>
+                <p className="text-[var(--color-secondary)] mb-6">Nenhum serviço cadastrado</p>
+                <Button type="button" onClick={() => handleAddService(section)} variant="primary" className="flex items-center gap-2 mx-auto"><Plus className="w-4 h-4" /> Adicionar</Button>
               </div>
             ) : (
               services.map((item, index) => {
                 const isLast = index === services.length - 1;
-                
                 return (
-                  <div 
-                    key={`service-${section}-${index}`}
-                    ref={isLast ? sectionRef : null}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, section, index)}
-                    onDragOver={(e) => handleDragOver(e, section, index)}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                    onDragEnd={handleDragEnd}
-                    onDrop={handleDrop}
-                    className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      draggingItem?.section === section && draggingItem?.index === index
-                        ? 'border-[var(--color-primary)] bg-[var(--color-background-body)]' 
-                        : 'hover:border-[var(--color-primary)]'
-                    }`}
-                  >
+                  <div key={`service-${section}-${index}`} ref={isLast ? sectionRef : null} draggable onDragStart={(e) => handleDragStart(e, section, index)} onDragOver={(e) => handleDragOver(e, section, index)} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragEnd={handleDragEnd} onDrop={handleDrop} 
+                    className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${draggingItem?.section === section && draggingItem?.index === index ? 'border-[var(--color-primary)] bg-[var(--color-background-body)]' : 'hover:border-[var(--color-primary)]'}`}>
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
-                        {/* Handle para drag & drop */}
-                        <div 
-                          className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background-body)] rounded transition-colors"
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, section, index)}
-                        >
+                        <div className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background-body)] rounded" draggable onDragStart={(e) => handleDragStart(e, section, index)}>
                           <GripVertical className="w-5 h-5 text-[var(--color-secondary)]" />
                         </div>
-                        
-                        {/* Indicador de posição */}
                         <div className="flex flex-col items-center">
-                          <span className="text-xs font-medium text-[var(--color-secondary)]">
-                            {item.step || (index + 1).toString().padStart(2, '0')}
-                          </span>
+                          <span className="text-xs font-medium text-[var(--color-secondary)]">{item.step}</span>
                           <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
                         </div>
-                        
                         <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="flex flex-col">
-                              <div className="flex items-center gap-2 text-sm text-[var(--color-secondary)]">
-                                <ArrowUpDown className="w-4 h-4" />
-                                <span>Posição: {index + 1}</span>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <h4 className="font-medium text-[var(--color-secondary)]">
-                                  {item.title || "Sem título"}
-                                </h4>
-                                {item.title && item.description && item.icon ? (
-                                  <span className="px-2 py-1 text-xs bg-[var(--color-background-body)] text-[var(--color-secondary)] rounded-full border border-[var(--color-border)]">
-                                    Completo
-                                  </span>
-                                ) : (
-                                  <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                                    Incompleto
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Título
-                                </label>
-                                <Input
-                                  value={item.title}
-                                  onChange={(e) => updateService(section, index, { title: e.target.value })}
-                                  placeholder="Ex: Infraestrutura de Elite"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                                  <Palette className="w-4 h-4" />
-                                  Cor
-                                </label>
-                                <div className="flex gap-2">
-                                  <Input
-                                    value={item.color}
-                                    onChange={(e) => updateService(section, index, { color: e.target.value })}
-                                    placeholder="#3B82F6"
-                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                  />
-                                  <ColorPicker
-                                    color={item.color}
-                                    onChange={(color) => updateService(section, index, { color })}
-                                  />
+                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Título</label>
+                                  <Input value={item.title} onChange={(e) => updateService(section, index, { title: e.target.value })} className="bg-[var(--color-background-body)] border-[var(--color-border)]" />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2"><Palette className="w-4 h-4" /> Cor</label>
+                                  <div className="flex gap-2">
+                                    <Input value={item.color} onChange={(e) => updateService(section, index, { color: e.target.value })} className="bg-[var(--color-background-body)] border-[var(--color-border)]" />
+                                    <ColorPicker color={item.color} onChange={(color) => updateService(section, index, { color })} />
+                                  </div>
+                                </div>
+                                <div className="p-3 bg-[var(--color-background-body)] rounded-lg">
+                                  <label className="flex items-center justify-between cursor-pointer">
+                                    <span className="text-sm font-medium text-[var(--color-secondary)]">Card Largo ({item.wide ? 'Sim' : 'Não'})</span>
+                                    <div className="relative inline-block w-12 h-6">
+                                      <input type="checkbox" checked={item.wide} onChange={(e) => updateService(section, index, { wide: e.target.checked })} className="opacity-0 w-0 h-0" id={`wide-${section}-${index}`} />
+                                      <label htmlFor={`wide-${section}-${index}`} className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors ${item.wide ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}>
+                                        <span className={`absolute h-4 w-4 rounded-full bg-[var(--color-background-body)] transition-transform top-1 ${item.wide ? 'translate-x-7' : 'translate-x-1'}`} />
+                                      </label>
+                                    </div>
+                                  </label>
                                 </div>
                               </div>
-                              
-                              <div className="p-3 bg-[var(--color-background-body)] rounded-lg">
-                                <label className="flex items-center justify-between cursor-pointer">
-                                  <div>
-                                    <span className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
-                                      Card Largo
-                                    </span>
-                                    <p className="text-xs text-[var(--color-secondary)]">
-                                      {item.wide ? "Ocupará largura total" : "Largura padrão"}
-                                    </p>
-                                  </div>
-                                  <div className="relative inline-block w-12 h-6">
-                                    <input
-                                      type="checkbox"
-                                      checked={item.wide}
-                                      onChange={(e) => updateService(section, index, { wide: e.target.checked })}
-                                      className="opacity-0 w-0 h-0"
-                                      id={`wide-${section}-${index}`}
-                                    />
-                                    <label 
-                                      htmlFor={`wide-${section}-${index}`}
-                                      className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors duration-200 ${
-                                        item.wide ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'
-                                      }`}
-                                    >
-                                      <span className={`absolute h-4 w-4 rounded-full bg-[var(--color-background-body)] transition-transform duration-200 ${
-                                        item.wide ? 'transform translate-x-7' : 'transform translate-x-1'
-                                      } top-1`} />
-                                    </label>
-                                  </div>
-                                </label>
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
+                                  <TextArea value={item.description} onChange={(e) => updateService(section, index, { description: e.target.value })} rows={5} className="bg-[var(--color-background-body)] border-[var(--color-border)]" />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone</label>
+                                  <IconSelector value={item.icon} onChange={(value) => updateService(section, index, { icon: value })} label="" />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Tipo Visual</label>
+                                  <Input value={item.visualType} onChange={(e) => updateService(section, index, { visualType: e.target.value })} className="bg-[var(--color-background-body)] border-[var(--color-border)]" />
+                                </div>
                               </div>
-                            </div>
-                            
-                            <div className="space-y-4">
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Descrição
-                                </label>
-                                <TextArea
-                                  value={item.description}
-                                  onChange={(e) => updateService(section, index, { description: e.target.value })}
-                                  placeholder="Descrição detalhada do serviço..."
-                                  rows={5}
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Ícone
-                                </label>
-                                <IconSelector
-                                  value={item.icon}
-                                  onChange={(value) => updateService(section, index, { icon: value })}
-                                  label=""
-                                  placeholder="Ex: mdi:check-decagram, lucide:settings"
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Tipo Visual
-                                </label>
-                                <Input
-                                  value={item.visualType}
-                                  onChange={(e) => updateService(section, index, { visualType: e.target.value })}
-                                  placeholder="Ex: technical, chart, ai-mesh"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
-                              </div>
-                            </div>
-                          </div>
+                           </div>
                         </div>
                       </div>
-                      
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => removeService(section, index)}
-                          className="whitespace-nowrap bg-[var(--color-background-body)] hover:bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)] flex items-center gap-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remover
-                        </Button>
-                      </div>
+                      <Button type="button" onClick={() => removeService(section, index)} variant="secondary" className="whitespace-nowrap bg-[var(--color-background-body)] hover:bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)] flex items-center gap-2">
+                        <Trash2 className="w-4 h-4" /> Remover
+                      </Button>
                     </div>
                   </div>
                 );
@@ -1003,100 +782,48 @@ export default function ComoFazemosPage() {
 
   const renderSection = (section: keyof ComoFazemosData, sectionTitle: string, Icon: any) => {
     const isExpanded = expandedSections[section];
-    
     return (
       <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => toggleSection(section)}
-          className="w-full flex items-center justify-between p-4 bg-[var(--color-background)] rounded-lg hover:bg-[var(--color-background-body)] transition-colors"
-        >
+        <button type="button" onClick={() => toggleSection(section)} className="w-full flex items-center justify-between p-4 bg-[var(--color-background)] rounded-lg hover:bg-[var(--color-background-body)] transition-colors">
           <div className="flex items-center gap-3">
             <Icon className="w-5 h-5 text-[var(--color-secondary)]" />
             <div className="text-left">
-              <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
-                {sectionTitle}
-              </h3>
-              <p className="text-sm text-[var(--color-secondary)]">
-                {section === "home" && "Seção principal da home page"}
-                {section === "marketing" && "Seção de estratégias de marketing"}
-                {section === "ecommerce" && "Seção para e-commerce"}
-                {section === "sobre" && "Seção da página sobre"}
-              </p>
+              <h3 className="text-lg font-semibold text-[var(--color-secondary)]">{sectionTitle}</h3>
+              <p className="text-sm text-[var(--color-secondary)]">Configuração da seção {sectionTitle}</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm px-3 py-1 bg-[var(--color-background-body)] text-[var(--color-secondary)] rounded-full border border-[var(--color-border)]">
-              {getSectionData(section).length} serviços
-            </span>
-            {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-[var(--color-secondary)]" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-[var(--color-secondary)]" />
-            )}
+            <span className="text-sm px-3 py-1 bg-[var(--color-background-body)] text-[var(--color-secondary)] rounded-full border border-[var(--color-border)]">{getSectionData(section).length} serviços</span>
+            {isExpanded ? <ChevronUp className="w-5 h-5 text-[var(--color-secondary)]" /> : <ChevronDown className="w-5 h-5 text-[var(--color-secondary)]" />}
           </div>
         </button>
 
-        <motion.div
-          initial={false}
-          animate={{ height: isExpanded ? "auto" : 0 }}
-          className="overflow-hidden"
-        >
+        <motion.div initial={false} animate={{ height: isExpanded ? "auto" : 0 }} className="overflow-hidden">
           <div className="space-y-6 mt-4">
             {renderHeaderSection(section, sectionTitle)}
-            {renderCtaSection(section, sectionTitle)}
+            {section === 'marketing' && renderFlywheelSection()}
             {renderServicesSection(section, sectionTitle, Icon)}
+            {renderCtaSection(section, sectionTitle)}
           </div>
         </motion.div>
       </div>
     );
   };
 
-  if (loading && !exists) {
-    return <Loading layout={Layout} exists={!!exists} />;
-  }
+  if (loading && !exists) return <Loading layout={Layout} exists={!!exists} />;
 
   return (
-    <ManageLayout
-      headerIcon={Layout}
-      title="Como Fazemos"
-      description="Configure as seções 'Como Fazemos' para home, marketing, ecommerce e sobre"
-      exists={!!exists}
-      itemName="Seção"
-    >
+    <ManageLayout headerIcon={Layout} title="Como Fazemos" description="Configure as seções de metodologia e serviços" exists={!!exists} itemName="Seção">
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {renderSection("home", "Seção Home", Layout)}
-        {renderSection("marketing", "Seção Marketing", Type)}
-        {renderSection("ecommerce", "Seção Ecommerce", ShoppingCart)}
-        {renderSection("sobre", "Seção Sobre", List)}
+        {renderSection("home", "Home Page", Layout)}
+        {renderSection("marketing", "Marketing", Type)}
+        {renderSection("ecommerce", "E-commerce", ShoppingCart)}
+        {renderSection("sobre", "Sobre Nós", List)}
 
-        <FixedActionBar
-          onDeleteAll={openDeleteAllModal}
-          onSubmit={handleSubmit}
-          isAddDisabled={false}
-          isSaving={loading}
-          exists={!!exists}
-          completeCount={completion.completed}
-          totalCount={completion.total}
-          itemName="Seção"
-          icon={Layout}
-        />
+        <FixedActionBar onDeleteAll={openDeleteAllModal} onSubmit={handleSubmit} isAddDisabled={false} isSaving={loading} exists={!!exists} completeCount={completion.completed} totalCount={completion.total} itemName="Seção" icon={Layout} />
       </form>
-
-      <DeleteConfirmationModal
-        isOpen={deleteModal.isOpen}
-        onClose={closeDeleteModal}
-        onConfirm={confirmDelete}
-        type={deleteModal.type}
-        itemTitle={deleteModal.title}
-        totalItems={4}
-        itemName="Configuração Como Fazemos"
-      />
-
-      <FeedbackMessages 
-        success={success} 
-        errorMsg={errorMsg} 
-      />
+      <DeleteConfirmationModal isOpen={deleteModal.isOpen} onClose={closeDeleteModal} onConfirm={confirmDelete} type={deleteModal.type} itemTitle={deleteModal.title} totalItems={4} itemName="Configuração" />
+      <FeedbackMessages success={success} errorMsg={errorMsg} />
     </ManageLayout>
   );
 }
