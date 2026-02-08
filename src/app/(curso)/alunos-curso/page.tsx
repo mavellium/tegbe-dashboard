@@ -26,9 +26,6 @@ import {
   CheckCircle2,
   ArrowUp,
   ArrowDown,
-  Zap,
-  Tag,
-  Users,
   TrendingUp,
   BarChart3,
   GripVertical,
@@ -36,8 +33,7 @@ import {
   Star,
   Text,
   Palette,
-  Sparkles,
-  Heading
+  Tag
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -47,9 +43,7 @@ import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import ColorPicker from "@/components/ColorPicker";
 import { ImageUpload } from "@/components/ImageUpload";
-import { VideoUpload } from "@/components/VideoUpload";
-import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { tailwindToHex, hexToTailwindTextClass } from "@/lib/colors";
+import { VideoUpload } from "@/components/VideoUpload"; // Certifique-se de importar o novo
 
 interface FooterStat {
   id?: string;
@@ -61,7 +55,7 @@ interface FooterStat {
 
 interface Testimonial {
   id: string;
-  type: "video" | "image" | "text"; // Adicionado tipo "text"
+  type: "video" | "image" | "text";
   clientName: string;
   clientRole: string;
   description: string;
@@ -74,12 +68,12 @@ interface Testimonial {
 }
 
 interface TestimonialsData {
-  badge?: string; // NOVO CAMPO
+  badge?: string;
   titulo: string;
   subtitulo: string;
   showStats: boolean;
-  textColor?: string; // NOVO CAMPO
-  backgroundColor?: string; // NOVO CAMPO
+  textColor?: string;
+  backgroundColor?: string;
   footerStats: FooterStat[];
   testimonials: Testimonial[];
 }
@@ -239,9 +233,6 @@ function SortableFooterStatItem({
                   placeholder="Ex: 2.5k+, R$ 78M+, 98%"
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-bold text-lg"
                 />
-                <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                  Valor numérico da estatística (pode incluir símbolos como +, %, R$)
-                </p>
               </div>
             </div>
 
@@ -267,9 +258,6 @@ function SortableFooterStatItem({
                     label="Ícone"
                     placeholder="ph:graduation-cap-fill"
                   />
-                  <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                    Ícone opcional para a estatística
-                  </p>
                 </div>
 
                 <div>
@@ -383,7 +371,7 @@ const TestimonialItem = ({
                 e.stopPropagation();
                 onMove("down");
               }}
-              disabled={index === 0} // Este limite precisa ser ajustado conforme o contexto
+              disabled={index === 0}
               className="bg-[var(--color-background-body)] hover:bg-[var(--color-background-body)]/80 border-[var(--color-border)]"
             >
               <ArrowDown className="w-3 h-3" />
@@ -424,8 +412,8 @@ const TestimonialItem = ({
                 <div className="grid grid-cols-3 gap-2">
                   {(["video", "image", "text"] as const).map((type) => {
                     const Icon = type === "video" ? Video : 
-                                type === "image" ? ImageIcon : 
-                                Text;
+                                 type === "image" ? ImageIcon : 
+                                 Text;
                     return (
                       <button
                         key={type}
@@ -559,12 +547,11 @@ const TestimonialItem = ({
                   <VideoUpload
                     label="Vídeo do Depoimento"
                     currentVideo={testimonial.src || ''}
-                    selectedFile={getFileFromState(`testimonials.${index}.src`)}
-                    onFileChange={(file) => onFileChange(`testimonials.${index}.src`, file)}
+                    onChange={(url) => onUpdate({ src: url })}
                     aspectRatio="aspect-video"
                     previewWidth={800}
                     previewHeight={450}
-                    description="Vídeo do depoimento do cliente"
+                    description="O vídeo será enviado para a CDN automaticamente ao ser selecionado."
                   />
                   
                   <ImageUpload
@@ -604,15 +591,11 @@ const TestimonialItem = ({
               <div className="text-xs text-[var(--color-secondary)]/50 space-y-1">
                 {testimonial.type === "video" && (
                   <>
-                    <p>• Para vídeos: envie o arquivo .mp4 ou .webm</p>
-                    <p>• A thumbnail será gerada automaticamente ou você pode enviar uma imagem personalizada</p>
+                    <p>• Vídeos são hospedados externamente para melhor performance.</p>
                   </>
                 )}
                 {testimonial.type === "image" && (
                   <p>• Para imagens: JPG, PNG ou WebP (recomendado 800x600px)</p>
-                )}
-                {testimonial.type === "text" && (
-                  <p>• Depoimento em texto: apenas conteúdo textual, sem mídia</p>
                 )}
               </div>
             </div>
@@ -789,18 +772,18 @@ export default function TestimonialsPage() {
     let completed = 0;
     let total = 0;
 
-    // Configurações gerais (agora com mais campos)
-    total += 6; // badge, titulo, subtitulo, showStats, textColor, backgroundColor
+    // Configurações gerais
+    total += 6; 
     if (currentData.badge?.trim()) completed++;
     if (currentData.titulo.trim()) completed++;
     if (currentData.subtitulo.trim()) completed++;
-    total++; // showStats é booleano, sempre considerado como completo
+    total++; 
     completed++;
     if (currentData.textColor?.trim()) completed++;
     if (currentData.backgroundColor?.trim()) completed++;
 
     // FooterStats
-    total += footerStats.length * 4; // value, label, icon, color
+    total += footerStats.length * 4;
     footerStats.forEach(stat => {
       if (stat.value.trim()) completed++;
       if (stat.label.trim()) completed++;
@@ -809,7 +792,7 @@ export default function TestimonialsPage() {
     });
 
     // Testimonials
-    total += testimonials.length * 4; // clientName, clientRole, description, type
+    total += testimonials.length * 4;
     testimonials.forEach(testimonial => {
       if (testimonial.clientName.trim()) completed++;
       if (testimonial.clientRole.trim()) completed++;
@@ -841,7 +824,7 @@ export default function TestimonialsPage() {
       itemName="Cases de Sucesso"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Configurações Gerais - ATUALIZADA */}
+        {/* Seção Configurações Gerais */}
         <div className="space-y-4">
           <SectionHeader
             title="Configurações Gerais"

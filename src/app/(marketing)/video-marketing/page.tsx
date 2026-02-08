@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   VideoIcon,
@@ -14,12 +13,7 @@ import {
   Type,
   Settings,
   Layers,
-  ChevronDown,
-  ChevronUp,
-  Headphones,
   Zap,
-  AlertTriangle,
-  CheckCircle2,
   Eye
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
@@ -164,7 +158,6 @@ export default function ShowcasePage() {
     updateNested(path, value);
   };
 
-  // Função auxiliar para obter File do fileStates
   const getFileFromState = (key: string): File | null => {
     const value = fileStates[key];
     return value instanceof File ? value : null;
@@ -179,17 +172,14 @@ export default function ShowcasePage() {
     let completed = 0;
     let total = 0;
 
-    // Metadata
     total += 2;
     if (currentData.metadata.component?.trim()) completed++;
     if (currentData.metadata.vision?.trim()) completed++;
 
-    // Assets
     total += 2;
     if (currentData.metadata.assets.video_url?.trim()) completed++;
     if (currentData.metadata.assets.noise_texture?.trim()) completed++;
 
-    // Headline
     total += 1;
     if (currentData.content.headline.line_1?.trim()) completed++;
     
@@ -201,7 +191,6 @@ export default function ShowcasePage() {
     total += 1;
     if (currentData.content.headline.subline?.trim()) completed++;
 
-    // Labels
     total += 2;
     if (currentData.content.labels.loading?.trim()) completed++;
     if (currentData.content.labels.error?.trim()) completed++;
@@ -224,7 +213,6 @@ export default function ShowcasePage() {
       itemName="Showcase"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Metadata */}
         <div className="space-y-4">
           <SectionHeader
             title="Configurações do Componente"
@@ -262,7 +250,6 @@ export default function ShowcasePage() {
                 </div>
               </div>
 
-              {/* Assets - Upload de Vídeo */}
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
                   <VideoIcon className="w-5 h-5" />
@@ -271,8 +258,8 @@ export default function ShowcasePage() {
                 <VideoUpload
                   label="Vídeo Principal"
                   currentVideo={currentData.metadata.assets.video_url}
-                  selectedFile={getFileFromState('metadata.assets.video_url')}
-                  onFileChange={(file) => setFileState('metadata.assets.video_url', file)}
+                  // AQUI: Atualiza direto o JSON com a URL retornada pela CDN
+                  onChange={(url) => handleChange('metadata.assets.video_url', url)}
                   aspectRatio="aspect-video"
                   previewWidth={800}
                   previewHeight={450}
@@ -280,7 +267,6 @@ export default function ShowcasePage() {
                 />
               </div>
 
-              {/* Assets - Upload de Textura */}
               <div className="space-y-4">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
                   <ImageIcon className="w-5 h-5" />
@@ -310,7 +296,6 @@ export default function ShowcasePage() {
           </motion.div>
         </div>
 
-        {/* Seção Conteúdo */}
         <div className="space-y-4">
           <SectionHeader
             title="Conteúdo do Showcase"
@@ -326,7 +311,6 @@ export default function ShowcasePage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)] space-y-8">
-              {/* Headline */}
               <div className="space-y-6">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
                   <Zap className="w-5 h-5" />
@@ -397,7 +381,6 @@ export default function ShowcasePage() {
                 </div>
               </div>
 
-              {/* Labels */}
               <div className="space-y-6">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
                   <Eye className="w-5 h-5" />

@@ -11,16 +11,13 @@ import {
   Video,
   Palette,
   Type,
-  Eye,
   Film,
   Info,
   GraduationCap,
   CheckCircle2,
   Sparkles,
   Tag,
-  PaintBucket,
-  Image as ImageIcon,
-  AlertCircle
+  PaintBucket
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -93,7 +90,6 @@ const defaultVideoSectionsData: VideoSectionsData = {
   defaultSection: "sobre"
 };
 
-// Componente SectionTab
 interface SectionTabProps {
   sectionKey: "sobre" | "cursos";
   label: string;
@@ -137,8 +133,6 @@ export default function VideoSectionsPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<VideoSectionsData>({
     apiPath: "/api/tegbe-institucional/json/video-sections",
     defaultData: defaultVideoSectionsData,
@@ -151,7 +145,6 @@ export default function VideoSectionsPage() {
     }));
   };
 
-  // Helper para obter dados da seção atual de forma segura
   const getCurrentSectionData = (): VideoPageData => {
     const sectionData = videoData?.[activeSection];
     if (!sectionData) {
@@ -171,15 +164,8 @@ export default function VideoSectionsPage() {
     handleSectionChange(path, cleanColor);
   };
 
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
     try {
       await save();
     } catch (err) {
@@ -187,19 +173,16 @@ export default function VideoSectionsPage() {
     }
   };
 
-  // Calcular completude
   const calculateCompletion = () => {
     const currentSectionData = getCurrentSectionData();
     let completed = 0;
     let total = 0;
 
-    // Conteúdo (3 campos)
     total += 3;
     if (currentSectionData.content?.badge?.trim()) completed++;
     if (currentSectionData.content?.title?.trim()) completed++;
     if (currentSectionData.content?.videoSrc?.trim()) completed++;
 
-    // Estilo (6 campos)
     total += 6;
     if (currentSectionData.style?.backgroundColor?.trim()) completed++;
     if (currentSectionData.style?.textColor?.trim()) completed++;
@@ -213,13 +196,9 @@ export default function VideoSectionsPage() {
 
   const completion = calculateCompletion();
 
-  // Renderizar seção de conteúdo
   const renderContentSection = () => {
     const currentSectionData = getCurrentSectionData();
     const contentData = currentSectionData.content || {};
-    
-    // Chave para o fileState do vídeo
-    const videoFileKey = `${activeSection}.content.videoSrc`;
     
     return (
       <div className="space-y-4">
@@ -286,15 +265,15 @@ export default function VideoSectionsPage() {
                 <VideoUpload
                   label=""
                   currentVideo={contentData.videoSrc || ''}
-                  selectedFile={getFileFromState(videoFileKey)}
-                  onFileChange={(file) => setFileState(videoFileKey, file)}
+                  // AQUI: Atualiza direto o JSON com a URL retornada pela CDN
+                  onChange={(url) => handleSectionChange('content.videoSrc', url)}
                   aspectRatio="aspect-video"
                   previewWidth={800}
                   previewHeight={450}
                   description="Vídeo de destaque da seção"
                 />
                 <p className="text-xs text-[var(--color-secondary)]/70">
-                  Faça upload de um vídeo ou cole a URL. Formatos suportados: MP4, WebM, OGG.
+                  O vídeo será enviado automaticamente para a CDN. Formatos suportados: MP4, WebM, OGG.
                 </p>
               </div>
             </div>
@@ -304,7 +283,6 @@ export default function VideoSectionsPage() {
     );
   };
 
-  // Renderizar seção de estilo
   const renderStyleSection = () => {
     const currentSectionData = getCurrentSectionData();
     const styleData = currentSectionData.style || {};
@@ -327,7 +305,6 @@ export default function VideoSectionsPage() {
           <Card className="p-6 bg-[var(--color-background)]">
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Cores Principais */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
                     <PaintBucket className="w-4 h-4" />
@@ -354,9 +331,6 @@ export default function VideoSectionsPage() {
                           onChange={(color: string) => handleColorChange('style.backgroundColor', color)}
                         />
                       </div>
-                      <p className="text-xs text-[var(--color-secondary)]/70">
-                        Cor de fundo da seção
-                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -378,9 +352,6 @@ export default function VideoSectionsPage() {
                           onChange={(color: string) => handleColorChange('style.textColor', color)}
                         />
                       </div>
-                      <p className="text-xs text-[var(--color-secondary)]/70">
-                        Cor do texto principal
-                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -402,14 +373,10 @@ export default function VideoSectionsPage() {
                           onChange={(color: string) => handleColorChange('style.accentColor', color)}
                         />
                       </div>
-                      <p className="text-xs text-[var(--color-secondary)]/70">
-                        Cor para elementos de destaque
-                      </p>
                     </div>
                   </div>
                 </div>
 
-                {/* Estilos do Badge */}
                 <div className="space-y-4">
                   <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
                     <Tag className="w-4 h-4" />
@@ -436,9 +403,6 @@ export default function VideoSectionsPage() {
                           onChange={(color: string) => handleColorChange('style.badgeText', color)}
                         />
                       </div>
-                      <p className="text-xs text-[var(--color-secondary)]/70">
-                        Cor do texto dentro do badge
-                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -454,9 +418,6 @@ export default function VideoSectionsPage() {
                         }
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
                       />
-                      <p className="text-xs text-[var(--color-secondary)]/70">
-                        Cor de fundo com transparência (RGBA)
-                      </p>
                     </div>
 
                     <div className="space-y-2">
@@ -472,9 +433,6 @@ export default function VideoSectionsPage() {
                         }
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
                       />
-                      <p className="text-xs text-[var(--color-secondary)]/70">
-                        Cor da borda com transparência (RGBA)
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -499,7 +457,6 @@ export default function VideoSectionsPage() {
       itemName="Seções de Vídeo"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Tabs de Seções */}
         <Card className="p-6 bg-[var(--color-background)]">
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-[var(--color-secondary)]">Selecione a Seção</h3>
@@ -525,7 +482,6 @@ export default function VideoSectionsPage() {
             />
           </div>
           
-          {/* Indicador visual da seção ativa */}
           <div className="mt-4 p-3 rounded-lg bg-[var(--color-background-body)] border border-[var(--color-border)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -550,7 +506,6 @@ export default function VideoSectionsPage() {
           </div>
         </Card>
 
-        {/* Seções de Conteúdo e Estilo */}
         <div className="space-y-6">
           {renderContentSection()}
           {renderStyleSection()}
