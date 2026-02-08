@@ -3,6 +3,67 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
 /* =========================================================
+   Função para extrair sugestões de todos os logos
+========================================================= */
+async function getSuggestionsFromAllLogos() {
+  try {
+    // Buscar todos os registros onde type começa com "logos"
+    const allLogosRecords = await prisma.formData.findMany({
+      where: {
+        type: {
+          startsWith: 'logos',
+        },
+      },
+    });
+
+    const categories = new Set<string>();
+    const companies: Array<{
+      name: string;
+      image?: string;
+      description?: string;
+      category?: string;
+    }> = [];
+
+    // Extrair categorias e empresas únicas
+    allLogosRecords.forEach(record => {
+      const values = record.values as any[];
+      if (Array.isArray(values)) {
+        values.forEach(item => {
+          // Adicionar categoria
+          if (item.category && typeof item.category === 'string' && item.category.trim()) {
+            categories.add(item.category.trim());
+          }
+
+          // Adicionar empresa se tiver nome
+          if (item.name && typeof item.name === 'string' && item.name.trim()) {
+            const existingCompany = companies.find(c => 
+              c.name.toLowerCase() === item.name.toLowerCase()
+            );
+            
+            if (!existingCompany) {
+              companies.push({
+                name: item.name.trim(),
+                image: item.image || undefined,
+                description: item.description || undefined,
+                category: item.category || undefined,
+              });
+            }
+          }
+        });
+      }
+    });
+
+    return {
+      categories: Array.from(categories).sort(),
+      companies: companies.sort((a, b) => a.name.localeCompare(b.name)),
+    };
+  } catch (error) {
+    console.error("❌ Error extracting suggestions:", error);
+    return { categories: [], companies: [] };
+  }
+}
+
+/* =========================================================
    Upload helper para Bunny CDN
 ========================================================= */
 async function uploadToBunny(file: File, path: string = "uploads"): Promise<string> {
@@ -208,13 +269,17 @@ export async function PUT(
 }
 
 /* =========================================================
-   GET
+   GET com sugestões
 ========================================================= */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   context: { params: Promise<{ type: string; subtype: string }> }
 ) {
   const { type, subtype } = await context.params;
+  
+  // Verificar se o cliente quer sugestões
+  const { searchParams } = new URL(req.url);
+  const includeSuggestions = searchParams.get('suggestions') === 'true';
 
   const record = await prisma.formData.findUnique({
     where: {
@@ -222,7 +287,17 @@ export async function GET(
     },
   });
 
-  return NextResponse.json(record ?? null);
+  let suggestions = null;
+  
+  // Se for um tipo de logo e o cliente pediu sugestões
+  if (type.startsWith('logos') && includeSuggestions) {
+    suggestions = await getSuggestionsFromAllLogos();
+  }
+
+  return NextResponse.json({
+    ...record,
+    suggestions
+  });
 }
 
 /* =========================================================

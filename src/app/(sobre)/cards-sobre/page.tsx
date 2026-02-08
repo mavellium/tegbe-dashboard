@@ -864,7 +864,7 @@ export default function ComoFazemosPage() {
                                     Completo
                                   </span>
                                 ) : (
-                                  <span className="px-2 py-1 text-xs bg-[var(--color-background-body)] text-[var(--color-secondary)] rounded-full border border-[var(--color-border)]">
+                                  <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
                                     Incompleto
                                   </span>
                                 )}

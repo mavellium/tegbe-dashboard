@@ -30,7 +30,7 @@ export const VideoUpload = ({
   previewHeight = 225,
   description,
   accept = "video/mp4,video/webm,video/ogg",
-  maxSizeMB = 50,
+  maxSizeMB = 10000,
   showRemoveButton = false // Padrão: não mostrar botão remover
 }: VideoUploadProps) => {
   const [previewUrl, setPreviewUrl] = useState<string>("");

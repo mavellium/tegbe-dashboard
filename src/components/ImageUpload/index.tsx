@@ -15,7 +15,8 @@ interface ImageUploadProps {
   previewWidth?: number;
   previewHeight?: number;
   description?: string;
-  showRemoveButton?: boolean; // Nova prop opcional
+  showRemoveButton?: boolean;
+  maxSizeMB?: number;
 }
 
 export const ImageUpload = ({ 
@@ -27,28 +28,43 @@ export const ImageUpload = ({
   previewWidth = 300,
   previewHeight = 200,
   description,
-  showRemoveButton = false // Padrão: não mostrar botão remover
+  showRemoveButton = false,
+  maxSizeMB = 100
 }: ImageUploadProps) => {
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [error, setError] = useState<string>("");
+  // Novo estado para controlar se a imagem falhou ao carregar (403, 404, etc)
+  const [hasLoadError, setHasLoadError] = useState(false);
 
   useEffect(() => {
+    // Sempre resetamos o erro de carregamento quando a fonte muda
+    setHasLoadError(false);
+
     if (selectedFile) {
+      if (maxSizeMB && selectedFile.size > maxSizeMB * 1024 * 1024) {
+        setError(`Arquivo muito grande. Máximo: ${maxSizeMB}MB`);
+        onFileChange(null);
+        return;
+      }
+
       const objectUrl = URL.createObjectURL(selectedFile);
       setPreviewUrl(objectUrl);
+      setError("");
       
       return () => {
         URL.revokeObjectURL(objectUrl);
       };
     } else if (currentImage) {
       setPreviewUrl(currentImage);
+      setError("");
     } else {
       setPreviewUrl("");
     }
-  }, [selectedFile, currentImage]);
+  }, [selectedFile, currentImage, maxSizeMB, onFileChange]);
 
   const handleImageClick = () => {
-    if (previewUrl) {
+    if (previewUrl && !hasLoadError) {
       setShowFullscreen(true);
     }
   };
@@ -59,6 +75,9 @@ export const ImageUpload = ({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
+    setError("");
+    // Resetar erro visual garantindo que a nova imagem tente ser renderizada
+    setHasLoadError(false);
     onFileChange(file);
   };
 
@@ -66,15 +85,20 @@ export const ImageUpload = ({
     if (selectedFile && previewUrl.startsWith('blob:')) {
       return previewUrl;
     }
-    // Se for uma URL relativa, garantir que seja completa
+    
     if (previewUrl && !previewUrl.startsWith('http') && !previewUrl.startsWith('blob:')) {
       const cleanUrl = previewUrl.startsWith('//') ? previewUrl.substring(2) : previewUrl;
       return `https://${cleanUrl}`;
     }
+    
     return previewUrl;
   };
 
   const imageUrl = getImageUrl();
+  
+  // Determina se deve mostrar o preview da imagem ou o placeholder
+  // Mostra imagem APENAS se tiver URL E não tiver dado erro de carregamento (403)
+  const shouldShowImage = !!imageUrl && !hasLoadError;
 
   return (
     <>
@@ -89,9 +113,14 @@ export const ImageUpload = ({
           </p>
         )}
 
+        {error && (
+          <div className="p-3 bg-red-900/20 border border-red-800 rounded-lg">
+            <p className="text-sm text-red-400">{error}</p>
+          </div>
+        )}
+
         <div className="flex flex-col items-center justify-center">
-          {/* Preview da imagem */}
-          {imageUrl ? (
+          {shouldShowImage ? (
             <div className="relative group w-full flex flex-col justify-center items-center">
               <div 
                 className={`relative flex ${aspectRatio} rounded-lg overflow-hidden border border-zinc-600 bg-zinc-900 cursor-pointer`}
@@ -108,22 +137,12 @@ export const ImageUpload = ({
                   width={previewWidth || undefined}
                   height={previewHeight || undefined}
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent) {
-                      parent.innerHTML = `
-                        <div class="w-full h-full flex items-center justify-center bg-zinc-800">
-                          <svg class="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                        </div>
-                      `;
-                    }
+                  onError={() => {
+                    // Se der erro (403, 404), atualizamos o estado
+                    // Isso fará o componente renderizar o placeholder no lugar da imagem quebrada
+                    setHasLoadError(true);
                   }}
                 />
-                {/* Overlay para zoom */}
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <div className="bg-zinc-800/90 p-2 rounded-full">
                     <ZoomIn className="w-5 h-5 text-zinc-300" />
@@ -143,62 +162,50 @@ export const ImageUpload = ({
                 height: previewHeight ? `${previewHeight}px` : 'auto'
               }}
             >
-              <ImageIcon className="w-12 h-12 text-zinc-400" />
+              <div className="flex flex-col items-center justify-center text-zinc-400">
+                <ImageIcon className="w-12 h-12 mb-2" />
+                {imageUrl && hasLoadError && (
+                  <span className="text-xs text-red-400 font-medium">Erro ao carregar imagem atual</span>
+                )}
+              </div>
             </div>
           )}
           
-          {/* Botões de controle abaixo do preview */}
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
-            {imageUrl ? (
-              <>
-                <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                  <Upload className="w-4 h-4" />
-                  {selectedFile ? "Alterar Imagem" : "Substituir Imagem"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileSelect}
-                  />
-                </label>
-                
-                {showRemoveButton && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    onClick={() => onFileChange(null)}
-                    className="px-4 py-2"
-                  >
-                    Remover Imagem
-                  </Button>
-                )}
-              </>
-            ) : (
-              <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
-                <Upload className="w-4 h-4" />
-                Selecionar Imagem
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-              </label>
+            <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
+              <Upload className="w-4 h-4" />
+              {/* Se tiver imagem E não estiver com erro, mostra "Alterar", senão "Selecionar" */}
+              {shouldShowImage ? "Alterar Imagem" : "Selecionar Imagem"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+            </label>
+            
+            {showRemoveButton && (imageUrl || selectedFile) && (
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => onFileChange(null)}
+                className="px-4 py-2"
+              >
+                Remover Imagem
+              </Button>
             )}
           </div>
           
-          {/* Informações técnicas */}
           <div className="mt-3 text-center w-full">
             <p className="text-sm text-zinc-400">
-              Formatos: JPG, PNG, WebP, GIF • Tamanho ideal: 800x600px
+              Formatos: JPG, PNG, WebP, GIF • Tamanho máximo: {maxSizeMB}MB
             </p>
           </div>
         </div>
       </div>
 
-      {/* Modal de visualização em tela cheia */}
       <AnimatePresence>
-        {showFullscreen && imageUrl && (
+        {showFullscreen && shouldShowImage && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

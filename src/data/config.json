@@ -60,10 +60,8 @@
           "icon": "FileText",
           "children": [
             { "name": "Headline", "icon": "HelpCircle", "href": "/headline-ecommerce" },
-            { "name": "Venda mais", "icon": "HelpCircle", "href": "/venda-mais-ecommerce" },
             { "name": "Cards home", "icon": "HelpCircle", "href": "/cards-home-ecommerce" },
             { "name": "Passos", "icon": "HelpCircle", "href": "/passos-ecommerce" },
-            { "name": "Animação", "icon": "HelpCircle", "href": "/animacao-ecommerce" },
             { "name": "Plataformas", "icon": "HelpCircle", "href": "/plataformas-ecommerce" },
             { "name": "Logos", "icon": "HelpCircle", "href": "/logos-ecommerce" },
             { "name": "Seção Certificada", "icon": "HelpCircle", "href": "/certified-ecommerce" },

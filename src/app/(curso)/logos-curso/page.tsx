@@ -105,7 +105,7 @@ export default function CursosPage() {
     fileStates,
     setFileState,
   } = useJsonManagement<CursosData>({
-    apiPath: "/api/tegbe-institucional/json/cursos",
+    apiPath: "/api/tegbe-institucional/json/logos-curso",
     defaultData: defaultCursosData,
     mergeFunction: mergeWithDefaults,
   });

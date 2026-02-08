@@ -156,7 +156,7 @@ function SortableLocationItem({
                       Completo
                     </span>
                   ) : (
-                    <span className="px-2 py-1 text-xs bg-[var(--color-warning)]/20 text-red rounded-full border border-[var(--color-warning)]/30">
+                    <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
                       Incompleto
                     </span>
                   )}
