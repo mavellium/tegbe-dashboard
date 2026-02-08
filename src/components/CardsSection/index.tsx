@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/Card";
 import { Button } from "@/components/Button";
 import { ShoppingBag, Plus } from "lucide-react";
 import { CardEditor } from "../CardEditor";
 
+// Tipos alinhados com o CardEditor
 interface Feature {
   text: string;
   icon: string;
@@ -14,6 +14,11 @@ interface CTA {
   text: string;
   action: "whatsapp" | "link" | "email" | "phone";
   value: string;
+}
+
+interface PhoneImageSize {
+  width: number;
+  height: number;
 }
 
 interface CardData {
@@ -30,10 +35,7 @@ interface CardData {
   cta: CTA;
   hasPhoneImage?: boolean;
   phoneImage?: string;
-  phoneImageSize?: {
-    width: number;
-    height: number;
-  };
+  phoneImageSize?: PhoneImageSize;
 }
 
 interface CardsSectionProps {
@@ -43,13 +45,6 @@ interface CardsSectionProps {
   onAddCard: () => void;
   onCardChange: (cardIndex: number, field: string, value: any) => void;
   onRemoveCard: (cardIndex: number) => void;
-  files: {
-    [cardId: number]: {
-      backgroundImage: File | null;
-      phoneImage: File | null;
-    };
-  };
-  onFileChange: (cardId: number, type: "backgroundImage" | "phoneImage", file: File | null) => void;
 }
 
 export const CardsSection: React.FC<CardsSectionProps> = ({
@@ -58,9 +53,7 @@ export const CardsSection: React.FC<CardsSectionProps> = ({
   onToggleCard,
   onAddCard,
   onCardChange,
-  onRemoveCard,
-  files,
-  onFileChange
+  onRemoveCard
 }) => {
   return (
     <div className="space-y-6">
@@ -93,8 +86,6 @@ export const CardsSection: React.FC<CardsSectionProps> = ({
               onToggle={() => onToggleCard(card.id)}
               onChange={(field: string, value: any) => onCardChange(index, field, value)}
               onRemove={() => onRemoveCard(index)}
-              selectedFiles={files[card.id] || { backgroundImage: null, phoneImage: null }}
-              onFileChange={(type: any, file: any) => onFileChange(card.id, type, file)}
             />
           ))}
         </div>
