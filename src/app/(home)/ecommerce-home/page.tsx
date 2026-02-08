@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -10,9 +10,7 @@ import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   Palette,
-  Tag,
   Settings,
-  Star,
   Image as ImageIcon,
   Layout,
   GripVertical,
@@ -24,7 +22,6 @@ import {
   Grid3X3,
   ShoppingCart,
   Rocket,
-  Package,
   Zap,
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
@@ -149,7 +146,6 @@ export default function EcommerceSectionPage() {
     errorMsg,
     deleteModal,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -160,8 +156,6 @@ export default function EcommerceSectionPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estado local para URLs temporárias de preview
-  const [tempImageUrls, setTempImageUrls] = useState<Record<string, string>>({});
   // Estado para drag & drop
   const [draggingCard, setDraggingCard] = useState<number | null>(null);
   // Referência para o último card adicionado
@@ -265,26 +259,6 @@ export default function EcommerceSectionPage() {
     }
   };
 
-  // Função para lidar com upload de imagem de cards
-  const handleCardImageChange = (cardIndex: number, file: File | null) => {
-    const card = ecommerceData.bento_cards[cardIndex];
-    const path = `bento_cards.${cardIndex}.image`;
-    
-    setFileState(path, file);
-    
-    if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      setTempImageUrls(prev => ({
-        ...prev,
-        [`card_${cardIndex}`]: objectUrl
-      }));
-      
-      updateCard(cardIndex, { image: objectUrl });
-    } else {
-      updateCard(cardIndex, { image: "" });
-    }
-  };
-
   // Funções de drag & drop
   const handleCardDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
@@ -323,28 +297,11 @@ export default function EcommerceSectionPage() {
     }
   };
 
-  // Limpar URLs temporárias ao desmontar
-  useEffect(() => {
-    return () => {
-      Object.values(tempImageUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-    };
-  }, [tempImageUrls]);
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
     try {
-      // Salvar no banco de dados
       await save();
-      
-      // Após salvar, limpar as URLs temporárias
-      Object.values(tempImageUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-      setTempImageUrls({});
-      
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
@@ -407,8 +364,7 @@ export default function EcommerceSectionPage() {
               <ImageUpload
                 label=""
                 currentImage={card.image || ""}
-                selectedFile={null}
-                onFileChange={(file) => handleCardImageChange(index, file)}
+                onChange={(url) => updateCard(index, { image: url })}
                 aspectRatio="aspect-video"
                 previewWidth={300}
                 previewHeight={200}
@@ -512,7 +468,7 @@ export default function EcommerceSectionPage() {
       }
     });
 
-    // Tema
+    // Theme
     total += 5;
     if (ecommerceData.theme.bg_section) completed++;
     if (ecommerceData.theme.bg_card) completed++;

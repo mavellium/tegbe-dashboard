@@ -7,23 +7,18 @@ import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
-import { Button } from "@/components/Button";
 import IconSelector from "@/components/IconSelector";
 import { 
   TrendingUp,
   Palette,
   Type,
-  Settings,
-  Layers,
-  ChevronDown,
-  ChevronUp,
-  ImageIcon,
   Zap,
-  CheckCircle2,
+  ImageIcon,
   School,
   Target,
   Star,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Layers
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -32,7 +27,6 @@ import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { hexToTailwindTextClass, tailwindToHex } from "@/lib/colors";
 import { ImageUpload } from "@/components/ImageUpload";
 
 interface ThemeData {
@@ -216,8 +210,6 @@ export default function DualShowcasePage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<ShowcaseData>({
     apiPath: "/api/tegbe-institucional/json/expertise",
     defaultData: defaultData,
@@ -236,12 +228,6 @@ export default function DualShowcasePage() {
 
   const handleChange = (path: string, value: any) => {
     updateNested(`${activeSection}.${path}`, value);
-  };
-
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -514,8 +500,7 @@ export default function DualShowcasePage() {
                     <ImageUpload
                       label="Imagem do Showcase"
                       currentImage={currentSectionData.visual.imageSrc}
-                      selectedFile={getFileFromState(`${activeSection}.visual.imageSrc`)}
-                      onFileChange={(file) => setFileState(`${activeSection}.visual.imageSrc`, file)}
+                      onChange={(url) => handleChange('visual.imageSrc', url)}
                       aspectRatio="aspect-video"
                       previewWidth={800}
                       previewHeight={450}

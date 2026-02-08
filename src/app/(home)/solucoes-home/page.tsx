@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -132,8 +132,6 @@ export default function ServiceRouterPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<ServiceRouterData>({
     apiPath: "/api/tegbe-institucional/json/solucoes",
     defaultData: defaultServiceRouterData,
@@ -158,7 +156,7 @@ export default function ServiceRouterPage() {
     }));
   };
 
-  // Função para adicionar serviço - ATUALIZADA para usar pageData diretamente
+  // Função para adicionar serviço
   const handleAddService = () => {
     if (pageData.service_router.services.length >= currentPlanLimit) {
       return false;
@@ -207,7 +205,7 @@ export default function ServiceRouterPage() {
     return true;
   };
 
-  // Função para atualizar serviço - ATUALIZADA
+  // Função para atualizar serviço
   const updateService = (index: number, updates: Partial<Service>) => {
     const updated = [...pageData.service_router.services];
     if (index >= 0 && index < updated.length) {
@@ -216,7 +214,7 @@ export default function ServiceRouterPage() {
     }
   };
 
-  // Função para remover serviço - ATUALIZADA
+  // Função para remover serviço
   const removeService = (index: number) => {
     const services = pageData.service_router.services;
     
@@ -254,7 +252,7 @@ export default function ServiceRouterPage() {
     }
   };
 
-  // Funções de drag & drop - ATUALIZADAS para usar pageData diretamente
+  // Funções de drag & drop
   const handleServiceDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
@@ -303,7 +301,7 @@ export default function ServiceRouterPage() {
     e.currentTarget.classList.remove('drag-over');
   };
 
-  // Funções para atualizar tema do serviço - CORRIGIDAS
+  // Funções para atualizar tema do serviço
   const handleServiceThemeChange = (index: number, property: keyof ServiceTheme, hexColor: string) => {
     const currentService = pageData.service_router.services[index];
     const newTheme = { ...currentService.theme };
@@ -326,12 +324,6 @@ export default function ServiceRouterPage() {
     updateService(index, { theme: newTheme });
   };
 
-  // Função auxiliar para obter File do fileStates - ADICIONADA
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
@@ -342,7 +334,7 @@ export default function ServiceRouterPage() {
     }
   };
 
-  // Validações - ATUALIZADAS para usar pageData
+  // Validações
   const isServiceValid = (item: Service): boolean => {
     return item.title.trim() !== '' && 
            item.verticalTitle.trim() !== '' && 
@@ -361,7 +353,7 @@ export default function ServiceRouterPage() {
     ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
     : null;
 
-  // Funções para obter cores hex - SIMPLIFICADAS
+  // Funções para obter cores hex
   const getBackgroundColor = (bgClass: string) => {
     const hex = tailwindToHex(bgClass);
     return hex ? hex + '20' : '#F9FAFB20';
@@ -699,8 +691,7 @@ export default function ServiceRouterPage() {
                                   <ImageUpload
                                     label=""
                                     currentImage={service.image}
-                                    selectedFile={getFileFromState(`service_router.services.${index}.image`)}
-                                    onFileChange={(file) => setFileState(`service_router.services.${index}.image`, file)}
+                                    onChange={(url) => updateService(index, { image: url })}
                                     description="Imagem de fundo do serviço"
                                     aspectRatio="aspect-video"
                                     previewWidth={200}

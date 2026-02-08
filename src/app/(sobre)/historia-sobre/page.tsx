@@ -22,7 +22,6 @@ import {
   Calendar,
   Target,
   BookOpen,
-  Image,
   Badge,
   Type,
   ArrowUpDown
@@ -32,7 +31,6 @@ import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { SectionHeader } from "@/components/SectionHeader";
 import { ImageUpload } from "@/components/ImageUpload";
-import { normalizeHexColor, extractHexFromTailwind } from "@/lib/colors";
 import Loading from "@/components/Loading";
 
 interface TimelineItem {
@@ -40,7 +38,6 @@ interface TimelineItem {
   step: string;
   title: string;
   description: string;
-  file?: File | null;
   image?: string;
 }
 
@@ -113,9 +110,7 @@ export default function TimelinePage() {
     success,
     errorMsg,
     deleteModal,
-    fileStates,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -590,8 +585,7 @@ export default function TimelinePage() {
                                         label="Imagem do Marco Histórico"
                                         description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x400px."
                                         currentImage={item.image || ""}
-                                        selectedFile={fileStates[`timeline.${index}.image`] || null}
-                                        onFileChange={(file) => setFileState(`timeline.${index}.image`, file)}
+                                        onChange={(url) => updateTimelineItem(index, { image: url })}
                                         aspectRatio="aspect-video"
                                         previewWidth={300}
                                         previewHeight={150}

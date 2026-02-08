@@ -92,8 +92,6 @@ export default function FluxoEstagiosEcommercePage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<FluxoEstagiosData>({
     apiPath: "/api/tegbe-institucional/json/passos",
     defaultData: defaultFluxoEstagiosData,
@@ -169,12 +167,6 @@ export default function FluxoEstagiosEcommercePage() {
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
-  };
-
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const calculateCompletion = () => {
@@ -415,8 +407,7 @@ export default function FluxoEstagiosEcommercePage() {
                                 <ImageUpload
                                   label=""
                                   currentImage={estagio.image || ''}
-                                  selectedFile={getFileFromState(`values.${index}.image`)}
-                                  onFileChange={(file) => setFileState(`values.${index}.image`, file)}
+                                  onChange={(url) => handleUpdateEstagio(index, { image: url })}
                                   aspectRatio="aspect-video"
                                   previewWidth={300}
                                   previewHeight={200}

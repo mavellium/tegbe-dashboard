@@ -93,8 +93,6 @@ export default function PlataformasMarketingPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<PlataformasData>({
     apiPath: "/api/tegbe-institucional/json/plataformas",
     defaultData: defaultPlataformasData,
@@ -152,12 +150,6 @@ export default function PlataformasMarketingPage() {
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
-  };
-
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const calculateCompletion = () => {
@@ -384,8 +376,7 @@ export default function PlataformasMarketingPage() {
                                 <ImageUpload
                                   label=""
                                   currentImage={plataforma.image || ''}
-                                  selectedFile={getFileFromState(`values.${index}.image`)}
-                                  onFileChange={(file) => setFileState(`values.${index}.image`, file)}
+                                  onChange={(url) => handleUpdatePlataforma(index, { image: url })}
                                   aspectRatio="aspect-square"
                                   previewWidth={200}
                                   previewHeight={200}

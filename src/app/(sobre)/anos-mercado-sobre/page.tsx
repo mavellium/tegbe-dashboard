@@ -1,32 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
-import { Button } from "@/components/Button";
 import { 
   Settings, 
-  AlertCircle,
   CheckCircle2,
-  XCircle,
-  Search,
   Layers,
   Image,
-  Badge,
-  Type,
   MessageSquare,
   Target,
   Link,
   Users,
   Eye,
-  Shield,
-  TrendingUp,
-  Calendar
+  Shield
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -34,8 +26,6 @@ import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationM
 import { SectionHeader } from "@/components/SectionHeader";
 import { ImageUpload } from "@/components/ImageUpload";
 import IconSelector from "@/components/IconSelector";
-import ColorPicker from "@/components/ColorPicker";
-import { normalizeHexColor, extractHexFromTailwind } from "@/lib/colors";
 import Loading from "@/components/Loading";
 
 interface ConsultoriaData {
@@ -130,9 +120,7 @@ export default function ConsultoriaPage() {
     success,
     errorMsg,
     deleteModal,
-    fileStates,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -143,7 +131,6 @@ export default function ConsultoriaPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [expandedSections, setExpandedSections] = useState({
     visual: true,
     header: false,
@@ -152,9 +139,6 @@ export default function ConsultoriaPage() {
 
   // Referência para scroll
   const contentRef = useRef<HTMLDivElement>(null);
-
-  // Controle de planos
-  const currentPlanType = 'pro';
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -273,8 +257,7 @@ export default function ConsultoriaPage() {
                           label="Imagem Principal"
                           description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x600px."
                           currentImage={consultoriaData.visual.imageSrc}
-                          selectedFile={fileStates['visual.imageSrc'] || null}
-                          onFileChange={(file) => setFileState('visual.imageSrc', file)}
+                          onChange={(url) => updateNested('visual.imageSrc', url)}
                           aspectRatio="aspect-[4/3]"
                           previewWidth={400}
                           previewHeight={300}

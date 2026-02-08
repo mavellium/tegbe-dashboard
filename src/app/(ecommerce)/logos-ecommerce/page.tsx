@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useId, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
@@ -13,7 +13,6 @@ import {
   X, 
   GripVertical, 
   ArrowUpDown, 
-  Plus, 
   AlertCircle, 
   CheckCircle2, 
   Trash2,
@@ -23,7 +22,6 @@ import {
   List,
   Type,
   DownloadCloud,
-  Tag,
   ChevronDown,
   Check
 } from "lucide-react";
@@ -54,7 +52,6 @@ interface LogoItem {
   id?: string;
   name: string;
   description: string;
-  file?: File | null;
   image?: string;
   category?: string;
 }
@@ -274,6 +271,7 @@ function LogoSelector({
                       }`}
                     >
                       {logo.image ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                           src={logo.image}
                           alt={logo.name}
@@ -335,10 +333,8 @@ function SortableLogoItem({
   logoList,
   suggestions,
   handleChange,
-  handleFileChange,
   handleImportCompany,
   openDeleteSingleModal,
-  getImageUrl,
   setNewItemRef,
 }: {
   logo: LogoItem;
@@ -350,10 +346,8 @@ function SortableLogoItem({
   logoList: LogoItem[];
   suggestions: SuggestionData;
   handleChange: (index: number, field: keyof LogoItem, value: any) => void;
-  handleFileChange: (index: number, file: File | null) => void;
   handleImportCompany: (index: number, companyData: LogoItem) => void;
   openDeleteSingleModal: (index: number, name: string) => void;
-  getImageUrl: (logo: LogoItem) => string;
   setNewItemRef?: (node: HTMLDivElement | null) => void;
 }) {
   const stableId = useId();
@@ -376,7 +370,7 @@ function SortableLogoItem({
 
   const hasName = logo.name.trim() !== "";
   const hasDescription = logo.description.trim() !== "";
-  const hasImage = Boolean(logo.image?.trim() !== "" || logo.file);
+  const hasImage = logo.image?.trim() !== "";
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -455,18 +449,18 @@ function SortableLogoItem({
                     <span className="font-medium text-sm">Agilizar preenchimento:</span>
                  </div>
                  <select 
-                    className="flex-1 px-3 py-2 rounded bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-secondary)] w-full"
-                    onChange={(e) => {
-                      if(!e.target.value) return;
-                      const company = suggestions.companies.find(c => c.name === e.target.value);
-                      if(company) handleImportCompany(originalIndex, company);
-                    }}
-                    value=""
+                   className="flex-1 px-3 py-2 rounded bg-[var(--color-background)] border border-[var(--color-border)] text-sm text-[var(--color-secondary)] w-full"
+                   onChange={(e) => {
+                     if(!e.target.value) return;
+                     const company = suggestions.companies.find(c => c.name === e.target.value);
+                     if(company) handleImportCompany(originalIndex, company);
+                   }}
+                   value=""
                  >
-                    <option value="">Selecione uma empresa existente...</option>
-                    {suggestions.companies.map((c, i) => (
-                      <option key={i} value={c.name}>{c.name}</option>
-                    ))}
+                   <option value="">Selecione uma empresa existente...</option>
+                   {suggestions.companies.map((c, i) => (
+                     <option key={i} value={c.name}>{c.name}</option>
+                   ))}
                  </select>
                </div>
              </div>
@@ -483,8 +477,7 @@ function SortableLogoItem({
                   label="Imagem do Logo"
                   description="Formatos suportados: PNG (transparente), SVG, JPG."
                   currentImage={logo.image || ""}
-                  selectedFile={logo.file || null}
-                  onFileChange={(file) => handleFileChange(originalIndex, file)}
+                  onChange={(url) => handleChange(originalIndex, "image", url)}
                   aspectRatio="aspect-square"
                   previewWidth={200}
                   previewHeight={200}
@@ -560,7 +553,6 @@ export default function LogosPage({
     name: "", 
     description: "",
     category: "",
-    file: null, 
     image: "" 
   }), []);
 
@@ -580,7 +572,7 @@ export default function LogosPage({
     setSuccess,
     errorMsg,
     setErrorMsg,
-    showValidation,
+    showValidation, // Adicionado aqui
     deleteModal,
     currentPlanLimit,
     currentPlanType,
@@ -669,7 +661,7 @@ export default function LogosPage({
 
     try {
       const filteredList = localLogos.filter(
-        logo => logo.name.trim() && logo.description.trim() && (logo.image?.trim() || logo.file)
+        logo => logo.name.trim() && logo.description.trim() && logo.image?.trim()
       );
 
       if (!filteredList.length) {
@@ -683,16 +675,8 @@ export default function LogosPage({
 
       fd.append(
         "values",
-        JSON.stringify(
-          filteredList.map(({ file, ...rest }) => rest)
-        )
+        JSON.stringify(filteredList)
       );
-
-      filteredList.forEach((logo, i) => {
-        if (logo.file) {
-          fd.append(`file${i}`, logo.file);
-        }
-      });
 
       const method = exists ? "PUT" : "POST";
 
@@ -711,7 +695,6 @@ export default function LogosPage({
       const normalized = saved.values.map((v: any, i: number) => ({
         ...v,
         id: v.id || `logo-${Date.now()}-${i}`,
-        file: null,
       }));
 
       setLocalLogos(normalized);
@@ -743,13 +726,6 @@ export default function LogosPage({
     setLogoList(newList);
   };
 
-  const handleFileChange = (index: number, file: File | null) => {
-    const newList = [...localLogos];
-    newList[index] = { ...newList[index], file };
-    setLocalLogos(newList);
-    setLogoList(newList);
-  };
-
   const handleImportCompany = (index: number, companyData: LogoItem) => {
     const newList = [...localLogos];
     newList[index] = { 
@@ -757,32 +733,17 @@ export default function LogosPage({
       name: companyData.name,
       image: companyData.image,
       description: companyData.description || newList[index].description,
-      category: companyData.category || newList[index].category,
-      file: null 
+      category: companyData.category || newList[index].category
     };
     setLocalLogos(newList);
     setLogoList(newList);
-  };
-
-  const getImageUrl = (logo: LogoItem): string => {
-    if (logo.file) {
-      return URL.createObjectURL(logo.file);
-    }
-    if (logo.image) {
-      if (logo.image.startsWith('http') || logo.image.startsWith('//')) {
-        return logo.image;
-      } else {
-        return `https://mavellium.com.br${logo.image.startsWith('/') ? '' : '/'}${logo.image}`;
-      }
-    }
-    return "";
   };
 
   const updateLogos = async (list: LogoItem[]) => {
     if (!exists) return;
 
     const filteredList = list.filter(
-      logo => logo.name.trim() || logo.description.trim() || logo.category?.trim() || logo.file || logo.image
+      logo => logo.name.trim() || logo.description.trim() || logo.category?.trim() || logo.image
     );
 
     const fd = new FormData();
@@ -793,10 +754,6 @@ export default function LogosPage({
       fd.append(`values[${i}][description]`, logo.description);
       fd.append(`values[${i}][category]`, logo.category || "");
       fd.append(`values[${i}][image]`, logo.image || "");
-      
-      if (logo.file) {
-        fd.append(`file${i}`, logo.file);
-      }
       
       if (logo.id) {
         fd.append(`values[${i}][id]`, logo.id);
@@ -824,7 +781,6 @@ export default function LogosPage({
       name: '',
       description: '',
       category: '',
-      file: null,
       image: ''
     };
     
@@ -860,7 +816,7 @@ export default function LogosPage({
   const logosCompleteCount = localLogos.filter(logo => 
     logo.name.trim() !== '' && 
     logo.description.trim() !== '' && 
-    (logo.image?.trim() !== '' || logo.file)
+    logo.image?.trim() !== ''
   ).length;
   const logosTotalCount = localLogos.length;
 
@@ -876,7 +832,7 @@ export default function LogosPage({
       if (logo.name.trim()) completed++;
       if (logo.description.trim()) completed++;
       if (logo.category?.trim()) completed++;
-      if (logo.image?.trim() || logo.file) completed++;
+      if (logo.image?.trim()) completed++;
     });
     return { completed, total };
   };
@@ -981,7 +937,7 @@ export default function LogosPage({
                     const originalIndex = localLogos.findIndex(l => l.id === logo.id) || index;
                     const hasName = logo.name.trim() !== "";
                     const hasDescription = logo.description.trim() !== "";
-                    const hasImage = Boolean(logo.image?.trim() !== "" || logo.file);
+                    const hasImage = logo.image?.trim() !== "";
                     const isLastInOriginalList = originalIndex === localLogos.length - 1;
                     const isLastAndEmpty = isLastInOriginalList && !hasName && !hasDescription && !hasImage;
 
@@ -997,10 +953,8 @@ export default function LogosPage({
                         logoList={localLogos}
                         suggestions={suggestions}
                         handleChange={handleChange}
-                        handleFileChange={handleFileChange}
                         handleImportCompany={handleImportCompany}
                         openDeleteSingleModal={openDeleteSingleModal}
-                        getImageUrl={getImageUrl}
                         setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
                       />
                     );

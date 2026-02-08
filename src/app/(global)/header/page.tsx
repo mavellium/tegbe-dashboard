@@ -237,9 +237,7 @@ export default function Page() {
     success,
     errorMsg,
     deleteModal,
-    fileStates,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -414,13 +412,6 @@ export default function Page() {
   const canAddNewLink = !isLinksLimitReached;
   const linksCompleteCount = localLinks.filter(isLinkValid).length;
   const linksTotalCount = localLinks.length;
-
-  const isGeneralValid = (): boolean => {
-    return headerData.general.logo.trim() !== '' && 
-           headerData.general.logoAlt.trim() !== '' &&
-           headerData.general.ctaLink.trim() !== '' &&
-           headerData.general.ctaText.trim() !== '';
-  };
 
   const generalCompleteCount = [
     headerData.general.logo.trim() !== '',
@@ -823,8 +814,7 @@ export default function Page() {
                     label="Logo do Site"
                     description="Imagem principal do site (recomendado: PNG transparente)"
                     currentImage={headerData.general.logo}
-                    selectedFile={fileStates['general.logo'] || null}
-                    onFileChange={(file) => setFileState('general.logo', file)}
+                    onChange={(url) => updateNested('general.logo', url)}
                     aspectRatio="aspect-[4/1]"
                     previewWidth={200}
                     previewHeight={200}
@@ -842,8 +832,7 @@ export default function Page() {
                     label="Badge de Consultor"
                     description="Selo de consultoria certificada"
                     currentImage={headerData.general.consultantBadge}
-                    selectedFile={fileStates['general.consultantBadge'] || null}
-                    onFileChange={(file) => setFileState('general.consultantBadge', file)}
+                    onChange={(url) => updateNested('general.consultantBadge', url)}
                     aspectRatio="aspect-square"
                     previewWidth={100}
                     previewHeight={100}

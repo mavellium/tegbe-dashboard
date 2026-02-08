@@ -110,8 +110,6 @@ export default function CertificacaoMLPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<CertificacaoMLData>({
     apiPath: "/api/tegbe-institucional/json/certificacao",
     defaultData: defaultCertificacaoMLData,
@@ -175,12 +173,6 @@ export default function CertificacaoMLPage() {
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
-  };
-
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const calculateCompletion = () => {
@@ -554,8 +546,7 @@ export default function CertificacaoMLPage() {
                     <ImageUpload
                       label=""
                       currentImage={pageData.values.images.consultant || ''}
-                      selectedFile={getFileFromState('values.images.consultant')}
-                      onFileChange={(file) => setFileState('values.images.consultant', file)}
+                      onChange={(url) => updateNested('values.images.consultant', url)}
                       aspectRatio="aspect-square"
                       previewWidth={300}
                       previewHeight={300}
@@ -575,8 +566,7 @@ export default function CertificacaoMLPage() {
                     <ImageUpload
                       label=""
                       currentImage={pageData.values.images.seal || ''}
-                      selectedFile={getFileFromState('values.images.seal')}
-                      onFileChange={(file) => setFileState('values.images.seal', file)}
+                      onChange={(url) => updateNested('values.images.seal', url)}
                       aspectRatio="aspect-square"
                       previewWidth={300}
                       previewHeight={300}

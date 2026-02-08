@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useCallback, useId, useRef, useEffect } from "react";
+import { useState, useMemo, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -20,25 +20,15 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Trash2,
-  XCircle,
   Search,
   X,
-  Users,
-  Type,
-  MessageSquare,
-  Instagram,
-  ChevronDown,
-  ChevronUp,
-  Zap,
-  Palette,
-  Layers,
-  Grid3x3,
-  Crown,
-  Image as ImageLucide,
   Text,
   Badge,
-  Hash,
-  Tag
+  Layers,
+  Image as ImageLucide,
+  Type,
+  MessageSquare,
+  Instagram
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -53,7 +43,6 @@ interface GalleryImage {
   alt: string;
   image: string;
   span: string;
-  file?: File | null;
 }
 
 interface BadgeContent {
@@ -78,7 +67,6 @@ interface GalleryData {
       cardTitle?: string;
       cardDescription?: string;
     };
-    // Adicione outros campos conforme necessário
   };
 }
 
@@ -110,7 +98,6 @@ const defaultData: GalleryData = {
   }
 };
 
-// Função para mesclar com dados padrão
 const mergeWithDefaults = (apiData: any, defaultData: GalleryData): GalleryData => {
   if (!apiData) return defaultData;
   
@@ -119,8 +106,7 @@ const mergeWithDefaults = (apiData: any, defaultData: GalleryData): GalleryData 
       id: item.id || `image-${Date.now()}-${index}`,
       alt: item.alt || "",
       image: item.image || "",
-      span: item.span || "row-span-1",
-      file: null
+      span: item.span || "row-span-1"
     })) || defaultData.data,
     textContent: {
       badge: {
@@ -149,18 +135,14 @@ function SortableGalleryItem({
   showValidation,
   itemList,
   handleChange,
-  handleFileChange,
   openDeleteSingleModal,
-  getImageUrl,
 }: {
   item: GalleryImage;
   index: number;
   showValidation: boolean;
   itemList: GalleryImage[];
   handleChange: (index: number, field: keyof GalleryImage, value: any) => void;
-  handleFileChange: (index: number, file: File | null) => void;
   openDeleteSingleModal: (index: number, title: string) => void;
-  getImageUrl: (item: GalleryImage) => string;
 }) {
   const stableId = useId();
   const sortableId = item.id || `gallery-${index}-${stableId}`;
@@ -181,10 +163,8 @@ function SortableGalleryItem({
   };
 
   const hasAlt = item.alt.trim() !== "";
-  const hasImage = Boolean(item.image?.trim() !== "" || item.file);
+  const hasImage = item.image?.trim() !== "";
   const hasSpan = Boolean(item.span.trim() !== "");
-
-  const imageUrl = getImageUrl(item);
 
   return (
     <div
@@ -259,8 +239,7 @@ function SortableGalleryItem({
                   label=""
                   description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 1000x500px."
                   currentImage={item.image || ""}
-                  selectedFile={item.file || null}
-                  onFileChange={(file) => handleFileChange(index, file)}
+                  onChange={(url) => handleChange(index, "image", url)}
                   aspectRatio="aspect-video"
                   previewWidth={300}
                   previewHeight={150}
@@ -329,7 +308,6 @@ export default function GalleryPage() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [showValidation, setShowValidation] = useState(false);
   const [deleteImageIndex, setDeleteImageIndex] = useState<number | null>(null);
   const [deleteImageTitle, setDeleteImageTitle] = useState<string>("");
@@ -346,8 +324,6 @@ export default function GalleryPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<GalleryData>({
     apiPath: "/api/tegbe-institucional/json/gallery",
     defaultData: defaultData,
@@ -373,17 +349,6 @@ export default function GalleryPage() {
     const newImages = [...images];
     newImages[index] = { ...newImages[index], [field]: value };
     updateNested(`data`, newImages);
-  };
-
-  const handleImageFileChange = (index: number, file: File | null) => {
-    const newImages = [...images];
-    newImages[index] = { ...newImages[index], file };
-    updateNested(`data`, newImages);
-  };
-
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -416,21 +381,12 @@ export default function GalleryPage() {
     }
   };
 
-  const getImageUrl = (item: GalleryImage): string => {
-    if (item.file) return URL.createObjectURL(item.file);
-    if (item.image) {
-      return item.image.startsWith('http') ? item.image : `https://mavellium.com.br${item.image.startsWith('/') ? '' : '/'}${item.image}`;
-    }
-    return "";
-  };
-
   const handleAddImage = () => {
     const newImage: GalleryImage = {
       id: `image-${Date.now()}-${images.length}`,
       alt: '',
       image: '',
-      span: 'row-span-1',
-      file: null
+      span: 'row-span-1'
     };
     updateNested(`data`, [...images, newImage]);
   };
@@ -488,7 +444,7 @@ export default function GalleryPage() {
     total += images.length * 3; // alt, image, span para cada imagem
     images.forEach(image => {
       if (image.alt.trim()) completed++;
-      if (image.image.trim() || image.file) completed++;
+      if (image.image.trim()) completed++;
       if (image.span.trim()) completed++;
     });
 
@@ -496,7 +452,7 @@ export default function GalleryPage() {
   };
 
   const completion = calculateCompletion();
-  const imagesComplete = images.filter(image => image.alt.trim() && (image.image.trim() || image.file)).length;
+  const imagesComplete = images.filter(image => image.alt.trim() && image.image.trim()).length;
 
   if (loading && !exists) {
     return <Loading layout={Layers} exists={!!exists} />;
@@ -773,9 +729,7 @@ export default function GalleryPage() {
                             showValidation={showValidation}
                             itemList={images}
                             handleChange={handleImageChange}
-                            handleFileChange={handleImageFileChange}
                             openDeleteSingleModal={openDeleteSingleModal}
-                            getImageUrl={getImageUrl}
                           />
                         ))}
                       </SortableContext>
@@ -864,39 +818,6 @@ export default function GalleryPage() {
         success={success} 
         errorMsg={errorMsg} 
       />
-
-      {/* Modal de imagem expandida */}
-      <AnimatePresence>
-        {expandedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4"
-            onClick={() => setExpandedImage(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="relative max-w-6xl max-h-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                onClick={() => setExpandedImage(null)}
-                className="absolute -top-4 -right-4 !p-3 !rounded-full bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 z-10 border-none"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-              <img
-                src={expandedImage}
-                alt="Preview expandido"
-                className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </ManageLayout>
   );
 }

@@ -13,21 +13,19 @@ import {
   Settings, 
   Link as LinkIcon, 
   Mail, 
-  Phone, 
-  MapPin, 
-  Building, 
   Globe, 
   Instagram, 
   Linkedin, 
   Youtube, 
-  FileText,
-  Palette,
-  GripVertical,
-  AlertCircle,
-  CheckCircle2,
-  XCircle,
-  Trash2,
-  Plus
+  FileText, 
+  Palette, 
+  GripVertical, 
+  AlertCircle, 
+  CheckCircle2, 
+  XCircle, 
+  Trash2, 
+  Plus,
+  Building
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -230,7 +228,7 @@ const defaultFooterData: FooterData = {
 // Função para mesclar dados com padrão
 const mergeWithDefaults = (apiData: any, defaultData: FooterData): FooterData => {
   if (!apiData) return defaultData;
-  
+   
   return {
     id: apiData.id,
     general: {
@@ -385,9 +383,7 @@ export default function Page() {
     success,
     errorMsg,
     deleteModal,
-    fileStates,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -444,23 +440,23 @@ export default function Page() {
     if (localNavigation.length >= currentPlanLimit) {
       return false;
     }
-    
+     
     const newItem: NavigationItem = {
       name: '',
       href: ''
     };
-    
+     
     const updated = [...localNavigation, newItem];
     setLocalNavigation(updated);
     updateNested('navigation', updated);
-    
+     
     setTimeout(() => {
       newNavItemRef.current?.scrollIntoView({ 
         behavior: 'smooth',
         block: 'nearest'
       });
     }, 100);
-    
+     
     return true;
   };
 
@@ -475,7 +471,7 @@ export default function Page() {
 
   const removeNav = (index: number) => {
     const updated = [...localNavigation];
-    
+     
     if (updated.length <= 1) {
       // Mantém pelo menos um item vazio
       const emptyItem: NavigationItem = {
@@ -496,22 +492,22 @@ export default function Page() {
     if (localContentLinks.length >= currentPlanLimit) {
       return false;
     }
-    
+     
     const updated = [...localContentLinks, ""];
     setLocalContentLinks(updated);
-    
+     
     // Replica automaticamente para todas as páginas
     pageKeys.forEach((page) => {
       updateNested(`content.${page}.links`, updated);
     });
-    
+     
     setTimeout(() => {
       newContentLinkRef.current?.scrollIntoView({ 
         behavior: 'smooth',
         block: 'nearest'
       });
     }, 100);
-    
+     
     return true;
   };
 
@@ -520,7 +516,7 @@ export default function Page() {
     if (index >= 0 && index < updated.length) {
       updated[index] = value;
       setLocalContentLinks(updated);
-      
+       
       // Replica automaticamente para todas as páginas
       pageKeys.forEach((page) => {
         updateNested(`content.${page}.links`, updated);
@@ -530,7 +526,7 @@ export default function Page() {
 
   const removeContentLink = (index: number) => {
     const updated = [...localContentLinks];
-    
+     
     if (updated.length <= 1) {
       // Mantém pelo menos um item vazio
       setLocalContentLinks([""]);
@@ -555,19 +551,19 @@ export default function Page() {
 
   const handleNavDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    
+     
     if (draggingNavItem === null || draggingNavItem === index) return;
-    
+     
     const updated = [...localNavigation];
     const draggedItem = updated[draggingNavItem];
-    
+     
     // Remove o item arrastado
     updated.splice(draggingNavItem, 1);
-    
+     
     // Insere na nova posição
     const newIndex = index > draggingNavItem ? index : index;
     updated.splice(newIndex, 0, draggedItem);
-    
+     
     setLocalNavigation(updated);
     updateNested('navigation', updated);
     setDraggingNavItem(index);
@@ -587,26 +583,26 @@ export default function Page() {
 
   const handleContentLinkDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    
+     
     if (draggingContentLink === null || draggingContentLink === index) return;
-    
+     
     const updated = [...localContentLinks];
     const draggedItem = updated[draggingContentLink];
-    
+     
     // Remove o item arrastado
     updated.splice(draggingContentLink, 1);
-    
+     
     // Insere na nova posição
     const newIndex = index > draggingContentLink ? index : index;
     updated.splice(newIndex, 0, draggedItem);
-    
+     
     setLocalContentLinks(updated);
-    
+     
     // Replica automaticamente para todas as páginas
     pageKeys.forEach((page) => {
       updateNested(`content.${page}.links`, updated);
     });
-    
+     
     setDraggingContentLink(index);
   };
 
@@ -643,16 +639,16 @@ export default function Page() {
   };
 
   // Configuração de upload de imagens (aplica automaticamente a todas as páginas)
-  const handleBadgeImageUpload = (file: File | null) => {
+  const handleBadgeImageUpdate = (url: string) => {
     // Aplica automaticamente a todas as páginas
     pageKeys.forEach((page) => {
-      setFileState(`content.${page}.badgeImage`, file);
+      updateNested(`content.${page}.badgeImage`, url);
     });
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
+     
     try {
       await save();
     } catch (err) {
@@ -733,7 +729,7 @@ export default function Page() {
       'primary', 'hoverText', 'decoration', 'bgHover', 'borderHover', 
       'glowGradient', 'glowAmbient', 'iconBg', 'iconHoverText', 'iconHoverBg', 'topBorder'
     ];
-    
+     
     pageKeys.forEach(page => {
       const variant = footerData.variants[page];
       variantProperties.forEach(prop => {
@@ -792,13 +788,12 @@ export default function Page() {
                       </span>
                     </div>
                   </div>
-                  
+                   
                   <ImageUpload
                     label="Logo do Footer"
                     description="Logo principal no rodapé"
                     currentImage={footerData.general.logo}
-                    selectedFile={fileStates['general.logo'] || null}
-                    onFileChange={(file) => setFileState('general.logo', file)}
+                    onChange={(url) => updateNested('general.logo', url)}
                     aspectRatio="aspect-[4/1]"
                     previewWidth={200}
                     previewHeight={200}
@@ -808,8 +803,7 @@ export default function Page() {
                     label="Logo Powered By"
                     description="Logo da empresa parceira (ex: Mavellium)"
                     currentImage={footerData.general.poweredByLogo}
-                    selectedFile={fileStates['general.poweredByLogo'] || null}
-                    onFileChange={(file) => setFileState('general.poweredByLogo', file)}
+                    onChange={(url) => updateNested('general.poweredByLogo', url)}
                     aspectRatio="aspect-[3/1]"
                     previewWidth={200}
                     previewHeight={200}
@@ -821,7 +815,7 @@ export default function Page() {
                     <FileText className="w-5 h-5" />
                     Dados da Empresa
                   </h3>
-                  
+                   
                   <Input
                     label="CNPJ"
                     value={footerData.general.cnpj}
@@ -873,7 +867,7 @@ export default function Page() {
                       </span>
                     </div>
                   </div>
-                  
+                   
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
@@ -887,7 +881,7 @@ export default function Page() {
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                     </div>
-                    
+                     
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
                         <Linkedin className="w-4 h-4 text-blue-700" />
@@ -900,7 +894,7 @@ export default function Page() {
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
                     </div>
-                    
+                     
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
                         <Youtube className="w-4 h-4 text-red-600" />
@@ -1022,7 +1016,7 @@ export default function Page() {
                           >
                             <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
                           </div>
-                          
+                           
                           {/* Indicador de posição */}
                           <div className="flex flex-col items-center">
                             <span className="text-xs font-medium text-[var(--color-secondary)]/70">
@@ -1030,7 +1024,7 @@ export default function Page() {
                             </span>
                             <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
                           </div>
-                          
+                           
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-4">
                               <h4 className="font-medium text-[var(--color-secondary)]">
@@ -1046,7 +1040,7 @@ export default function Page() {
                                 </span>
                               )}
                             </div>
-                            
+                             
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">
@@ -1074,7 +1068,7 @@ export default function Page() {
                             </div>
                           </div>
                         </div>
-                        
+                         
                         <div className="flex flex-col gap-2">
                           <Button
                             type="button"
@@ -1126,13 +1120,12 @@ export default function Page() {
                     <FileText className="w-5 h-5" />
                     Badge e Estatísticas
                   </h3>
-                  
+                   
                   <ImageUpload
                     label="Imagem do Badge"
                     description="Selo/logo que aparece no footer (aplica a todas as páginas)"
                     currentImage={footerData.content.ecommerce.badgeImage}
-                    selectedFile={fileStates['content.ecommerce.badgeImage'] || null}
-                    onFileChange={handleBadgeImageUpload}
+                    onChange={handleBadgeImageUpdate}
                     aspectRatio="aspect-square"
                     previewWidth={100}
                     previewHeight={100}
@@ -1211,7 +1204,7 @@ export default function Page() {
                       </span>
                     </div>
                   </div>
-                  
+                   
                   <Input
                     label="Título da Coluna"
                     value={footerData.content.ecommerce.columnTitle}
@@ -1244,7 +1237,7 @@ export default function Page() {
                         )}
                       </div>
                     </div>
-                    
+                     
                     {/* Mensagem de erro */}
                     {contentLinksValidationError && (
                       <div className={`p-3 rounded-lg ${isContentLinksLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
@@ -1289,14 +1282,14 @@ export default function Page() {
                               >
                                 <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
                               </div>
-                              
+                               
                               {/* Indicador de posição */}
                               <div className="flex flex-col items-center">
                                 <span className="text-xs font-medium text-[var(--color-secondary)]/70">
                                   {index + 1}
                                 </span>
                               </div>
-                              
+                               
                               <div className="flex-1">
                                 <div className="flex items-center gap-3 mb-2">
                                   <h4 className="font-medium text-[var(--color-secondary)]">
@@ -1312,7 +1305,7 @@ export default function Page() {
                                     </span>
                                   )}
                                 </div>
-                                
+                                 
                                 <div className="space-y-2">
                                   <Input
                                     value={link}
@@ -1323,7 +1316,7 @@ export default function Page() {
                                 </div>
                               </div>
                             </div>
-                            
+                             
                             <div className="flex flex-col gap-2">
                               <Button
                                 type="button"
@@ -1347,7 +1340,7 @@ export default function Page() {
                     <Mail className="w-5 h-5" />
                     Contato e Descrição
                   </h3>
-                  
+                   
                   <Input
                     label="Email de Contato"
                     type="email"

@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { TextArea } from "@/components/TextArea";
 import IconSelector from "@/components/IconSelector";
 import { ImageUpload } from "@/components/ImageUpload";
 import { 
@@ -128,8 +127,6 @@ export default function AuthoritySectionPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<AuthoritySectionData>({
     apiPath: "/api/tegbe-institucional/json/metricas-home",
     defaultData: defaultAuthoritySectionData,
@@ -343,16 +340,8 @@ export default function AuthoritySectionPage() {
     setDraggingPartner(null);
   };
 
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
-    console.log('Salvando dados:', pageData);
     
     try {
       await save();
@@ -975,8 +964,7 @@ export default function AuthoritySectionPage() {
                                 <ImageUpload
                                   label="Logo do Parceiro"
                                   currentImage={partner.src}
-                                  selectedFile={getFileFromState(`authority_section.infrastructure.partners.${index}.src`)}
-                                  onFileChange={(file) => setFileState(`authority_section.infrastructure.partners.${index}.src`, file)}
+                                  onChange={(url) => handleUpdatePartner(index, { src: url })}
                                   description="Faça upload ou cole a URL do logo do parceiro"
                                   aspectRatio="aspect-square"
                                   previewWidth={150}

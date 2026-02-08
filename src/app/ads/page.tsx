@@ -7,42 +7,49 @@ import { useListManagement } from "@/hooks/useListManagement";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { Button } from "@/components/Button";
-import { Type, MessageSquare, Image as ImageIcon, X, ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  Type, 
+  MessageSquare, 
+  Image as ImageIcon, 
+  X, 
+  ChevronDown, 
+  ChevronUp
+} from "lucide-react";
 import { SearchSortBar } from "@/components/Manage/SearchSortBar";
 import { ItemHeader } from "@/components/Manage/ItemHeader";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
-import { ImageUpload } from "@/components/Manage/ImageUpload";
+import { ImageUpload } from "@/components/ImageUpload";
 import ColorPicker from "@/components/ColorPicker";
 import IconSelector from "@/components/IconSelector";
-import Image from "next/image";
+import { Button } from "@/components/Button";
 
+// ================= TIPOS =================
 interface AdsItem {
   id?: string;
-  titulo?: {
-    linha1?: string;
-    linha2?: string;
-    linha3?: string;
-    linha4?: string;
-    linha5?: string;
-    linha6?: string;
-    linha7?: string;
-    corDestaque?: string;
+  titulo: {
+    linha1: string;
+    linha2: string;
+    linha3: string;
+    linha4: string;
+    linha5: string;
+    linha6: string;
+    linha7: string;
+    corDestaque: string;
   };
-  botao?: {
-    texto?: string;
-    link?: string;
-    icone?: string;
+  botao: {
+    texto: string;
+    link: string;
+    icone: string;
   };
-  background?: {
-    src?: string;
-    alt?: string;
+  background: {
+    src: string;
+    alt: string;
   };
-  file?: File | null;
 }
 
+// ================= COMPONENTE PRINCIPAL =================
 export default function AdsPage({ 
   type = "ads", 
   subtype = "tegbe-institucional"
@@ -50,27 +57,18 @@ export default function AdsPage({
   type: string; 
   subtype: string; 
 }) {
-  const defaultItem = useMemo(() => ({ 
+  // --- Estados e Configurações Iniciais ---
+  const defaultItem: AdsItem = useMemo(() => ({ 
     titulo: {
-      linha1: "",
-      linha2: "",
-      linha3: "",
-      linha4: "",
-      linha5: "",
-      linha6: "",
-      linha7: "",
-      corDestaque: "#FFCC00"
+      linha1: "", linha2: "", linha3: "", linha4: "", 
+      linha5: "", linha6: "", linha7: "", corDestaque: "#FFCC00"
     },
     botao: {
-      texto: "",
-      link: "",
-      icone: "ic:baseline-whatsapp"
+      texto: "", link: "", icone: "ic:baseline-whatsapp"
     },
     background: {
-      src: "",
-      alt: ""
-    },
-    file: null
+      src: "", alt: ""
+    }
   }), []);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
@@ -79,6 +77,7 @@ export default function AdsPage({
 
   const apiBase = `/api/${subtype}/form`;
 
+  // --- Hook de Gerenciamento ---
   const {
     list: adsList,
     setList: setAdsList,
@@ -107,6 +106,7 @@ export default function AdsPage({
     closeDeleteModal,
     confirmDelete,
     clearFilters,
+    // save removido pois não existe no hook useListManagement
   } = useListManagement<AdsItem>({
     type,
     apiPath: `${apiBase}/${type}`,
@@ -116,153 +116,78 @@ export default function AdsPage({
 
   const remainingSlots = Math.max(0, currentPlanLimit - adsList.length);
 
+  // --- Refs ---
   const setNewItemRef = useCallback((node: HTMLDivElement | null) => {
     if (newItemRef && node) {
       (newItemRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
     }
   }, [newItemRef]);
 
-  // Carregar dados do backend
-useEffect(() => {
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      console.log("Carregando dados do backend...");
+  // --- Carregamento de Dados ---
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${apiBase}/${type}`);
 
-      const response = await fetch(`${apiBase}/${type}`);
+        if (!response.ok) {
+          setAdsList([defaultItem]);
+          return;
+        }
 
-      if (!response.ok) {
-        console.error("Erro na resposta do backend:", response.status);
+        const data = await response.json();
+
+        if (data && Array.isArray(data.values) && data.values.length > 0) {
+          const dbItem = data.values[0];
+          
+          const normalizedItem: AdsItem = {
+            id: data.id,
+            titulo: {
+              linha1: dbItem?.titulo?.linha1 ?? "",
+              linha2: dbItem?.titulo?.linha2 ?? "",
+              linha3: dbItem?.titulo?.linha3 ?? "",
+              linha4: dbItem?.titulo?.linha4 ?? "",
+              linha5: dbItem?.titulo?.linha5 ?? "",
+              linha6: dbItem?.titulo?.linha6 ?? "",
+              linha7: dbItem?.titulo?.linha7 ?? "",
+              corDestaque: dbItem?.titulo?.corDestaque ?? "#FFCC00",
+            },
+            botao: {
+              texto: dbItem?.botao?.texto ?? "",
+              link: dbItem?.botao?.link ?? "",
+              icone: dbItem?.botao?.icone ?? "ic:baseline-whatsapp",
+            },
+            background: {
+              src: dbItem?.background?.src ?? "",
+              alt: dbItem?.background?.alt ?? "",
+            }
+          };
+
+          setAdsList([normalizedItem]);
+        } else {
+          setAdsList([defaultItem]);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados:", error);
         setAdsList([defaultItem]);
-        return;
+      } finally {
+        setLoading(false);
+        setInitialLoad(false);
       }
+    };
 
-      const data = await response.json();
-      console.log("Dados recebidos do backend:", data);
-
-      if (data && Array.isArray(data.values) && data.values.length > 0) {
-        const dbItem = data.values[0];
-        console.log("Item encontrado no banco:", dbItem);
-
-        const normalizedItem: AdsItem = {
-          id: data.id,
-          titulo: {
-            linha1: dbItem?.titulo?.linha1 ?? "",
-            linha2: dbItem?.titulo?.linha2 ?? "",
-            linha3: dbItem?.titulo?.linha3 ?? "",
-            linha4: dbItem?.titulo?.linha4 ?? "",
-            linha5: dbItem?.titulo?.linha5 ?? "",
-            linha6: dbItem?.titulo?.linha6 ?? "",
-            linha7: dbItem?.titulo?.linha7 ?? "",
-            corDestaque: dbItem?.titulo?.corDestaque ?? "#FFCC00",
-          },
-          botao: {
-            texto: dbItem?.botao?.texto ?? "",
-            link: dbItem?.botao?.link ?? "",
-            icone: dbItem?.botao?.icone ?? "ic:baseline-whatsapp",
-          },
-          background: {
-            src: dbItem?.background?.src ?? "",
-            alt: dbItem?.background?.alt ?? "",
-          },
-          file: null,
-        };
-
-        console.log("Item normalizado:", normalizedItem);
-        setAdsList([normalizedItem]);
-      } else {
-        console.log("Registro existe, mas values vazio. Usando padrão");
-        setAdsList([defaultItem]);
-      }
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-      setAdsList([defaultItem]);
-    } finally {
-      setLoading(false);
-      setInitialLoad(false);
+    if (initialLoad) {
+      loadData();
     }
-  };
+  }, [apiBase, type, initialLoad, defaultItem, setAdsList, setLoading]);
 
-  if (initialLoad) {
-    loadData();
-  }
-}, [apiBase, type, initialLoad]);
+  // --- Handlers ---
   const toggleSection = (index: number, section: string) => {
     setExpandedSections(prev => ({
       ...prev,
       [`${index}-${section}`]: !prev[`${index}-${section}`]
     }));
   };
-
-const handleSubmit = async (e?: React.FormEvent) => {
-  if (e) e.preventDefault();
-
-  setLoading(true);
-  setErrorMsg("");
-  setSuccess(false);
-
-  try {
-    const item = adsList[0];
-    if (!item) throw new Error("Nenhum Ads para salvar");
-
-    const fd = new FormData();
-
-    // Identificação
-    fd.append("type", type);
-    fd.append("subtype", subtype);
-
-    if (item.id) {
-      fd.append("id", item.id);
-    }
-
-    // Conteúdo (JSON)
-    const values = [
-      {
-        titulo: item.titulo,
-        botao: item.botao,
-        background: {
-          ...item.background,
-          src: item.background?.src || "",
-        },
-      },
-    ];
-
-    fd.append("values", JSON.stringify(values));
-
-    // Arquivo
-    if (item.file) {
-      fd.append("file0", item.file);
-    }
-
-    const method =  item.id && !item.id.startsWith("temp-") ? "PUT" : "POST";
-
-    const res = await fetch(`/api/${subtype}/form/${type}`, {
-      method,
-      body: fd,
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Erro ao salvar");
-
-    setAdsList([
-      {
-        ...item,
-        id: data.id,
-        file: null,
-        background: data.values?.[0]?.background ?? item.background,
-      },
-    ]);
-
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-  } catch (err: any) {
-    console.error("SAVE ERROR:", err);
-    setErrorMsg(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
 
   const handleChange = (index: number, path: string, value: any) => {
     const newList = [...adsList];
@@ -272,56 +197,92 @@ const handleSubmit = async (e?: React.FormEvent) => {
       newList[index] = JSON.parse(JSON.stringify(defaultItem));
     }
     
-    const keys = path.split('.');
-    let current: any = newList[index];
+    // Deep Clone simples para evitar mutação direta
+    const item = JSON.parse(JSON.stringify(newList[index]));
     
-    // Criar estrutura se não existir
+    const keys = path.split('.');
+    let current = item;
+    
+    // Navegar até a propriedade correta
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i];
-      if (!current[key] || typeof current[key] !== 'object') {
-        current[key] = {};
-      }
+      if (!current[key]) current[key] = {};
       current = current[key];
     }
     
-    // Extrair valor do evento ou usar valor direto
+    // Extrair valor do evento se necessário
     const finalValue = value?.target?.value !== undefined ? value.target.value : value;
     
-    // Atualizar valor
-    current[keys[keys.length - 1]] = String(finalValue || "");
+    // Atribuir valor
+    current[keys[keys.length - 1]] = finalValue;
     
+    newList[index] = item;
     setAdsList(newList);
-    console.log(`Campo ${path} alterado para:`, finalValue);
   };
 
-  const handleFileChange = (index: number, file: File | null) => {
+  // Manipulador simplificado que atualiza diretamente a URL da imagem no objeto
+  const handleImageChange = (index: number, url: string) => {
     const newList = [...adsList];
     
     if (!newList[index]) {
       newList[index] = JSON.parse(JSON.stringify(defaultItem));
     }
     
+    // Atualiza diretamente o src do background
     newList[index] = {
       ...newList[index],
-      file,
       background: {
-        ...newList[index]?.background,
-        src: file ? URL.createObjectURL(file) : newList[index]?.background?.src || ""
+        ...newList[index].background,
+        src: url
       }
     };
     
     setAdsList(newList);
-    console.log('Arquivo alterado:', file ? file.name : 'removido');
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    setLoading(true);
+    setErrorMsg("");
+    setSuccess(false);
+
+    try {
+      const payload = {
+        id: exists?.id,
+        values: adsList
+      };
+
+      const res = await fetch(`${apiBase}/${type}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erro ao salvar");
+
+      // Atualizar lista com dados retornados se necessário
+      // (Mantendo o estado local para preservar a UI, mas poderia atualizar com `data.values`)
+      
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err: any) {
+      console.error("SAVE ERROR:", err);
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getImageUrl = (item: AdsItem): string => {
-    if (item?.file) {
-      return URL.createObjectURL(item.file);
-    }
     return item?.background?.src || "";
   };
 
-  const SectionHeader = ({ 
+  // --- Sub-Componentes de Renderização ---
+  const AdsSectionHeader = ({ 
     title, 
     section, 
     index, 
@@ -329,7 +290,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
   }: { 
     title: string; 
     section: string; 
-    index: number;
+    index: number; 
     icon: any; 
   }) => {
     const isExpanded = expandedSections[`${index}-${section}`];
@@ -338,7 +299,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
       <button
         type="button"
         onClick={() => toggleSection(index, section)}
-        className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors mb-4"
+        className="w-full flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors mb-4 border border-zinc-200 dark:border-zinc-700"
       >
         <div className="flex items-center gap-3">
           <Icon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
@@ -353,37 +314,20 @@ const handleSubmit = async (e?: React.FormEvent) => {
     );
   };
 
-  const renderAdsItem = (item: AdsItem | null, index: number, isSearchMode = false) => {
+  const renderAdsItem = (item: AdsItem, index: number, isSearchMode = false) => {
     if (!item) return null;
 
-    // Extrair valores com fallbacks
-    const titulo = item.titulo || {};
-    const botao = item.botao || {};
-    const background = item.background || {};
+    const titulo = item.titulo;
+    const botao = item.botao;
+    const background = item.background;
 
-    const linha1 = titulo.linha1 || "";
-    const linha2 = titulo.linha2 || "";
-    const linha3 = titulo.linha3 || "";
-    const linha4 = titulo.linha4 || "";
-    const linha5 = titulo.linha5 || "";
-    const linha6 = titulo.linha6 || "";
-    const linha7 = titulo.linha7 || "";
-    const corDestaque = titulo.corDestaque || "#FFCC00";
+    const hasTitulo = Object.values(titulo).some(val => val.trim() !== "");
+    const hasBotao = botao.texto.trim() !== "" || botao.link.trim() !== "";
+    const hasBackground = Boolean(background.src?.trim());
     
-    const botaoTexto = botao.texto || "";
-    const botaoLink = botao.link || "";
-    const botaoIcone = botao.icone || "ic:baseline-whatsapp";
-    
-    const backgroundSrc = background.src || "";
-    const backgroundAlt = background.alt || "";
-
-    const hasTitulo = [linha1, linha2, linha3, linha4, linha5, linha6, linha7].some(val => val.trim() !== "");
-    const hasBotao = botaoTexto.trim() !== "" || botaoLink.trim() !== "";
-    const hasBackground =
-    Boolean(backgroundSrc?.trim()) || Boolean(item.file);
     const isLastInOriginalList = index === adsList.length - 1;
     const isLastAndEmpty = isLastInOriginalList && !hasTitulo && !hasBotao && !hasBackground;
-    const imageUrl = getImageUrl(item);
+    const imageUrl = background.src || "";
 
     return (
       <div
@@ -410,7 +354,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
             )}
             
             {/* Seção Título */}
-            <SectionHeader title="Título" section="titulo" index={index} icon={Type} />
+            <AdsSectionHeader title="Título" section="titulo" index={index} icon={Type} />
             
             <AnimatePresence>
               {expandedSections[`${index}-titulo`] && (
@@ -428,8 +372,9 @@ const handleSubmit = async (e?: React.FormEvent) => {
                         </label>
                         <Input
                           type="text"
-                          value={titulo[`linha${num}` as keyof typeof titulo] || ""}
+                          value={(titulo as any)[`linha${num}`] || ""}
                           onChange={(e: any) => handleChange(index, `titulo.linha${num}`, e)}
+                          className="bg-white dark:bg-zinc-800"
                         />
                       </div>
                     ))}
@@ -438,16 +383,18 @@ const handleSubmit = async (e?: React.FormEvent) => {
                       <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                         Cor de Destaque (Linha 7)
                       </label>
-                      <div className="flex gap-2">
-                        <Input
-                          type="text"
-                          placeholder="#FFCC00"
-                          value={corDestaque}
-                          onChange={(e: any) => handleChange(index, 'titulo.corDestaque', e)}
-                          className="font-mono"
-                        />
+                      <div className="flex gap-2 items-center">
+                        <div className="flex-1">
+                          <Input
+                            type="text"
+                            placeholder="#FFCC00"
+                            value={titulo.corDestaque}
+                            onChange={(e: any) => handleChange(index, 'titulo.corDestaque', e)}
+                            className="font-mono bg-white dark:bg-zinc-800"
+                          />
+                        </div>
                         <ColorPicker
-                          color={corDestaque}
+                          color={titulo.corDestaque}
                           onChange={(color: string) => handleChange(index, 'titulo.corDestaque', color)}
                         />
                       </div>
@@ -458,7 +405,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
             </AnimatePresence>
 
             {/* Seção Botão */}
-            <SectionHeader title="Botão de Ação" section="botao" index={index} icon={MessageSquare} />
+            <AdsSectionHeader title="Botão de Ação" section="botao" index={index} icon={MessageSquare} />
             
             <AnimatePresence>
               {expandedSections[`${index}-botao`] && (
@@ -475,8 +422,9 @@ const handleSubmit = async (e?: React.FormEvent) => {
                       </label>
                       <Input
                         type="text"
-                        value={botaoTexto}
+                        value={botao.texto}
                         onChange={(e: any) => handleChange(index, 'botao.texto', e)}
+                        className="bg-white dark:bg-zinc-800"
                       />
                     </div>
 
@@ -486,15 +434,16 @@ const handleSubmit = async (e?: React.FormEvent) => {
                       </label>
                       <Input
                         type="text"
-                        value={botaoLink}
+                        value={botao.link}
                         onChange={(e: any) => handleChange(index, 'botao.link', e)}
+                        className="bg-white dark:bg-zinc-800"
                       />
                     </div>
 
                     <div className="md:col-span-2">
                       <IconSelector
-                        value={botaoIcone}
-                        onChange={(value) => handleChange(index, 'botao.icone', value)}
+                        value={botao.icone}
+                        onChange={(value: string) => handleChange(index, 'botao.icone', value)}
                         label="Ícone do Botão"
                         placeholder="ic:baseline-whatsapp"
                       />
@@ -505,7 +454,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
             </AnimatePresence>
 
             {/* Seção Background */}
-            <SectionHeader title="Imagem de Fundo" section="background" index={index} icon={ImageIcon} />
+            <AdsSectionHeader title="Imagem de Fundo" section="background" index={index} icon={ImageIcon} />
             
             <AnimatePresence>
               {expandedSections[`${index}-background`] && (
@@ -518,13 +467,14 @@ const handleSubmit = async (e?: React.FormEvent) => {
                   <div className="space-y-6 p-4">
                     <div>
                       <ImageUpload
-                        imageUrl={imageUrl}
-                        hasImage={!!hasBackground}
-                        file={item.file || null}
-                        onFileChange={(file) => handleFileChange(index, file)}
-                        onExpand={setExpandedImage}
+                        currentImage={imageUrl}
+                        onChange={(url: string) => handleImageChange(index, url)}
                         label="Imagem de Fundo (Opcional)"
-                        altText={backgroundAlt || "Preview da imagem de fundo"}
+                        description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 1920x1080px."
+                        aspectRatio="aspect-video"
+                        previewHeight={200}
+                        previewWidth={400}
+                        showRemoveButton={false}
                       />
                     </div>
 
@@ -534,8 +484,10 @@ const handleSubmit = async (e?: React.FormEvent) => {
                       </label>
                       <Input
                         type="text"
-                        value={backgroundAlt}
+                        value={background.alt}
                         onChange={(e: any) => handleChange(index, 'background.alt', e)}
+                        className="bg-white dark:bg-zinc-800"
+                        placeholder="Descrição da imagem para acessibilidade"
                       />
                     </div>
                   </div>
@@ -548,10 +500,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
     );
   };
 
-  const handleSubmitWrapper = () => {
-    handleSubmit();
-  };
-
+  // ================= RENDERIZAÇÃO =================
   return (
     <ManageLayout
       headerIcon={Type}
@@ -582,7 +531,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
         <form onSubmit={handleSubmit}>
           <AnimatePresence>
             {search ? (
-              filteredAds.map((item ) => {
+              filteredAds.map((item) => {
                 const originalIndex = adsList.findIndex(a => a.id === item.id);
                 return renderAdsItem(item, originalIndex, true);
               })
@@ -595,7 +544,7 @@ const handleSubmit = async (e?: React.FormEvent) => {
 
       <FixedActionBar
         onDeleteAll={openDeleteAllModal}
-        onSubmit={handleSubmitWrapper}
+        onSubmit={() => handleSubmit()}
         isAddDisabled={!canAddNewItem || isLimitReached}
         isSaving={loading}
         exists={!!exists}
@@ -636,29 +585,21 @@ const handleSubmit = async (e?: React.FormEvent) => {
             >
               <Button
                 onClick={() => setExpandedImage(null)}
-                className="absolute -top-4 -right-4 !p-3 !rounded-full bg-red-500 hover:bg-red-600 z-10"
+                className="absolute -top-4 -right-4 !p-3 !rounded-full bg-red-500 hover:bg-red-600 z-10 shadow-lg text-white border-none"
               >
                 <X className="w-5 h-5" />
               </Button>
-              {expandedImage.startsWith('blob:') ? (
-                <img
-                  src={expandedImage}
-                  alt="Preview expandido"
-                  className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-                  onError={(e) => {
-                    console.error('Erro ao carregar imagem expandida:', expandedImage);
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <Image
-                  src={expandedImage}
-                  alt="Preview expandido"
-                  width={800}
-                  height={600}
-                  className="max-w-full max-h-[80vh] object-contain rounded-2xl"
-                />
-              )}
+              
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={expandedImage}
+                alt="Preview expandido"
+                className="max-w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl"
+                onError={(e) => {
+                  console.error('Erro ao carregar imagem expandida:', expandedImage);
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
             </motion.div>
           </motion.div>
         )}

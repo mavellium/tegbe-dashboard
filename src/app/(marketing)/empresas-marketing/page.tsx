@@ -70,7 +70,7 @@ interface MarketingData {
   footer: string;
   layout: "marquee" | "grid" | "carousel";
   logos: LogoRow;
-  cta: CTA; // Novo campo CTA
+  cta: CTA;
 }
 
 interface SobreData {
@@ -195,8 +195,6 @@ export default function EcosystemPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<EcosystemData>({
     apiPath: "/api/tegbe-institucional/json/empresas",
     defaultData: defaultEcosystemData,
@@ -249,17 +247,6 @@ export default function EcosystemPage() {
     const currentLogos = [...ecosystemData[section].logos[row]];
     currentLogos.splice(index, 1);
     updateNested(`${section}.logos.${row}`, currentLogos);
-    
-    // Limpar arquivo do estado
-    const fileKey = `${section}.logos.${row}.${index}.src`;
-    if (fileStates[fileKey]) {
-      setFileState(fileKey, null);
-    }
-  };
-
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -330,15 +317,12 @@ export default function EcosystemPage() {
   }
 
   const renderLogoItemEditor = (logo: LogoItem, index: number, row: "row1" | "row2", section: "marketing") => {
-    const fileKey = `${section}.logos.${row}.${index}.src`;
-    const selectedFile = getFileFromState(fileKey);
-
     return (
       <Card className="p-4 border border-[var(--color-border)]" key={index}>
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-12 flex items-center justify-center bg-[var(--color-background-body)] rounded border border-[var(--color-border)]">
-              {logo.src || selectedFile ? (
+              {logo.src ? (
                 <div className="w-full h-full flex items-center justify-center bg-[var(--color-background-body)]">
                   <div className="text-xs text-[var(--color-secondary)]/50 text-center">
                     Logo {index + 1}
@@ -374,8 +358,7 @@ export default function EcosystemPage() {
             <ImageUpload
               label="Imagem da Logo"
               currentImage={logo.src}
-              selectedFile={selectedFile}
-              onFileChange={(file) => setFileState(fileKey, file)}
+              onChange={(url) => handleLogoChange(section, row, index, "src", url)}
               aspectRatio="aspect-[3/2]"
               previewWidth={120}
               previewHeight={80}

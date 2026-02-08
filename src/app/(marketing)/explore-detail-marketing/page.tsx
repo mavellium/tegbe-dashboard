@@ -26,10 +26,7 @@ import {
   Layers,
   Eye,
   EyeOff,
-  Power,
-  Calendar,
-  ArrowDownToLine,
-  ArrowUpToLine
+  Power
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -71,7 +68,7 @@ interface ServicesData {
     subtitle: string;
   };
   services: ServiceItem[];
-  cta: CTA; // Novo campo CTA
+  cta: CTA;
 }
 
 const defaultCTA: CTA = {
@@ -112,21 +109,6 @@ const effectOptions = [
   { value: "pulse", label: "Pulsação Leve" },
   { value: "shadow", label: "Sombra Elevada" },
   { value: "gradient", label: "Gradiente" },
-];
-
-const ctaStyleOptions = [
-  { value: "default", label: "Padrão" },
-  { value: "primary", label: "Primário" },
-  { value: "secondary", label: "Secundário" },
-  { value: "outline", label: "Outline" },
-  { value: "gradient", label: "Gradiente" },
-];
-
-const ctaPositionOptions = [
-  { value: "below-content", label: "Abaixo do conteúdo" },
-  { value: "above-content", label: "Acima do conteúdo" },
-  { value: "floating", label: "Flutuante" },
-  { value: "inline", label: "Em linha" },
 ];
 
 // Função para extrair hex de uma classe Tailwind
@@ -205,9 +187,7 @@ export default function ServicesPage() {
     success,
     errorMsg,
     deleteModal,
-    fileStates,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -225,14 +205,14 @@ export default function ServicesPage() {
   const [expandedSections, setExpandedSections] = useState({
     header: true,
     services: false,
-    cta: false, // Nova seção CTA
+    cta: false,
   });
 
   // Referências para novos itens
   const newServiceRef = useRef<HTMLDivElement>(null);
 
   // Controle de planos
-  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanType = 'pro';
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   // Sincroniza os dados quando carregam do banco
@@ -719,8 +699,7 @@ export default function ServicesPage() {
                                         label="Imagem de Destaque"
                                         description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x400px."
                                         currentImage={service.image}
-                                        selectedFile={fileStates[`services.${index}.image`] || null}
-                                        onFileChange={(file) => setFileState(`services.${index}.image`, file)}
+                                        onChange={(url) => updateService(index, { image: url })}
                                         aspectRatio="aspect-video"
                                         previewWidth={300}
                                         previewHeight={150}

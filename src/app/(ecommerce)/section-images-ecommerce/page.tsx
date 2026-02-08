@@ -10,8 +10,6 @@ import {
   Image as ImageIcon, 
   ShoppingBag, 
   Megaphone,
-  ChevronDown, 
-  ChevronUp,
   Move,
   Layout,
   Settings
@@ -135,8 +133,6 @@ export default function HeroImagesPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<HeroImageData>({
     apiPath: "/api/tegbe-institucional/json/hero-images",
     defaultData: defaultHeroData,
@@ -194,8 +190,7 @@ export default function HeroImagesPage() {
             <ImageUpload
               label="Imagem de Fundo"
               currentImage={imageValue}
-              selectedFile={fileStates[`image.${section}`]}
-              onFileChange={(file) => setFileState(`image.${section}`, file)}
+              onChange={(url) => updateNested(`image.${section}`, url)}
               aspectRatio="aspect-video"
               previewWidth={400}
               previewHeight={300}

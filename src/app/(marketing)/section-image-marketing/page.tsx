@@ -7,14 +7,11 @@ import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { 
-  Image as ImageIcon, 
   ShoppingBag, 
   Megaphone,
-  ChevronDown, 
-  ChevronUp,
   Move,
   Layout,
-  Settings
+  Image as ImageIcon
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -135,8 +132,6 @@ export default function HeroImagesPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<HeroImageData>({
     apiPath: "/api/tegbe-institucional/json/hero-images",
     defaultData: defaultHeroData,
@@ -194,8 +189,7 @@ export default function HeroImagesPage() {
             <ImageUpload
               label="Imagem de Fundo"
               currentImage={imageValue}
-              selectedFile={fileStates[`image.${section}`]}
-              onFileChange={(file) => setFileState(`image.${section}`, file)}
+              onChange={(url) => updateNested(`image.${section}`, url)}
               aspectRatio="aspect-video"
               previewWidth={400}
               previewHeight={300}

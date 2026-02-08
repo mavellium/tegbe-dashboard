@@ -11,7 +11,6 @@ import { Button } from "@/components/Button";
 import { 
   MapPin,
   Building,
-  Settings,
   Layers,
   Plus,
   Trash2,
@@ -23,7 +22,6 @@ import {
   MessageSquare,
   CheckCircle2,
   AlertCircle,
-  XCircle,
   GripVertical,
   Sparkles,
   Tag
@@ -36,7 +34,6 @@ import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ImageUpload } from "@/components/ImageUpload";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { tailwindToHex, hexToTailwindTextClass } from "@/lib/colors";
 
 interface Location {
   id: string;
@@ -171,8 +168,6 @@ export default function CentrosPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<CentrosData>({
     apiPath: "/api/tegbe-institucional/json/localizacoes",
     defaultData: defaultData,
@@ -358,12 +353,6 @@ export default function CentrosPage() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
-  };
-
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -805,12 +794,11 @@ export default function CentrosPage() {
                                     <ImageUpload
                                       label=""
                                       currentImage={image}
-                                      selectedFile={getFileFromState(`locations.${locationIndex}.images.${imageIndex}`)}
-                                      onFileChange={(file) => setFileState(`locations.${locationIndex}.images.${imageIndex}`, file)}
+                                      onChange={(url) => handleImageChange(locationIndex, imageIndex, url)}
                                       aspectRatio="aspect-video"
                                       previewWidth={200}
                                       previewHeight={150}
-                                                              />
+                                    />
                                   </div>
                                 </div>
                               ))}

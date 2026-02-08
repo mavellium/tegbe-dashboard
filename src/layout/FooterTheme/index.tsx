@@ -8,7 +8,19 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { ImageUpload } from "@/components/ImageUpload";
-import { Palette, Layout, Settings, Link as LinkIcon, Mail, Phone, MapPin, Building, Globe, Instagram, Linkedin, Youtube, FileText } from "lucide-react";
+import { 
+  Palette, 
+  Layout, 
+  Settings, 
+  Link as LinkIcon, 
+  Mail, 
+  FileText, 
+  Building, 
+  Globe, 
+  Instagram, 
+  Linkedin, 
+  Youtube 
+} from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
@@ -18,7 +30,8 @@ import { extractHexFromTailwind, hexToTailwindClass } from "@/lib/colorUtils";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 
-// Tipos baseados no novo JSON
+// ================= TIPOS =================
+
 interface SocialLinks {
   instagram: string;
   linkedin: string;
@@ -61,6 +74,8 @@ interface ThemeVariant {
   topBorder: string;
 }
 
+type PageKey = 'ecommerce' | 'marketing' | 'sobre' | 'cursos';
+
 type FooterData = {
   id?: string;
   general: {
@@ -73,18 +88,8 @@ type FooterData = {
     socials: SocialLinks;
   };
   navigation: NavigationItem[];
-  content: {
-    ecommerce: PageContent;
-    marketing: PageContent;
-    sobre: PageContent;
-    cursos: PageContent;
-  };
-  variants: {
-    ecommerce: ThemeVariant;
-    marketing: ThemeVariant;
-    sobre: ThemeVariant;
-    cursos: ThemeVariant;
-  };
+  content: Record<PageKey, PageContent>;
+  variants: Record<PageKey, ThemeVariant>;
 };
 
 const defaultFooterData: FooterData = {
@@ -210,164 +215,45 @@ const defaultFooterData: FooterData = {
 const mergeWithDefaults = (apiData: any, defaultData: FooterData): FooterData => {
   if (!apiData) return defaultData;
   
-  return {
-    id: apiData.id,
-    general: {
-      logo: apiData.general?.logo || defaultData.general.logo,
-      poweredByLogo: apiData.general?.poweredByLogo || defaultData.general.poweredByLogo,
-      cnpj: apiData.general?.cnpj || defaultData.general.cnpj,
-      address: apiData.general?.address || defaultData.general.address,
-      phone: apiData.general?.phone || defaultData.general.phone,
-      whatsappLink: apiData.general?.whatsappLink || defaultData.general.whatsappLink,
-      socials: {
-        instagram: apiData.general?.socials?.instagram || defaultData.general.socials.instagram,
-        linkedin: apiData.general?.socials?.linkedin || defaultData.general.socials.linkedin,
-        youtube: apiData.general?.socials?.youtube || defaultData.general.socials.youtube,
+  // Mesclagem profunda simplificada para garantir estrutura
+  const merged = { ...defaultData, ...apiData };
+  
+  // Garantir nested objects
+  merged.general = { ...defaultData.general, ...apiData.general };
+  merged.general.socials = { ...defaultData.general.socials, ...apiData.general?.socials };
+  
+  merged.content = { ...defaultData.content };
+  if (apiData.content) {
+    (['ecommerce', 'marketing', 'sobre', 'cursos'] as PageKey[]).forEach(key => {
+      if (apiData.content[key]) {
+        merged.content[key] = { ...defaultData.content[key], ...apiData.content[key] };
       }
-    },
-    navigation: apiData.navigation || defaultData.navigation,
-    content: {
-      ecommerce: {
-        badgeImage: apiData.content?.ecommerce?.badgeImage || defaultData.content.ecommerce.badgeImage,
-        badgeTitle: apiData.content?.ecommerce?.badgeTitle || defaultData.content.ecommerce.badgeTitle,
-        badgeDesc: apiData.content?.ecommerce?.badgeDesc || defaultData.content.ecommerce.badgeDesc,
-        stats1: {
-          val: apiData.content?.ecommerce?.stats1?.val || defaultData.content.ecommerce.stats1.val,
-          label: apiData.content?.ecommerce?.stats1?.label || defaultData.content.ecommerce.stats1.label,
-        },
-        stats2: {
-          val: apiData.content?.ecommerce?.stats2?.val || defaultData.content.ecommerce.stats2.val,
-          label: apiData.content?.ecommerce?.stats2?.label || defaultData.content.ecommerce.stats2.label,
-        },
-        columnTitle: apiData.content?.ecommerce?.columnTitle || defaultData.content.ecommerce.columnTitle,
-        links: apiData.content?.ecommerce?.links || defaultData.content.ecommerce.links,
-        email: apiData.content?.ecommerce?.email || defaultData.content.ecommerce.email,
-        desc: apiData.content?.ecommerce?.desc || defaultData.content.ecommerce.desc,
-      },
-      marketing: {
-        badgeImage: apiData.content?.marketing?.badgeImage || defaultData.content.marketing.badgeImage,
-        badgeTitle: apiData.content?.marketing?.badgeTitle || defaultData.content.marketing.badgeTitle,
-        badgeDesc: apiData.content?.marketing?.badgeDesc || defaultData.content.marketing.badgeDesc,
-        stats1: {
-          val: apiData.content?.marketing?.stats1?.val || defaultData.content.marketing.stats1.val,
-          label: apiData.content?.marketing?.stats1?.label || defaultData.content.marketing.stats1.label,
-        },
-        stats2: {
-          val: apiData.content?.marketing?.stats2?.val || defaultData.content.marketing.stats2.val,
-          label: apiData.content?.marketing?.stats2?.label || defaultData.content.marketing.stats2.label,
-        },
-        columnTitle: apiData.content?.marketing?.columnTitle || defaultData.content.marketing.columnTitle,
-        links: apiData.content?.marketing?.links || defaultData.content.marketing.links,
-        email: apiData.content?.marketing?.email || defaultData.content.marketing.email,
-        desc: apiData.content?.marketing?.desc || defaultData.content.marketing.desc,
-      },
-      sobre: {
-        badgeImage: apiData.content?.sobre?.badgeImage || defaultData.content.sobre.badgeImage,
-        badgeTitle: apiData.content?.sobre?.badgeTitle || defaultData.content.sobre.badgeTitle,
-        badgeDesc: apiData.content?.sobre?.badgeDesc || defaultData.content.sobre.badgeDesc,
-        stats1: {
-          val: apiData.content?.sobre?.stats1?.val || defaultData.content.sobre.stats1.val,
-          label: apiData.content?.sobre?.stats1?.label || defaultData.content.sobre.stats1.label,
-        },
-        stats2: {
-          val: apiData.content?.sobre?.stats2?.val || defaultData.content.sobre.stats2.val,
-          label: apiData.content?.sobre?.stats2?.label || defaultData.content.sobre.stats2.label,
-        },
-        columnTitle: apiData.content?.sobre?.columnTitle || defaultData.content.sobre.columnTitle,
-        links: apiData.content?.sobre?.links || defaultData.content.sobre.links,
-        email: apiData.content?.sobre?.email || defaultData.content.sobre.email,
-        desc: apiData.content?.sobre?.desc || defaultData.content.sobre.desc,
-      },
-      cursos: {
-        badgeImage: apiData.content?.cursos?.badgeImage || defaultData.content.cursos.badgeImage,
-        badgeTitle: apiData.content?.cursos?.badgeTitle || defaultData.content.cursos.badgeTitle,
-        badgeDesc: apiData.content?.cursos?.badgeDesc || defaultData.content.cursos.badgeDesc,
-        stats1: {
-          val: apiData.content?.cursos?.stats1?.val || defaultData.content.cursos.stats1.val,
-          label: apiData.content?.cursos?.stats1?.label || defaultData.content.cursos.stats1.label,
-        },
-        stats2: {
-          val: apiData.content?.cursos?.stats2?.val || defaultData.content.cursos.stats2.val,
-          label: apiData.content?.cursos?.stats2?.label || defaultData.content.cursos.stats2.label,
-        },
-        columnTitle: apiData.content?.cursos?.columnTitle || defaultData.content.cursos.columnTitle,
-        links: apiData.content?.cursos?.links || defaultData.content.cursos.links,
-        email: apiData.content?.cursos?.email || defaultData.content.cursos.email,
-        desc: apiData.content?.cursos?.desc || defaultData.content.cursos.desc,
+    });
+  }
+
+  merged.variants = { ...defaultData.variants };
+  if (apiData.variants) {
+    (['ecommerce', 'marketing', 'sobre', 'cursos'] as PageKey[]).forEach(key => {
+      if (apiData.variants[key]) {
+        merged.variants[key] = { ...defaultData.variants[key], ...apiData.variants[key] };
       }
-    },
-    variants: {
-      ecommerce: {
-        primary: apiData.variants?.ecommerce?.primary || defaultData.variants.ecommerce.primary,
-        hoverText: apiData.variants?.ecommerce?.hoverText || defaultData.variants.ecommerce.hoverText,
-        decoration: apiData.variants?.ecommerce?.decoration || defaultData.variants.ecommerce.decoration,
-        bgHover: apiData.variants?.ecommerce?.bgHover || defaultData.variants.ecommerce.bgHover,
-        borderHover: apiData.variants?.ecommerce?.borderHover || defaultData.variants.ecommerce.borderHover,
-        glowGradient: apiData.variants?.ecommerce?.glowGradient || defaultData.variants.ecommerce.glowGradient,
-        glowAmbient: apiData.variants?.ecommerce?.glowAmbient || defaultData.variants.ecommerce.glowAmbient,
-        iconBg: apiData.variants?.ecommerce?.iconBg || defaultData.variants.ecommerce.iconBg,
-        iconHoverText: apiData.variants?.ecommerce?.iconHoverText || defaultData.variants.ecommerce.iconHoverText,
-        iconHoverBg: apiData.variants?.ecommerce?.iconHoverBg || defaultData.variants.ecommerce.iconHoverBg,
-        topBorder: apiData.variants?.ecommerce?.topBorder || defaultData.variants.ecommerce.topBorder,
-      },
-      marketing: {
-        primary: apiData.variants?.marketing?.primary || defaultData.variants.marketing.primary,
-        hoverText: apiData.variants?.marketing?.hoverText || defaultData.variants.marketing.hoverText,
-        decoration: apiData.variants?.marketing?.decoration || defaultData.variants.marketing.decoration,
-        bgHover: apiData.variants?.marketing?.bgHover || defaultData.variants.marketing.bgHover,
-        borderHover: apiData.variants?.marketing?.borderHover || defaultData.variants.marketing.borderHover,
-        glowGradient: apiData.variants?.marketing?.glowGradient || defaultData.variants.marketing.glowGradient,
-        glowAmbient: apiData.variants?.marketing?.glowAmbient || defaultData.variants.marketing.glowAmbient,
-        iconBg: apiData.variants?.marketing?.iconBg || defaultData.variants.marketing.iconBg,
-        iconHoverText: apiData.variants?.marketing?.iconHoverText || defaultData.variants.marketing.iconHoverText,
-        iconHoverBg: apiData.variants?.marketing?.iconHoverBg || defaultData.variants.marketing.iconHoverBg,
-        topBorder: apiData.variants?.marketing?.topBorder || defaultData.variants.marketing.topBorder,
-      },
-      sobre: {
-        primary: apiData.variants?.sobre?.primary || defaultData.variants.sobre.primary,
-        hoverText: apiData.variants?.sobre?.hoverText || defaultData.variants.sobre.hoverText,
-        decoration: apiData.variants?.sobre?.decoration || defaultData.variants.sobre.decoration,
-        bgHover: apiData.variants?.sobre?.bgHover || defaultData.variants.sobre.bgHover,
-        borderHover: apiData.variants?.sobre?.borderHover || defaultData.variants.sobre.borderHover,
-        glowGradient: apiData.variants?.sobre?.glowGradient || defaultData.variants.sobre.glowGradient,
-        glowAmbient: apiData.variants?.sobre?.glowAmbient || defaultData.variants.sobre.glowAmbient,
-        iconBg: apiData.variants?.sobre?.iconBg || defaultData.variants.sobre.iconBg,
-        iconHoverText: apiData.variants?.sobre?.iconHoverText || defaultData.variants.sobre.iconHoverText,
-        iconHoverBg: apiData.variants?.sobre?.iconHoverBg || defaultData.variants.sobre.iconHoverBg,
-        topBorder: apiData.variants?.sobre?.topBorder || defaultData.variants.sobre.topBorder,
-      },
-      cursos: {
-        primary: apiData.variants?.cursos?.primary || defaultData.variants.cursos.primary,
-        hoverText: apiData.variants?.cursos?.hoverText || defaultData.variants.cursos.hoverText,
-        decoration: apiData.variants?.cursos?.decoration || defaultData.variants.cursos.decoration,
-        bgHover: apiData.variants?.cursos?.bgHover || defaultData.variants.cursos.bgHover,
-        borderHover: apiData.variants?.cursos?.borderHover || defaultData.variants.cursos.borderHover,
-        glowGradient: apiData.variants?.cursos?.glowGradient || defaultData.variants.cursos.glowGradient,
-        glowAmbient: apiData.variants?.cursos?.glowAmbient || defaultData.variants.cursos.glowAmbient,
-        iconBg: apiData.variants?.cursos?.iconBg || defaultData.variants.cursos.iconBg,
-        iconHoverText: apiData.variants?.cursos?.iconHoverText || defaultData.variants.cursos.iconHoverText,
-        iconHoverBg: apiData.variants?.cursos?.iconHoverBg || defaultData.variants.cursos.iconHoverBg,
-        topBorder: apiData.variants?.cursos?.topBorder || defaultData.variants.cursos.topBorder,
-      }
-    }
-  };
+    });
+  }
+
+  return merged;
 };
 
-const pageKeys = ['ecommerce', 'marketing', 'sobre', 'cursos'] as const;
-type PageKey = typeof pageKeys[number];
+const pageKeys: PageKey[] = ['ecommerce', 'marketing', 'sobre', 'cursos'];
 
 export const FooterPageComponent: React.FC = () => {
   const {
     data: footerData,
-    setData: setFooterData,
     exists,
     loading,
     success,
     errorMsg,
     deleteModal,
-    fileStates,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -402,7 +288,7 @@ export const FooterPageComponent: React.FC = () => {
     try {
       await save();
     } catch (err) {
-      // Erro já tratado no hook
+      console.error(err);
     }
   };
 
@@ -464,10 +350,10 @@ export const FooterPageComponent: React.FC = () => {
   };
 
   // Configuração de upload de imagens (aplica automaticamente a todas as páginas)
-  const handleBadgeImageUpload = (file: File | null) => {
+  const handleBadgeImageUpload = (url: string) => {
     // Aplica automaticamente a todas as páginas
     pageKeys.forEach((page) => {
-      setFileState(`content.${page}.badgeImage`, file);
+      updateNested(`content.${page}.badgeImage`, url);
     });
   };
 
@@ -512,22 +398,20 @@ export const FooterPageComponent: React.FC = () => {
                     label="Logo do Footer"
                     description="Logo principal no rodapé"
                     currentImage={footerData.general.logo}
-                    selectedFile={fileStates['general.logo'] || null}
-                    onFileChange={(file) => setFileState('general.logo', file)}
+                    onChange={(url) => updateNested('general.logo', url)}
                     aspectRatio="aspect-[4/1]"
                     previewWidth={200}
-                    previewHeight={200}
+                    previewHeight={50}
                   />
 
                   <ImageUpload
                     label="Logo Powered By"
                     description="Logo da empresa parceira (ex: Mavellium)"
                     currentImage={footerData.general.poweredByLogo}
-                    selectedFile={fileStates['general.poweredByLogo'] || null}
-                    onFileChange={(file) => setFileState('general.poweredByLogo', file)}
+                    onChange={(url) => updateNested('general.poweredByLogo', url)}
                     aspectRatio="aspect-[3/1]"
-                    previewWidth={200}
-                    previewHeight={200}
+                    previewWidth={150}
+                    previewHeight={50}
                   />
                 </div>
 
@@ -711,8 +595,7 @@ export const FooterPageComponent: React.FC = () => {
                     label="Imagem do Badge"
                     description="Selo/logo que aparece no footer (aplica a todas as páginas)"
                     currentImage={footerData.content.ecommerce.badgeImage}
-                    selectedFile={fileStates['content.ecommerce.badgeImage'] || null}
-                    onFileChange={handleBadgeImageUpload}
+                    onChange={handleBadgeImageUpload}
                     aspectRatio="aspect-square"
                     previewWidth={100}
                     previewHeight={100}

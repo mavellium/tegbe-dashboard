@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useCallback, useId } from "react";
+import { useState, useId } from "react";
 import { motion } from "framer-motion";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -43,7 +43,7 @@ import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import ColorPicker from "@/components/ColorPicker";
 import { ImageUpload } from "@/components/ImageUpload";
-import { VideoUpload } from "@/components/VideoUpload"; // Certifique-se de importar o novo
+import { VideoUpload } from "@/components/VideoUpload";
 
 interface FooterStat {
   id?: string;
@@ -300,8 +300,6 @@ const TestimonialItem = ({
   onUpdate,
   onRemove,
   onMove,
-  onFileChange,
-  getFileFromState,
 }: {
   testimonial: Testimonial;
   index: number;
@@ -310,8 +308,6 @@ const TestimonialItem = ({
   onUpdate: (updates: Partial<Testimonial>) => void;
   onRemove: () => void;
   onMove: (direction: "up" | "down") => void;
-  onFileChange: (field: string, file: File | null) => void;
-  getFileFromState: (key: string) => File | null;
 }) => {
   const TypeIcon = testimonial.type === "video" ? Video : 
                    testimonial.type === "image" ? ImageIcon : 
@@ -557,8 +553,7 @@ const TestimonialItem = ({
                   <ImageUpload
                     label="Thumbnail do Vídeo (Poster)"
                     currentImage={testimonial.poster || ''}
-                    selectedFile={getFileFromState(`testimonials.${index}.poster`)}
-                    onFileChange={(file) => onFileChange(`testimonials.${index}.poster`, file)}
+                    onChange={(url) => onUpdate({ poster: url })}
                     aspectRatio="aspect-video"
                     previewWidth={800}
                     previewHeight={450}
@@ -569,8 +564,7 @@ const TestimonialItem = ({
                 <ImageUpload
                   label="Imagem do Depoimento"
                   currentImage={testimonial.src || ''}
-                  selectedFile={getFileFromState(`testimonials.${index}.src`)}
-                  onFileChange={(file) => onFileChange(`testimonials.${index}.src`, file)}
+                  onChange={(url) => onUpdate({ src: url })}
                   aspectRatio="aspect-video"
                   previewWidth={800}
                   previewHeight={450}
@@ -627,8 +621,6 @@ export default function TestimonialsPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<TestimonialsData>({
     apiPath: "/api/tegbe-institucional/json/alunos",
     defaultData: defaultData,
@@ -744,15 +736,6 @@ export default function TestimonialsPage() {
     
     updateNested('testimonials', currentTestimonials);
   };
-
-  const handleFileChange = (key: string, file: File | null) => {
-    setFileState(key, file);
-  };
-
-  const getFileFromState = useCallback((key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
-  }, [fileStates]);
 
   // Funções para cores
   const handleTextColorChange = (hexColor: string) => {
@@ -1099,8 +1082,6 @@ export default function TestimonialsPage() {
                     onUpdate={(updates) => handleUpdateTestimonial(index, updates)}
                     onRemove={() => handleRemoveTestimonial(index)}
                     onMove={(direction) => moveTestimonial(index, direction)}
-                    onFileChange={handleFileChange}
-                    getFileFromState={getFileFromState}
                   />
                 ))}
               </div>

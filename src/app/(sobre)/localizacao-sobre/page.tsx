@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useId, useEffect, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion"; // Removido 'motion'
 import { useListManagement } from "@/hooks/useListManagement";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
@@ -10,16 +10,13 @@ import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   MapPin, 
-  X, 
   GripVertical, 
   ArrowUpDown, 
-  Plus, 
   AlertCircle, 
   CheckCircle2, 
   Trash2,
   XCircle,
   Search,
-  Target,
   Image as ImageIcon
 } from "lucide-react";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
@@ -44,13 +41,13 @@ import {
 } from "@dnd-kit/sortable";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import Loading from "@/components/Loading";
 
 interface LocationItem {
   id?: string;
   title: string;
   description: string;
   alt: string;
-  file?: File | null;
   image?: string;
 }
 
@@ -63,9 +60,7 @@ function SortableLocationItem({
   showValidation,
   locationList,
   handleChange,
-  handleFileChange,
   openDeleteSingleModal,
-  getImageUrl,
   setNewItemRef,
 }: {
   location: LocationItem;
@@ -76,9 +71,7 @@ function SortableLocationItem({
   showValidation: boolean;
   locationList: LocationItem[];
   handleChange: (index: number, field: keyof LocationItem, value: any) => void;
-  handleFileChange: (index: number, file: File | null) => void;
   openDeleteSingleModal: (index: number, title: string) => void;
-  getImageUrl: (location: LocationItem) => string;
   setNewItemRef?: (node: HTMLDivElement | null) => void;
 }) {
   const stableId = useId();
@@ -102,8 +95,7 @@ function SortableLocationItem({
   const hasTitle = location.title.trim() !== "";
   const hasDescription = location.description.trim() !== "";
   const hasAlt = location.alt.trim() !== "";
-  const hasImage = Boolean(location.image?.trim() !== "" || location.file);
-  const imageUrl = getImageUrl(location);
+  const hasImage = location.image && location.image.trim() !== "";
 
   const setRefs = useCallback(
     (node: HTMLDivElement | null) => {
@@ -187,8 +179,7 @@ function SortableLocationItem({
                   label="Imagem da Localização"
                   description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x400px."
                   currentImage={location.image || ""}
-                  selectedFile={location.file || null}
-                  onFileChange={(file) => handleFileChange(originalIndex, file)}
+                  onChange={(url) => handleChange(originalIndex, "image", url)}
                   aspectRatio="aspect-video"
                   previewWidth={400}
                   previewHeight={200}
@@ -263,7 +254,6 @@ export default function LocationPage({
     title: "", 
     description: "",
     alt: "",
-    file: null, 
     image: "" 
   }), []);
 
@@ -290,6 +280,7 @@ export default function LocationPage({
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
+    // Removed 'save' property because it does not exist on useListManagement
   } = useListManagement<LocationItem>({
     type,
     apiPath: `${apiBase}/${type}`,
@@ -342,6 +333,7 @@ export default function LocationPage({
     }
   };
 
+  // Implementação manual do save, pois useListManagement não expõe 'save'
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -351,36 +343,24 @@ export default function LocationPage({
 
     try {
       const filteredList = localLocations.filter(
-        location => location.title.trim() && location.description.trim() && location.alt.trim() && (location.image?.trim() || location.file)
+        location => location.title.trim() && location.description.trim() && location.alt.trim() && location.image?.trim()
       );
 
       if (!filteredList.length) {
-        setErrorMsg("Adicione ao menos uma localização completa com título, descrição, alt e imagem.");
-        return;
+        throw new Error("Adicione ao menos uma localização completa com título, descrição, alt e imagem.");
       }
 
-      const fd = new FormData();
-
-      if (exists) fd.append("id", exists.id);
-
-      fd.append(
-        "values",
-        JSON.stringify(
-          filteredList.map(({ file, ...rest }) => rest)
-        )
-      );
-
-      filteredList.forEach((location, i) => {
-        if (location.file) {
-          fd.append(`file${i}`, location.file);
-        }
-      });
-
-      const method = exists ? "PUT" : "POST";
+      const payload = {
+        id: exists?.id,
+        values: filteredList
+      };
 
       const res = await fetch(`${apiBase}/${type}`, {
-        method,
-        body: fd,
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -390,10 +370,10 @@ export default function LocationPage({
 
       const saved = await res.json();
 
-      const normalized = saved.values.map((v: any, i: number) => ({
+      // Normaliza retorno se necessário
+      const normalized = (saved.values || []).map((v: any, i: number) => ({
         ...v,
         id: v.id || `location-${Date.now()}-${i}`,
-        file: null,
       }));
 
       setLocalLocations(normalized);
@@ -402,7 +382,7 @@ export default function LocationPage({
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
       console.error(err);
-      setErrorMsg(err.message);
+      setErrorMsg(err.message || "Erro desconhecido ao salvar");
     } finally {
       setLoading(false);
     }
@@ -415,67 +395,6 @@ export default function LocationPage({
     setLocationList(newList);
   };
 
-  const handleFileChange = (index: number, file: File | null) => {
-    const newList = [...localLocations];
-    newList[index] = { ...newList[index], file };
-    setLocalLocations(newList);
-    setLocationList(newList);
-  };
-
-  const getImageUrl = (location: LocationItem): string => {
-    if (location.file) {
-      return URL.createObjectURL(location.file);
-    }
-    if (location.image) {
-      if (location.image.startsWith('http') || location.image.startsWith('//')) {
-        return location.image;
-      } else {
-        return `https://mavellium.com.br${location.image.startsWith('/') ? '' : '/'}${location.image}`;
-      }
-    }
-    return "";
-  };
-
-  const updateLocations = async (list: LocationItem[]) => {
-    if (!exists) return;
-
-    const filteredList = list.filter(
-      location => location.title.trim() || location.description.trim() || location.alt.trim() || location.file || location.image
-    );
-
-    const fd = new FormData();
-    
-    fd.append("id", exists.id);
-    
-    filteredList.forEach((location, i) => {
-      fd.append(`values[${i}][title]`, location.title);
-      fd.append(`values[${i}][description]`, location.description);
-      fd.append(`values[${i}][alt]`, location.alt);
-      fd.append(`values[${i}][image]`, location.image || "");
-      
-      if (location.file) {
-        fd.append(`file${i}`, location.file);
-      }
-      
-      if (location.id) {
-        fd.append(`values[${i}][id]`, location.id);
-      }
-    });
-
-    const res = await fetch(`${apiBase}/${type}`, {
-      method: "PUT",
-      body: fd,
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData.error || "Falha ao atualizar dados");
-    }
-
-    const updated = await res.json();
-    return updated;
-  };
-
   const handleAddLocation = () => {
     if (localLocations.length >= currentPlanLimit) {
       return false;
@@ -485,7 +404,6 @@ export default function LocationPage({
       title: '',
       description: '',
       alt: '',
-      file: null,
       image: ''
     };
     
@@ -524,7 +442,7 @@ export default function LocationPage({
     location.title.trim() !== '' && 
     location.description.trim() !== '' && 
     location.alt.trim() !== '' && 
-    (location.image?.trim() !== '' || location.file)
+    location.image?.trim() !== ''
   ).length;
   const locationsTotalCount = localLocations.length;
 
@@ -542,7 +460,7 @@ export default function LocationPage({
       if (location.title.trim()) completed++;
       if (location.description.trim()) completed++;
       if (location.alt.trim()) completed++;
-      if (location.image?.trim() || location.file) completed++;
+      if (location.image?.trim()) completed++;
     });
 
     return { completed, total };
@@ -554,6 +472,10 @@ export default function LocationPage({
     () => localLocations.map((item, index) => item.id ?? `location-${index}`),
     [localLocations]
   );
+
+  if (loading && !exists) {
+    return <Loading layout={MapPin} exists={!!exists} />;
+  }
 
   return (
     <ManageLayout
@@ -654,7 +576,7 @@ export default function LocationPage({
                     const hasTitle = location.title.trim() !== "";
                     const hasDescription = location.description.trim() !== "";
                     const hasAlt = location.alt.trim() !== "";
-                    const hasImage = Boolean(location.image?.trim() !== "" || location.file);
+                    const hasImage = location.image && location.image.trim() !== "";
                     const isLastInOriginalList = originalIndex === localLocations.length - 1;
                     const isLastAndEmpty = isLastInOriginalList && !hasTitle && !hasDescription && !hasAlt && !hasImage;
 
@@ -669,9 +591,7 @@ export default function LocationPage({
                         showValidation={showValidation}
                         locationList={localLocations}
                         handleChange={handleChange}
-                        handleFileChange={handleFileChange}
                         openDeleteSingleModal={openDeleteSingleModal}
-                        getImageUrl={getImageUrl}
                         setNewItemRef={isLastAndEmpty ? setNewItemRef : undefined}
                       />
                     );
@@ -698,7 +618,7 @@ export default function LocationPage({
       <DeleteConfirmationModal
         isOpen={deleteModal.isOpen}
         onClose={closeDeleteModal}
-        onConfirm={() => confirmDelete(updateLocations)}
+        onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={localLocations.length}

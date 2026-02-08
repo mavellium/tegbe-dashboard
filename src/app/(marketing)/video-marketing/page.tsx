@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { Button } from "@/components/Button";
 import { 
   VideoIcon,
   ImageIcon,
@@ -137,8 +136,6 @@ export default function ShowcasePage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<ShowcaseData>({
     apiPath: "/api/tegbe-institucional/json/video-marketing",
     defaultData: defaultData,
@@ -156,11 +153,6 @@ export default function ShowcasePage() {
 
   const handleChange = (path: string, value: any) => {
     updateNested(path, value);
-  };
-
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -258,7 +250,6 @@ export default function ShowcasePage() {
                 <VideoUpload
                   label="Vídeo Principal"
                   currentVideo={currentData.metadata.assets.video_url}
-                  // AQUI: Atualiza direto o JSON com a URL retornada pela CDN
                   onChange={(url) => handleChange('metadata.assets.video_url', url)}
                   aspectRatio="aspect-video"
                   previewWidth={800}
@@ -275,8 +266,7 @@ export default function ShowcasePage() {
                 <ImageUpload
                   label="Textura de Ruído (SVG)"
                   currentImage={currentData.metadata.assets.noise_texture}
-                  selectedFile={getFileFromState('metadata.assets.noise_texture')}
-                  onFileChange={(file) => setFileState('metadata.assets.noise_texture', file)}
+                  onChange={(url) => handleChange('metadata.assets.noise_texture', url)}
                   aspectRatio="aspect-square"
                   previewWidth={200}
                   previewHeight={200}

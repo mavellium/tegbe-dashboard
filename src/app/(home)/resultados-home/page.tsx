@@ -1,28 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { TextArea } from "@/components/TextArea";
-import { Switch } from "@/components/Switch";
 import IconSelector from "@/components/IconSelector";
+import { ImageUpload } from "@/components/ImageUpload";
 import { 
   Layout, 
-  ListIcon,
   GripVertical,
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Palette,
-  Tag,
-  Settings,
-  Star,
+  Trophy,
+  Trash2,
   TrendingUp,
-  Globe,
-  Target
+  Settings,
+  Plus
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -31,163 +27,129 @@ import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { Button } from "@/components/Button";
-import { ThemePropertyInput } from "@/components/ThemePropertyInput";
-import { hexToTailwindBgClass } from "@/lib/colors";
-import { ImageUpload } from "@/components/ImageUpload";
 import { useSite } from "@/context/site-context";
 
-interface CaseItem {
-  id: number;
-  logo: string;
-  name: string;
-  description: string;
-  result: string;
-  tags: string[];
-  icon_decoration: string;
+interface StatBento {
+  id: string;
+  type: 'hero' | 'standard' | 'mini';
+  value: number;
+  prefix: string;
+  suffix: string;
+  label: string;
+  badge?: string;
+  icon?: string;
+  theme: 'dark' | 'light' | 'accent';
+}
+
+interface Partner {
+  id: string;
+  alt: string;
+  src: string;
 }
 
 interface HeaderData {
-  tag: string;
+  label: string;
   title_main: string;
-  title_highlight: string;
-  live_status: string;
+  title_sub: string;
+  live_data_label: string;
 }
 
-interface ConfigData {
-  theme: string;
-  colors: {
-    primary_gold: string;
-    bg_dark: string;
-    card_bg: string;
-  };
-  behavior: {
-    infinite_loop: boolean;
-    snap_type: string;
-    responsivity: string;
-  };
+interface InfrastructureData {
+  label: string;
+  partners: Partner[];
 }
 
-interface SuccessCasesCarouselData {
-  id?: string;
-  componentName: string;
-  description: string;
-  enabled: boolean;
-  header: HeaderData;
-  cases: CaseItem[];
-  config: ConfigData;
-  metadata: {
-    author: string;
-    version: string;
-    lastModified: string;
-    tags: string[];
-    category?: string;
+interface AuthoritySectionData {
+  authority_section: {
+    header: HeaderData;
+    stats_bento: StatBento[];
+    infrastructure: InfrastructureData;
   };
 }
 
-const defaultSuccessCasesCarouselData: SuccessCasesCarouselData = {
-  componentName: "",
-  description: "",
-  enabled: true,
-  header: {
-    tag: "",
-    title_main: "",
-    title_highlight: "",
-    live_status: ""
-  },
-  cases: [
-    {
-      id: 1,
-      logo: "",
-      name: "",
-      description: "",
-      result: "",
-      tags: [""],
-      icon_decoration: "TrendingUp"
-    }
-  ],
-  config: {
-    theme: "Dark/Gold",
-    colors: {
-      primary_gold: "#FFC400",
-      bg_dark: "#020202",
-      card_bg: "#0A0A0A"
+const defaultAuthoritySectionData: AuthoritySectionData = {
+  authority_section: {
+    header: {
+      label: "",
+      title_main: "",
+      title_sub: "",
+      live_data_label: ""
     },
-    behavior: {
-      infinite_loop: false,
-      snap_type: "spring",
-      responsivity: "Multi-Device Optimized"
+    stats_bento: [
+      {
+        id: "stat_01",
+        type: "hero",
+        value: 0,
+        prefix: "",
+        suffix: "",
+        label: "",
+        badge: "",
+        icon: "solar:wad-of-money-bold-duotone",
+        theme: "dark"
+      }
+    ],
+    infrastructure: {
+      label: "",
+      partners: [
+        { id: "partner_01", alt: "", src: "" },
+      ]
     }
-  },
-  metadata: {
-    author: "",
-    version: "1.0.0",
-    lastModified: new Date().toISOString(),
-    tags: [""],
-    category: "testimonials"
-  },
+  }
 };
 
-const mergeWithDefaults = (apiData: any, defaultData: SuccessCasesCarouselData): SuccessCasesCarouselData => {
+const mergeWithDefaults = (apiData: any, defaultData: AuthoritySectionData): AuthoritySectionData => {
   if (!apiData) return defaultData;
   
   return {
-    id: apiData.id,
-    componentName: apiData.componentName || defaultData.componentName,
-    description: apiData.description || defaultData.description,
-    enabled: apiData.enabled ? defaultData.enabled : true,
-    header: apiData.header || defaultData.header,
-    cases: apiData.cases || defaultData.cases,
-    config: apiData.config || defaultData.config,
-    metadata: {
-      author: apiData.metadata?.author || defaultData.metadata.author,
-      version: apiData.metadata?.version || defaultData.metadata.version,
-      lastModified: apiData.metadata?.lastModified || defaultData.metadata.lastModified,
-      tags: apiData.metadata?.tags || defaultData.metadata.tags,
-      category: apiData.metadata?.category || defaultData.metadata.category,
+    authority_section: {
+      header: apiData.authority_section?.header || defaultData.authority_section.header,
+      stats_bento: apiData.authority_section?.stats_bento || defaultData.authority_section.stats_bento,
+      infrastructure: apiData.authority_section?.infrastructure || defaultData.authority_section.infrastructure,
     },
   };
 };
 
-export default function SuccessCasesCarouselPage() {
+export default function AuthoritySectionPage() {
   const { currentSite } = useSite();
   const currentPlanType = currentSite.planType;
-  const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+  const currentStatPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+  const currentPartnerPlanLimit = currentPlanType === 'pro' ? 20 : 10;
 
   const {
-    data: carouselData,
+    data: pageData,
     exists,
     loading,
     success,
     errorMsg,
     deleteModal,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<SuccessCasesCarouselData>({
-    apiPath: "/api/tegbe-institucional/json/resultado",
-    defaultData: defaultSuccessCasesCarouselData,
+  } = useJsonManagement<AuthoritySectionData>({
+    apiPath: "/api/tegbe-institucional/json/metricas-home",
+    defaultData: defaultAuthoritySectionData,
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estado local para URLs temporárias de preview
-  const [tempImageUrls, setTempImageUrls] = useState<Record<number, string>>({});
+  // Estados para drag & drop
+  const [draggingStat, setDraggingStat] = useState<number | null>(null);
+  const [draggingPartner, setDraggingPartner] = useState<number | null>(null);
   
-  // Estado para drag & drop
-  const [draggingCase, setDraggingCase] = useState<number | null>(null);
-  
-  // Estado para tags em edição
-  const [editingCaseTags, setEditingCaseTags] = useState<{ [key: number]: string }>({});
+  // Referências para novos itens
+  const newStatRef = useRef<HTMLDivElement>(null);
+  const newPartnerRef = useRef<HTMLDivElement>(null);
 
   const [expandedSections, setExpandedSections] = useState({
-    basic: true,
-    header: false,
-    cases: false,
-    config: false,
-    metadata: false,
+    header: true,
+    stats: false,
+    partners: false,
   });
+
+  // Funções para obter dados
+  const getStats = () => pageData.authority_section.stats_bento || [];
+  const getPartners = () => pageData.authority_section.infrastructure.partners || [];
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -196,32 +158,30 @@ export default function SuccessCasesCarouselPage() {
     }));
   };
 
-  // Referência para o último case adicionado
-  const newCaseRef = useRef<HTMLDivElement>(null);
-
-  // Funções para manipular a lista de cases
-  const addCase = () => {
-    const currentCases = [...carouselData.cases];
-    
-    if (currentCases.length >= currentPlanLimit) {
+  // Funções para manipular a lista de stats
+  const handleAddStat = () => {
+    const stats = getStats();
+    if (stats.length >= currentStatPlanLimit) {
       return false;
     }
     
-    const newCase: CaseItem = {
-      id: Date.now(),
-      logo: "",
-      name: "",
-      description: "",
-      result: "",
-      tags: [],
-      icon_decoration: "TrendingUp"
+    const newId = `stat_${Date.now()}_${stats.length + 1}`;
+    const newStat: StatBento = {
+      id: newId,
+      type: 'standard',
+      value: 0,
+      prefix: '',
+      suffix: '',
+      label: '',
+      theme: 'light'
     };
     
-    updateNested('cases', [...currentCases, newCase]);
+    const updated = [...stats, newStat];
+    updateNested('authority_section.stats_bento', updated);
     
     // Scroll para o novo item
     setTimeout(() => {
-      newCaseRef.current?.scrollIntoView({ 
+      newStatRef.current?.scrollIntoView({ 
         behavior: 'smooth',
         block: 'nearest'
       });
@@ -230,232 +190,250 @@ export default function SuccessCasesCarouselPage() {
     return true;
   };
 
-  const updateCase = (index: number, updates: Partial<CaseItem>) => {
-    const currentCases = [...carouselData.cases];
+  const handleUpdateStat = (index: number, updates: Partial<StatBento>) => {
+    const stats = getStats();
+    const updated = [...stats];
     
-    if (index >= 0 && index < currentCases.length) {
-      currentCases[index] = { ...currentCases[index], ...updates };
-      updateNested('cases', currentCases);
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      updateNested('authority_section.stats_bento', updated);
     }
   };
 
-  const removeCase = (index: number) => {
-    const currentCases = [...carouselData.cases];
+  const handleRemoveStat = (index: number) => {
+    const stats = getStats();
     
-    if (currentCases.length <= 1) {
-      // Mantém pelo menos um case vazio
-      updateNested('cases', [{
-        id: Date.now(),
-        logo: "",
-        name: "",
-        description: "",
-        result: "",
-        tags: [],
-        icon_decoration: "TrendingUp"
-      }]);
+    if (stats.length <= 1) {
+      // Mantém pelo menos um stat vazio
+      const emptyStat: StatBento = {
+        id: "stat_01",
+        type: 'standard',
+        value: 0,
+        prefix: '',
+        suffix: '',
+        label: '',
+        theme: 'light'
+      };
+      updateNested('authority_section.stats_bento', [emptyStat]);
     } else {
-      currentCases.splice(index, 1);
-      updateNested('cases', currentCases);
+      const updated = stats.filter((_, i) => i !== index);
+      updateNested('authority_section.stats_bento', updated);
     }
   };
 
-  // Função para lidar com upload de imagem do case
-  const handleCaseImageChange = (caseIndex: number, file: File | null) => {
-    const caseItem = carouselData.cases[caseIndex];
-    const path = `cases.${caseIndex}.logo`;
+  // Funções para manipular a lista de partners
+  const handleAddPartner = () => {
+    const partners = getPartners();
+    if (partners.length >= currentPartnerPlanLimit) {
+      return false;
+    }
     
-    setFileState(path, file);
+    const newId = `partner_${Date.now()}_${partners.length + 1}`;
+    const newPartner: Partner = {
+      id: newId,
+      alt: "",
+      src: ""
+    };
     
-    if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      setTempImageUrls(prev => ({
-        ...prev,
-        [caseItem?.id]: objectUrl
-      }));
-      
-      updateCase(caseIndex, { logo: objectUrl });
+    const updated = [...partners, newPartner];
+    updateNested('authority_section.infrastructure.partners', updated);
+    
+    // Scroll para o novo item
+    setTimeout(() => {
+      newPartnerRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }, 100);
+    
+    return true;
+  };
+
+  const handleUpdatePartner = (index: number, updates: Partial<Partner>) => {
+    const partners = getPartners();
+    const updated = [...partners];
+    
+    if (index >= 0 && index < updated.length) {
+      updated[index] = { ...updated[index], ...updates };
+      updateNested('authority_section.infrastructure.partners', updated);
+    }
+  };
+
+  const handleRemovePartner = (index: number) => {
+    const partners = getPartners();
+    
+    if (partners.length <= 1) {
+      // Mantém pelo menos um partner vazio
+      const emptyPartner: Partner = {
+        id: "partner_01",
+        alt: "",
+        src: ""
+      };
+      updateNested('authority_section.infrastructure.partners', [emptyPartner]);
     } else {
-      // Limpar URL temporária se existir
-      if (tempImageUrls[caseItem?.id]) {
-        URL.revokeObjectURL(tempImageUrls[caseItem?.id]);
-        setTempImageUrls(prev => {
-          const newUrls = { ...prev };
-          delete newUrls[caseItem?.id];
-          return newUrls;
-        });
-      }
-      
-      updateCase(caseIndex, { logo: "" });
+      const updated = partners.filter((_, i) => i !== index);
+      updateNested('authority_section.infrastructure.partners', updated);
     }
   };
 
-  // Funções para tags
-  const handleAddTagToCase = (caseIndex: number, tag: string) => {
-    if (!tag.trim()) return;
-    
-    const currentCase = carouselData.cases[caseIndex];
-    const updatedTags = [...currentCase.tags, tag.trim()];
-    updateCase(caseIndex, { tags: updatedTags });
-    
-    // Limpa o campo de edição
-    setEditingCaseTags(prev => ({
-      ...prev,
-      [caseIndex]: ''
-    }));
-  };
-
-  const handleRemoveTagFromCase = (caseIndex: number, tagIndex: number) => {
-    const currentCase = carouselData.cases[caseIndex];
-    const updatedTags = currentCase.tags.filter((_, i) => i !== tagIndex);
-    updateCase(caseIndex, { tags: updatedTags });
-  };
-
-  // Funções de drag & drop
-  const handleCaseDragStart = (e: React.DragEvent, index: number) => {
+  // Funções de drag & drop para stats
+  const handleStatDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
-    setDraggingCase(index);
+    setDraggingStat(index);
   };
 
-  const handleCaseDragOver = (e: React.DragEvent, index: number) => {
+  const handleStatDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
     
-    if (draggingCase === null || draggingCase === index) return;
+    if (draggingStat === null || draggingStat === index) return;
     
-    const currentCases = [...carouselData.cases];
-    const draggedCase = currentCases[draggingCase];
+    const stats = getStats();
+    const updated = [...stats];
+    const draggedStat = updated[draggingStat];
     
     // Remove o item arrastado
-    currentCases.splice(draggingCase, 1);
+    updated.splice(draggingStat, 1);
     
     // Insere na nova posição
-    const newIndex = index > draggingCase ? index : index;
-    currentCases.splice(newIndex, 0, draggedCase);
+    const newIndex = index > draggingStat ? index : index;
+    updated.splice(newIndex, 0, draggedStat);
     
-    updateNested('cases', currentCases);
-    setDraggingCase(index);
+    updateNested('authority_section.stats_bento', updated);
+    setDraggingStat(index);
   };
 
-  const handleCaseDragEnd = (e: React.DragEvent) => {
+  const handleStatDragEnd = (e: React.DragEvent) => {
     e.currentTarget.classList.remove('dragging');
-    setDraggingCase(null);
+    setDraggingStat(null);
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
+  // Funções de drag & drop para partners
+  const handlePartnerDragStart = (e: React.DragEvent, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString());
+    e.currentTarget.classList.add('dragging');
+    setDraggingPartner(index);
   };
 
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
+  const handlePartnerDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
+    
+    if (draggingPartner === null || draggingPartner === index) return;
+    
+    const partners = getPartners();
+    const updated = [...partners];
+    const draggedPartner = updated[draggingPartner];
+    
+    // Remove o item arrastado
+    updated.splice(draggingPartner, 1);
+    
+    // Insere na nova posição
+    const newIndex = index > draggingPartner ? index : index;
+    updated.splice(newIndex, 0, draggedPartner);
+    
+    updateNested('authority_section.infrastructure.partners', updated);
+    setDraggingPartner(index);
   };
 
-  const handleAddCase = () => {
-    const success = addCase();
-    if (!success) {
-      console.warn(`Limite do plano ${currentPlanType} atingido (${currentPlanLimit} itens)`);
-    }
+  const handlePartnerDragEnd = (e: React.DragEvent) => {
+    e.currentTarget.classList.remove('dragging');
+    setDraggingPartner(null);
   };
-
-  // Limpar URLs temporárias ao desmontar
-  useEffect(() => {
-    return () => {
-      Object.values(tempImageUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-    };
-  }, [tempImageUrls]);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
     try {
-      // Atualizar data da última modificação
-      updateNested('metadata.lastModified', new Date().toISOString());
-      
-      // Salvar no banco de dados
       await save();
-      
-      // Após salvar, limpar as URLs temporárias
-      Object.values(tempImageUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-      setTempImageUrls({});
-      
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
   };
 
-  // Funções para atualizar cores
-  const handleColorChange = (colorKey: keyof ConfigData['colors'], hexColor: string) => {
-    updateNested(`config.colors.${colorKey}`, hexColor);
+  // Função para obter ícone baseado no tipo de stat
+  const getStatTypeIcon = (type: string) => {
+    switch (type) {
+      case 'hero': return Trophy;
+      case 'standard': return TrendingUp;
+      default: return TrendingUp;
+    }
+  };
+
+  // Função para obter cor baseado no tema
+  const getThemeColor = (theme: string) => {
+    switch (theme) {
+      case 'dark': return 'bg-gray-900 text-white';
+      case 'light': return 'bg-white text-gray-900 border border-gray-200';
+      case 'accent': return 'bg-blue-50 text-blue-900 border border-blue-200';
+      default: return 'bg-white text-gray-900';
+    }
   };
 
   // Cálculos de validação
-  const isCaseValid = (caseItem?: CaseItem): boolean => {
-    return caseItem?.name?.trim() !== '' && 
-           caseItem?.description?.trim() !== '' && 
-           caseItem?.result?.trim() !== '';
+  const isStatValid = (stat: StatBento): boolean => {
+    return stat.label.trim() !== '' && stat.value !== undefined && stat.value !== null;
   };
 
-  const cases = carouselData.cases;
-  const isLimitReached = cases.length >= currentPlanLimit;
-  const canAddNewItem = !isLimitReached;
-  const completeCount = cases.filter(isCaseValid).length;
-  const totalCount = cases.length;
-  const validationError = isLimitReached 
-    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPlanLimit} itens).`
+  const isPartnerValid = (partner: Partner): boolean => {
+    return partner.alt.trim() !== '' && partner.src.trim() !== '';
+  };
+  
+  const stats = getStats();
+  const partners = getPartners();
+  
+  const isStatLimitReached = stats.length >= currentStatPlanLimit;
+  const isPartnerLimitReached = partners.length >= currentPartnerPlanLimit;
+  
+  const canAddNewStat = !isStatLimitReached;
+  const canAddNewPartner = !isPartnerLimitReached;
+  
+  const completeStatCount = stats.filter(isStatValid).length;
+  const completePartnerCount = partners.filter(isPartnerValid).length;
+  
+  const totalStatCount = stats.length;
+  const totalPartnerCount = partners.length;
+  
+  const statValidationError = isStatLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentStatPlanLimit} estatísticas).`
+    : null;
+    
+  const partnerValidationError = isPartnerLimitReached 
+    ? `Você chegou ao limite do plano ${currentPlanType} (${currentPartnerPlanLimit} parceiros).`
     : null;
 
-  // Cálculo de preenchimento
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Informações básicas
-    total += 3;
-    if (carouselData.componentName.trim()) completed++;
-    if (carouselData.description.trim()) completed++;
-    total++; // enabled sempre tem valor
-
-    // Header
+    // Header (4 campos)
     total += 4;
-    if (carouselData.header.tag.trim()) completed++;
-    if (carouselData.header.title_main.trim()) completed++;
-    if (carouselData.header.title_highlight.trim()) completed++;
-    if (carouselData.header.live_status.trim()) completed++;
+    if (pageData.authority_section.header.label.trim()) completed++;
+    if (pageData.authority_section.header.title_main.trim()) completed++;
+    if (pageData.authority_section.header.title_sub.trim()) completed++;
+    if (pageData.authority_section.header.live_data_label.trim()) completed++;
 
-    // Cases
-    total += cases.length * 6;
-    cases.forEach(caseItem => {
-      if (caseItem?.name?.trim()) completed++;
-      if (caseItem?.description?.trim()) completed++;
-      if (caseItem?.result?.trim()) completed++;
-      if (caseItem?.logo.trim()) completed++;
-      if (caseItem?.icon_decoration?.trim()) completed++;
-      if (caseItem?.tags?.length > 0) completed++;
+    // Stats Bento
+    total += stats.length * 7;
+    stats.forEach(stat => {
+      if (stat.label.trim()) completed++;
+      if (stat.value !== undefined && stat.value !== null) completed++;
+      if (stat.type.trim()) completed++;
+      if (stat.theme.trim()) completed++;
+      if (stat.prefix !== undefined) completed++;
+      if (stat.suffix !== undefined) completed++;
+      // badge e icon são opcionais
     });
 
-    // Config
-    total += 6;
-    if (carouselData.config.theme.trim()) completed++;
-    if (carouselData.config.colors.primary_gold) completed++;
-    if (carouselData.config.colors.bg_dark) completed++;
-    if (carouselData.config.colors.card_bg) completed++;
-    if (carouselData.config.behavior.snap_type.trim()) completed++;
-    if (carouselData.config.behavior.responsivity.trim()) completed++;
+    // Infrastructure Label (1 campo)
+    total += 1;
+    if (pageData.authority_section.infrastructure.label.trim()) completed++;
 
-    // Metadata
-    total += 4;
-    if (carouselData.metadata.author.trim()) completed++;
-    if (carouselData.metadata.version.trim()) completed++;
-    if (carouselData.metadata.category?.trim()) completed++;
-    if (carouselData.metadata.tags.length > 0) completed++;
+    // Partners
+    total += partners.length * 2; // alt e src
+    partners.forEach(partner => {
+      if (partner.alt.trim()) completed++;
+      if (partner.src.trim()) completed++;
+    });
 
     return { completed, total };
   };
@@ -468,73 +446,19 @@ export default function SuccessCasesCarouselPage() {
 
   return (
     <ManageLayout
-      headerIcon={Target}
-      title="Carrossel de Cases de Sucesso"
-      description="Gerencie o carrossel de cases com resultados mensuráveis"
+      headerIcon={Trophy}
+      title="Gerenciar Seção de Métricas"
+      description="Configure estatísticas, parceiros e conteúdo da seção de métricas"
       exists={!!exists}
-      itemName="Resultados"
+      itemName="Seção de Métricas"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Básica */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Informações Básicas"
-            section="basic"
-            icon={Settings}
-            isExpanded={expandedSections.basic}
-            onToggle={() => toggleSection("basic")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.basic ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Nome do Componente"
-                  value={carouselData.componentName}
-                  onChange={(e) => updateNested('componentName', e.target.value)}
-                  placeholder="Ex: Carrossel de Cases de Sucesso"
-                  required
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-
-                <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
-                  <div>
-                    <h4 className="font-medium text-[var(--color-secondary)]">Status do Componente</h4>
-                    <p className="text-sm text-[var(--color-secondary)]/70">
-                      {carouselData.enabled ? "Ativo e visível" : "Desativado"}
-                    </p>
-                  </div>
-                  <Switch
-                    checked={carouselData.enabled}
-                    onCheckedChange={(checked) => updateNested('enabled', checked)}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <TextArea
-                    label="Descrição"
-                    value={carouselData.description}
-                    onChange={(e) => updateNested('description', e.target.value)}
-                    placeholder="Descreva o propósito deste carrossel de cases"
-                    rows={3}
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
         {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
-            title="Cabeçalho do Carrossel"
+            title="Cabeçalho da Seção"
             section="header"
-            icon={Layout}
+            icon={Trophy}
             isExpanded={expandedSections.header}
             onToggle={() => toggleSection("header")}
           />
@@ -546,89 +470,105 @@ export default function SuccessCasesCarouselPage() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Tag / Categoria"
-                  value={carouselData.header.tag}
-                  onChange={(e) => updateNested('header.tag', e.target.value)}
-                  placeholder="Ex: Track Record Validado"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Label
+                  </label>
+                  <Input
+                    value={pageData.authority_section.header.label}
+                    onChange={(e) => updateNested('authority_section.header.label', e.target.value)}
+                    placeholder="Ex: Performance Auditada"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
 
-                <Input
-                  label="Status em Tempo Real"
-                  value={carouselData.header.live_status}
-                  onChange={(e) => updateNested('header.live_status', e.target.value)}
-                  placeholder="Ex: Atualizado em tempo real"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Título Principal
+                  </label>
+                  <Input
+                    value={pageData.authority_section.header.title_main}
+                    onChange={(e) => updateNested('authority_section.header.title_main', e.target.value)}
+                    placeholder="Ex: Não prometemos."
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
 
-                <Input
-                  label="Título Principal"
-                  value={carouselData.header.title_main}
-                  onChange={(e) => updateNested('header.title_main', e.target.value)}
-                  placeholder="Ex: Resultados que"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Título Secundário
+                  </label>
+                  <Input
+                    value={pageData.authority_section.header.title_sub}
+                    onChange={(e) => updateNested('authority_section.header.title_sub', e.target.value)}
+                    placeholder="Ex: Nós provamos."
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
 
-                <Input
-                  label="Título em Destaque"
-                  value={carouselData.header.title_highlight}
-                  onChange={(e) => updateNested('header.title_highlight', e.target.value)}
-                  placeholder="Ex: falam por si."
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Label dos Dados em Tempo Real
+                  </label>
+                  <Input
+                    value={pageData.authority_section.header.live_data_label}
+                    onChange={(e) => updateNested('authority_section.header.live_data_label', e.target.value)}
+                    placeholder="Ex: Live Data 2026"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
               </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Seção Cases */}
+        {/* Seção Stats Bento */}
         <div className="space-y-4">
           <SectionHeader
-            title="Cases de Sucesso"
-            section="cases"
-            icon={ListIcon}
-            isExpanded={expandedSections.cases}
-            onToggle={() => toggleSection("cases")}
+            title="Estatísticas (Bento Grid)"
+            section="stats"
+            icon={TrendingUp}
+            isExpanded={expandedSections.stats}
+            onToggle={() => toggleSection("stats")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.cases ? "auto" : 0 }}
+            animate={{ height: expandedSections.stats ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
-                      <Star className="w-5 h-5" />
-                      Cases Cadastrados
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                      Configure as estatísticas do grid
                     </h3>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                         <span className="text-sm text-[var(--color-secondary)]/70">
-                          {completeCount} de {totalCount} completos
+                          {completeStatCount} de {totalStatCount} completos
                         </span>
                       </div>
                       <span className="text-sm text-[var(--color-secondary)]/50">•</span>
                       <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {currentPlanLimit} cases
+                        Limite: {currentStatPlanLimit} estatísticas
                       </span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <Button
                       type="button"
-                      onClick={handleAddCase}
+                      onClick={handleAddStat}
                       variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                      disabled={!canAddNewItem}
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewStat}
                     >
-                      + Adicionar Case
+                      <Plus className="w-4 h-4" />
+                      Adicionar Estatística
                     </Button>
-                    {isLimitReached && (
+                    {isStatLimitReached && (
                       <p className="text-xs text-red-500 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3" />
                         Limite do plano atingido
@@ -636,437 +576,419 @@ export default function SuccessCasesCarouselPage() {
                     )}
                   </div>
                 </div>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Configure as estatísticas que aparecem no grid. Diferentes tipos (hero, standard, mini) criam diferentes layouts.
+                </p>
               </div>
 
               {/* Mensagem de erro */}
-              {validationError && (
-                <div className={`p-3 rounded-lg mb-4 ${isLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+              {statValidationError && (
+                <div className={`p-3 rounded-lg mb-4 ${isStatLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
                   <div className="flex items-start gap-2">
-                    {isLimitReached ? (
+                    {isStatLimitReached ? (
                       <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     ) : (
                       <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
                     )}
-                    <p className={`text-sm ${isLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {validationError}
+                    <p className={`text-sm ${isStatLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                      {statValidationError}
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="space-y-6">
-                {cases.map((caseItem, index) => (
-                  <div 
-                    key={index}
-                    ref={index === cases.length - 1 ? newCaseRef : undefined}
-                    draggable
-                    onDragStart={(e) => handleCaseDragStart(e, index)}
-                    onDragOver={(e) => handleCaseDragOver(e, index)}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                    onDragEnd={handleCaseDragEnd}
-                    onDrop={handleDrop}
-                    className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      draggingCase === index 
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
-                        : 'hover:border-[var(--color-primary)]/50'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
-                        {/* Handle para drag & drop */}
-                        <div 
-                          className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
-                          draggable
-                          onDragStart={(e) => handleCaseDragStart(e, index)}
-                        >
-                          <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
-                        </div>
-                        
-                        {/* Indicador de posição */}
-                        <div className="flex flex-col items-center">
-                          <span className="text-xs font-medium text-[var(--color-secondary)]/70">
-                            {index + 1}
-                          </span>
-                          <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
-                        </div>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-medium text-[var(--color-secondary)]">
-                              {caseItem?.name || "Case sem nome"}
-                            </h4>
-                            {caseItem?.name && caseItem?.description && caseItem?.result ? (
-                              <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
-                                Completo
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                                Incompleto
-                              </span>
-                            )}
+              <div className="space-y-4">
+                {stats.map((stat, index) => {
+                  const StatIcon = getStatTypeIcon(stat.type);
+                  return (
+                    <div 
+                      key={stat.id}
+                      ref={index === stats.length - 1 ? newStatRef : undefined}
+                      draggable
+                      onDragStart={(e) => handleStatDragStart(e, index)}
+                      onDragOver={(e) => handleStatDragOver(e, index)}
+                      onDragEnd={handleStatDragEnd}
+                      className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
+                        draggingStat === index 
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                          : 'hover:border-[var(--color-primary)]/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          {/* Handle para drag & drop */}
+                          <div 
+                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                            draggable
+                            onDragStart={(e) => handleStatDragStart(e, index)}
+                          >
+                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
                           </div>
                           
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Nome da Empresa
-                                </label>
-                                <Input
-                                  value={caseItem?.name}
-                                  onChange={(e) => updateCase(index, { name: e.target.value })}
-                                  placeholder="Ex: Decora Fest"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
+                          {/* Indicador de tipo */}
+                          <div className="flex flex-col items-center">
+                            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${getThemeColor(stat.theme)}`}>
+                              <StatIcon className="w-5 h-5" />
+                            </div>
+                            <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                  stat.type === 'hero' ? 'bg-purple-900/20 text-purple-700' :
+                                  stat.type === 'standard' ? 'bg-blue-900/20 text-blue-700' :
+                                  'bg-green-900/20 text-green-700'
+                                }`}>
+                                  {stat.type}
+                                </span>
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                  stat.theme === 'dark' ? 'bg-gray-900 text-white' :
+                                  stat.theme === 'light' ? 'bg-gray-100 text-gray-800' :
+                                  'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {stat.theme}
+                                </span>
                               </div>
-                              
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Logo da Empresa
-                                </label>
-                                <ImageUpload
-                                  label="Logo"
-                                  currentImage={caseItem?.logo ?? ''}
-                                  selectedFile={null}
-                                  onFileChange={(file) => handleCaseImageChange(index, file)}
-                                  aspectRatio="aspect-square"
-                                  previewWidth={120}
-                                  previewHeight={120}
-                                  description="Logo da empresa (recomendado: 400x400px)"
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                                  <Globe className="w-4 h-4" />
-                                  Descrição
-                                </label>
-                                <Input
-                                  value={caseItem?.description}
-                                  onChange={(e) => updateCase(index, { description: e.target.value })}
-                                  placeholder="E-commerce • Nacional"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
-                              </div>
+                              {isStatValid(stat) ? (
+                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                  Completo
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                  Incompleto
+                                </span>
+                              )}
                             </div>
                             
-                            <div className="space-y-4">
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                                  <TrendingUp className="w-4 h-4" />
-                                  Resultado
-                                </label>
-                                <Input
-                                  value={caseItem?.result}
-                                  onChange={(e) => updateCase(index, { result: e.target.value })}
-                                  placeholder="Faturamento +215%"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Ícone de Decoração
-                                </label>
-                                <IconSelector
-                                  value={caseItem?.icon_decoration ?? ''}
-                                  onChange={(value) => updateCase(index, { icon_decoration: value })}
-                                  placeholder="TrendingUp"
-                                />
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                                  Tags
-                                </label>
-                                <div className="space-y-2">
-                                  <div className="flex gap-2">
-                                    <Input
-                                      value={editingCaseTags[index] || ''}
-                                      onChange={(e) => setEditingCaseTags(prev => ({
-                                        ...prev,
-                                        [index]: e.target.value
-                                      }))}
-                                      placeholder="Nova tag"
-                                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          e.preventDefault();
-                                          handleAddTagToCase(index, editingCaseTags[index] || '');
-                                        }
-                                      }}
-                                    />
-                                    <Button
-                                      type="button"
-                                      onClick={() => handleAddTagToCase(index, editingCaseTags[index] || '')}
-                                      variant="primary"
-                                      className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                            <div className="space-y-6">
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                      Tipo
+                                    </label>
+                                    <select
+                                      value={stat.type}
+                                      onChange={(e) => handleUpdateStat(index, { type: e.target.value as 'hero' | 'standard' | 'mini' })}
+                                      className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
                                     >
-                                      Adicionar
-                                    </Button>
+                                      <option value="hero">Hero (Grande)</option>
+                                      <option value="standard">Standard (Médio)</option>
+                                      <option value="mini">Mini (Pequeno)</option>
+                                    </select>
                                   </div>
                                   
-                                  <div className="flex flex-wrap gap-2">
-                                    {caseItem?.tags?.map((tag, tagIndex) => (
-                                      <div
-                                        key={tagIndex}
-                                        className="flex items-center gap-1 px-3 py-1 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full"
-                                      >
-                                        <span className="text-sm">{tag}</span>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleRemoveTagFromCase(index, tagIndex)}
-                                          className="ml-1 text-[var(--color-primary)] hover:text-red-500"
-                                        >
-                                          ×
-                                        </button>
-                                      </div>
-                                    ))}
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Tema</label>
+                                    <select
+                                      value={stat.theme}
+                                      onChange={(e) => handleUpdateStat(index, { theme: e.target.value as 'dark' | 'light' | 'accent' })}
+                                      className="w-full px-3 py-2 bg-[var(--color-background-body)] border border-[var(--color-border)] rounded text-[var(--color-secondary)]"
+                                    >
+                                      <option value="dark">Dark (Escuro)</option>
+                                      <option value="light">Light (Claro)</option>
+                                      <option value="accent">Accent (Acentuado)</option>
+                                    </select>
                                   </div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Valor</label>
+                                    <Input
+                                      type="number"
+                                      value={stat.value}
+                                      onChange={(e) => handleUpdateStat(index, { value: parseFloat(e.target.value) || 0 })}
+                                      placeholder="Ex: 100"
+                                      step="0.1"
+                                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                    />
+                                  </div>
+                                  
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <label className="block text-sm font-medium text-[var(--color-secondary)]">Prefixo</label>
+                                      <Input
+                                        value={stat.prefix}
+                                        onChange={(e) => handleUpdateStat(index, { prefix: e.target.value })}
+                                        placeholder="Ex: +"
+                                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                      />
+                                    </div>
+                                    
+                                    <div className="space-y-2">
+                                      <label className="block text-sm font-medium text-[var(--color-secondary)]">Sufixo</label>
+                                      <Input
+                                        value={stat.suffix}
+                                        onChange={(e) => handleUpdateStat(index, { suffix: e.target.value })}
+                                        placeholder="Ex: M, k, x"
+                                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Label</label>
+                                    <Input
+                                      value={stat.label}
+                                      onChange={(e) => handleUpdateStat(index, { label: e.target.value })}
+                                      placeholder="Ex: GMV (Faturamento) Gerenciado"
+                                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                    />
+                                  </div>
+                                  
+                                  {stat.type === 'hero' && (
+                                    <div className="space-y-2">
+                                      <label className="block text-sm font-medium text-[var(--color-secondary)]">Badge</label>
+                                      <Input
+                                        value={stat.badge || ''}
+                                        onChange={(e) => handleUpdateStat(index, { badge: e.target.value })}
+                                        placeholder="Ex: Recorde Anual"
+                                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Ícone (opcional para alguns tipos) */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    Ícone (Opcional)
+                                  </label>
+                                  <IconSelector
+                                    value={stat.icon || ''}
+                                    onChange={(value) => handleUpdateStat(index, { icon: value })}
+                                    placeholder="solar:wad-of-money-bold-duotone"
+                                  />
+                                  <p className="text-xs text-[var(--color-secondary)]/50">
+                                    Ícones recomendados para tipos hero e mini
+                                  </p>
                                 </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => removeCase(index)}
-                          variant="danger"
-                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none"
-                        >
-                          Remover
-                        </Button>
+                        
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => handleRemoveStat(index)}
+                            variant="danger"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remover
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </Card>
           </motion.div>
         </div>
 
-        {/* Seção Configurações */}
+        {/* Seção Infraestrutura e Parceiros */}
         <div className="space-y-4">
           <SectionHeader
-            title="Configurações do Carrossel"
-            section="config"
-            icon={Palette}
-            isExpanded={expandedSections.config}
-            onToggle={() => toggleSection("config")}
+            title="Infraestrutura e Parceiros"
+            section="partners"
+            icon={Settings}
+            isExpanded={expandedSections.partners}
+            onToggle={() => toggleSection("partners")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.config ? "auto" : 0 }}
+            animate={{ height: expandedSections.partners ? "auto" : 0 }}
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-8">
-                {/* Tema */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
-                    Configurações de Tema
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Input
-                      label="Tema"
-                      value={carouselData.config.theme}
-                      onChange={(e) => updateNested('config.theme', e.target.value)}
-                      placeholder="Ex: Dark/Gold"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
-                </div>
-
-                {/* Cores */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
-                    Paleta de Cores
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <ThemePropertyInput
-                      property="bg"
-                      label="Ouro Primário"
-                      description="Cor de destaque principal"
-                      currentHex={carouselData.config.colors.primary_gold}
-                      tailwindClass={hexToTailwindBgClass(carouselData.config.colors.primary_gold)}
-                      onThemeChange={(_, hex) => handleColorChange('primary_gold', hex)}
-                    />
-
-                    <ThemePropertyInput
-                      property="bg"
-                      label="Fundo Escuro"
-                      description="Cor de fundo principal"
-                      currentHex={carouselData.config.colors.bg_dark}
-                      tailwindClass={hexToTailwindBgClass(carouselData.config.colors.bg_dark)}
-                      onThemeChange={(_, hex) => handleColorChange('bg_dark', hex)}
-                    />
-
-                    <ThemePropertyInput
-                      property="bg"
-                      label="Fundo do Card"
-                      description="Cor de fundo dos cards"
-                      currentHex={carouselData.config.colors.card_bg}
-                      tailwindClass={hexToTailwindBgClass(carouselData.config.colors.card_bg)}
-                      onThemeChange={(_, hex) => handleColorChange('card_bg', hex)}
-                    />
-                  </div>
-                </div>
-
-                {/* Comportamento */}
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
-                    Comportamento do Carrossel
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
-                      <div>
-                        <h4 className="font-medium text-[var(--color-secondary)]">Loop Infinito</h4>
-                        <p className="text-sm text-[var(--color-secondary)]/70">
-                          {carouselData.config.behavior.infinite_loop ? "Ativado" : "Desativado"}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={carouselData.config.behavior.infinite_loop}
-                        onCheckedChange={(checked) => updateNested('config.behavior.infinite_loop', checked)}
-                      />
-                    </div>
-
-                    <Input
-                      label="Tipo de Snap"
-                      value={carouselData.config.behavior.snap_type}
-                      onChange={(e) => updateNested('config.behavior.snap_type', e.target.value)}
-                      placeholder="Ex: spring, inertia, none"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-
-                    <Input
-                      label="Responsividade"
-                      value={carouselData.config.behavior.responsivity}
-                      onChange={(e) => updateNested('config.behavior.responsivity', e.target.value)}
-                      placeholder="Ex: Multi-Device Optimized"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] md:col-span-2"
-                    />
-                  </div>
+              {/* Label da Infraestrutura */}
+              <div className="mb-8">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Label da Infraestrutura
+                  </label>
+                  <Input
+                    value={pageData.authority_section.infrastructure.label}
+                    onChange={(e) => updateNested('authority_section.infrastructure.label', e.target.value)}
+                    placeholder="Ex: Infraestrutura Certificada"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
                 </div>
               </div>
-            </Card>
-          </motion.div>
-        </div>
 
-        {/* Seção Metadados */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Metadados"
-            section="metadata"
-            icon={Tag}
-            isExpanded={expandedSections.metadata}
-            onToggle={() => toggleSection("metadata")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.metadata ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Autor"
-                    value={carouselData.metadata.author}
-                    onChange={(e) => updateNested('metadata.author', e.target.value)}
-                    placeholder="Ex: Sistema IA"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <Input
-                    label="Versão"
-                    value={carouselData.metadata.version}
-                    onChange={(e) => updateNested('metadata.version', e.target.value)}
-                    placeholder="Ex: 1.0.0"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <Input
-                    label="Categoria"
-                    value={carouselData.metadata.category || ''}
-                    onChange={(e) => updateNested('metadata.category', e.target.value)}
-                    placeholder="Ex: testimonials, portfolio, results"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-
-                {/* Tags do componente */}
-                <div className="space-y-4">
+              {/* Lista de Parceiros */}
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                   <div>
-                    <h4 className="font-medium text-[var(--color-secondary)] mb-1">Tags do Componente</h4>
-                    <p className="text-sm text-[var(--color-secondary)]/70">
-                      Tags para organização e filtro
-                    </p>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {carouselData.metadata.tags.map((tag, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-1 px-3 py-1 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full"
-                      >
-                        <span className="text-sm">{tag}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const newTags = [...carouselData.metadata.tags];
-                            newTags.splice(index, 1);
-                            updateNested('metadata.tags', newTags);
-                          }}
-                          className="ml-1 text-[var(--color-primary)] hover:text-red-500"
-                        >
-                          ×
-                        </button>
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                      Parceiros
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-[var(--color-secondary)]/70">
+                          {completePartnerCount} de {totalPartnerCount} completos
+                        </span>
                       </div>
-                    ))}
+                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        Limite: {currentPartnerPlanLimit} parceiros
+                      </span>
+                    </div>
                   </div>
-                  
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Nova tag"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const input = e.target as HTMLInputElement;
-                          if (input.value.trim()) {
-                            const newTags = [...carouselData.metadata.tags, input.value.trim()];
-                            updateNested('metadata.tags', newTags);
-                            input.value = '';
-                          }
-                        }
-                      }}
-                    />
+                  <div className="flex flex-col items-end gap-2">
                     <Button
                       type="button"
-                      onClick={() => {
-                        const input = document.querySelector('input[placeholder="Nova tag"]') as HTMLInputElement;
-                        if (input && input.value.trim()) {
-                          const newTags = [...carouselData.metadata.tags, input.value.trim()];
-                          updateNested('metadata.tags', newTags);
-                          input.value = '';
-                        }
-                      }}
+                      onClick={handleAddPartner}
                       variant="primary"
-                      className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
+                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      disabled={!canAddNewPartner}
                     >
-                      Adicionar Tag
+                      <Plus className="w-4 h-4" />
+                      Adicionar Parceiro
                     </Button>
+                    {isPartnerLimitReached && (
+                      <p className="text-xs text-red-500 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Limite do plano atingido
+                      </p>
+                    )}
                   </div>
+                </div>
+
+                {/* Mensagem de erro */}
+                {partnerValidationError && (
+                  <div className={`p-3 rounded-lg mb-4 ${isPartnerLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'}`}>
+                    <div className="flex items-start gap-2">
+                      {isPartnerLimitReached ? (
+                        <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      )}
+                      <p className={`text-sm ${isPartnerLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
+                        {partnerValidationError}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  {partners.map((partner, index) => (
+                    <div 
+                      key={partner.id}
+                      ref={index === partners.length - 1 ? newPartnerRef : undefined}
+                      draggable
+                      onDragStart={(e) => handlePartnerDragStart(e, index)}
+                      onDragOver={(e) => handlePartnerDragOver(e, index)}
+                      onDragEnd={handlePartnerDragEnd}
+                      className={`p-4 border border-[var(--color-border)] rounded-lg space-y-4 transition-all duration-200 ${
+                        draggingPartner === index 
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
+                          : 'hover:border-[var(--color-primary)]/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 flex-1">
+                          {/* Handle para drag & drop */}
+                          <div 
+                            className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
+                            draggable
+                            onDragStart={(e) => handlePartnerDragStart(e, index)}
+                          >
+                            <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                          </div>
+                          
+                          {/* Indicador de posição */}
+                          <div className="flex flex-col items-center">
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
+                              <span className="text-sm font-bold text-[var(--color-primary)]">
+                                {index + 1}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-4">
+                              <h4 className="font-medium text-[var(--color-secondary)]">
+                                {partner.alt || "Parceiro sem nome"}
+                              </h4>
+                              {isPartnerValid(partner) ? (
+                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                  Completo
+                                </span>
+                              ) : (
+                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                  Incompleto
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    Nome do Parceiro
+                                  </label>
+                                  <Input
+                                    value={partner.alt}
+                                    onChange={(e) => handleUpdatePartner(index, { alt: e.target.value })}
+                                    placeholder="Ex: Mercado Livre"
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                                    URL da Imagem
+                                  </label>
+                                  <Input
+                                    value={partner.src}
+                                    onChange={(e) => handleUpdatePartner(index, { src: e.target.value })}
+                                    placeholder="https://exemplo.com/logo.svg"
+                                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                                  />
+                                </div>
+                              </div>
+                              
+                              <div className="lg:col-span-2">
+                                <ImageUpload
+                                  label="Logo do Parceiro"
+                                  currentImage={partner.src}
+                                  onChange={(url) => handleUpdatePartner(index, { src: url })}
+                                  description="Faça upload ou cole a URL do logo do parceiro"
+                                  aspectRatio="aspect-square"
+                                  previewWidth={150}
+                                  previewHeight={150}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col gap-2">
+                          <Button
+                            type="button"
+                            onClick={() => handleRemovePartner(index)}
+                            variant="danger"
+                            className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </Card>
@@ -1081,8 +1003,8 @@ export default function SuccessCasesCarouselPage() {
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Carrossel"
-          icon={Target}
+          itemName="Seção de Métricas"
+          icon={Trophy}
         />
       </form>
 
@@ -1093,7 +1015,7 @@ export default function SuccessCasesCarouselPage() {
         type={deleteModal.type}
         itemTitle={deleteModal.title}
         totalItems={1}
-        itemName="Carrossel de Cases"
+        itemName="Configuração da Seção de Métricas"
       />
 
       <FeedbackMessages 

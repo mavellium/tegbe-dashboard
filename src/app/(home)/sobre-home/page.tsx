@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -10,16 +10,10 @@ import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   Palette,
-  Tag,
   Settings,
-  Star,
-  TrendingUp,
   Image as ImageIcon,
-  Globe,
-  MapPin,
   Target,
   Layout,
-  ListIcon,
   GripVertical,
   AlertCircle,
   CheckCircle2,
@@ -27,6 +21,7 @@ import {
   Plus,
   Trash2,
   Hash,
+  TrendingUp,
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -137,7 +132,6 @@ export default function AboutRefinedSectionPage() {
     errorMsg,
     deleteModal,
     updateNested,
-    setFileState,
     save,
     openDeleteAllModal,
     closeDeleteModal,
@@ -148,9 +142,6 @@ export default function AboutRefinedSectionPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estado local para URLs temporárias de preview
-  const [tempImageUrls, setTempImageUrls] = useState<Record<string, string>>({});
-  
   // Estado para drag & drop
   const [draggingStat, setDraggingStat] = useState<number | null>(null);
 
@@ -170,25 +161,6 @@ export default function AboutRefinedSectionPage() {
 
   // Referência para o último item adicionado
   const newStatRef = useRef<HTMLDivElement>(null);
-
-  // Função para lidar com upload de imagem de fundo
-  const handleBgImageChange = (file: File | null) => {
-    const path = `content.image_bg`;
-    
-    setFileState(path, file);
-    
-    if (file) {
-      const objectUrl = URL.createObjectURL(file);
-      setTempImageUrls(prev => ({
-        ...prev,
-        [path]: objectUrl
-      }));
-      
-      updateNested(path, objectUrl);
-    } else {
-      updateNested(path, "/ads-bg.png");
-    }
-  };
 
   // Funções para manipular a lista de stats
   const addStat = () => {
@@ -275,28 +247,11 @@ export default function AboutRefinedSectionPage() {
     }
   };
 
-  // Limpar URLs temporárias ao desmontar
-  useEffect(() => {
-    return () => {
-      Object.values(tempImageUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-    };
-  }, [tempImageUrls]);
-
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
     try {
-      // Salvar no banco de dados
       await save();
-      
-      // Após salvar, limpar as URLs temporárias
-      Object.values(tempImageUrls).forEach(url => {
-        URL.revokeObjectURL(url);
-      });
-      setTempImageUrls({});
-      
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
@@ -446,8 +401,7 @@ export default function AboutRefinedSectionPage() {
                   <ImageUpload
                     label=""
                     currentImage={aboutData.content.image_bg}
-                    selectedFile={null}
-                    onFileChange={handleBgImageChange}
+                    onChange={(url) => updateNested('content.image_bg', url)}
                     aspectRatio="aspect-video"
                     previewWidth={400}
                     previewHeight={225}

@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import { 
   BookOpen,
@@ -17,8 +16,6 @@ import {
   Trash2,
   GripVertical,
   ArrowUpDown,
-  Eye,
-  EyeOff
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -102,8 +99,6 @@ export default function CursosPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-    fileStates,
-    setFileState,
   } = useJsonManagement<CursosData>({
     apiPath: "/api/tegbe-institucional/json/logos-curso",
     defaultData: defaultCursosData,
@@ -115,7 +110,7 @@ export default function CursosPage() {
     cursos: false,
   });
 
-  const [showHiddenIds, setShowHiddenIds] = useState(false);
+  const [showHiddenIds] = useState(false);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -194,12 +189,6 @@ export default function CursosPage() {
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
-  };
-
-  // Função auxiliar para obter File do fileStates
-  const getFileFromState = (key: string): File | null => {
-    const value = fileStates[key];
-    return value instanceof File ? value : null;
   };
 
   const calculateCompletion = () => {
@@ -415,8 +404,7 @@ export default function CursosPage() {
                                 <ImageUpload
                                   label=""
                                   currentImage={curso.image || ''}
-                                  selectedFile={getFileFromState(`values.${index}.image`)}
-                                  onFileChange={(file) => setFileState(`values.${index}.image`, file)}
+                                  onChange={(url) => handleUpdateCurso(index, { image: url })}
                                   aspectRatio="aspect-square"
                                   previewWidth={200}
                                   previewHeight={200}
