@@ -547,7 +547,6 @@ const TestimonialItem = ({
                     aspectRatio="aspect-video"
                     previewWidth={800}
                     previewHeight={450}
-                    description="O vídeo será enviado para a CDN automaticamente ao ser selecionado."
                   />
                   
                   <ImageUpload
