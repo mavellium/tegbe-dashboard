@@ -664,8 +664,10 @@ export default function TestimonialsPage() {
     updateNested(`footerStats`, [...footerStats, newStat]);
   };
 
-  const openDeleteFooterStatModal = (index: number, title: string) => {
-    console.log("Abrir modal para deletar estatística:", index, title);
+  // --- CORREÇÃO AQUI: Implementada a função de remoção direta ---
+  const handleRemoveFooterStat = (index: number) => {
+    const newStats = footerStats.filter((_, i) => i !== index);
+    updateNested('footerStats', newStats);
   };
 
   const sensors = useSensors(
@@ -1004,7 +1006,8 @@ export default function TestimonialsPage() {
                           item={item}
                           index={index}
                           handleChange={handleFooterStatChange}
-                          openDeleteSingleModal={openDeleteFooterStatModal}
+                          // --- CORREÇÃO AQUI: Passando a função de remoção correta ---
+                          openDeleteSingleModal={() => handleRemoveFooterStat(index)}
                         />
                       ))}
                     </SortableContext>
