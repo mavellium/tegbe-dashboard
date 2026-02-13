@@ -24,7 +24,8 @@ import {
   Palette,
   Target,
   MessageSquare,
-  BarChart3
+  BarChart3,
+  RefreshCcw // Icone para o Flywheel
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -59,23 +60,25 @@ interface CTASection {
   secondary?: CTAButton;
 }
 
-interface FlywheelPhase {
-  title: string;
-  color: string;
+// Interfaces do Flywheel atualizadas conforme JSON solicitado
+interface FlywheelRing {
+  texts: string[];
+  strokeColor: string;
+  strokeWidth: number;
+  textColor: string;
+}
+
+interface FlywheelCenter {
+  text: string;
+  gradientStart: string;
+  gradientEnd: string;
+  textColor: string;
 }
 
 interface FlywheelData {
-  title: string;
-  description: string;
-  subtitle: string;
-  benefits: string[];
-  phases: FlywheelPhase[];
-  colors: {
-    primary: string;
-    secondary: string;
-    accent: string;
-  };
-  image?: string; 
+  outerRing: FlywheelRing;
+  middleRing: FlywheelRing;
+  center: FlywheelCenter;
 }
 
 interface StatItem {
@@ -117,11 +120,31 @@ const defaultCTASection: CTASection = {
   description: "Anúncios, operação e dados trabalhando juntos para vender mais."
 };
 
-// CTA Simplificado para Marketing conforme JSON solicitado
 const defaultMarketingCTA: CTASection = {
   text: "Começar Agora",
   url: "https://api.whatsapp.com/send?phone=5514991779502",
   description: "Marketing que realmente converte"
+};
+
+const defaultFlywheelData: FlywheelData = {
+  outerRing: {
+    texts: ["Desconhecidos", "Prospects", "Clientes", "Promotores"],
+    strokeColor: "#fdba74",
+    strokeWidth: 65,
+    textColor: "#1e293b"
+  },
+  middleRing: {
+    texts: ["Atrair", "Envolver", "Encantar"],
+    strokeColor: "#fff7ed",
+    strokeWidth: 60,
+    textColor: "#0f172a"
+  },
+  center: {
+    text: "Crescimento",
+    gradientStart: "#fb923c",
+    gradientEnd: "#ef4444",
+    textColor: "white"
+  }
 };
 
 const defaultSectionData: SectionData = {
@@ -135,14 +158,11 @@ const defaultSectionData: SectionData = {
   cta: defaultCTASection
 };
 
-// Dados padrão do Marketing ajustados estritamente para o JSON solicitado
 const defaultMarketingData: SectionData = {
   header: {
-    // Campos não usados no marketing ficam vazios
     preTitle: "", 
     subtitle: "",
     gradientTitle: "",
-    // Campos solicitados
     title: "Acelere seu",
     badge: "Marketing Inteligente",
     highlighted: "Crescimento",
@@ -150,7 +170,7 @@ const defaultMarketingData: SectionData = {
   },
   services: [],
   cta: defaultMarketingCTA,
-  // Flywheel removido do padrão pois não consta no JSON solicitado
+  flywheel: defaultFlywheelData,
   stats: [
     { value: "3x", label: "Mais Leads" },
     { value: "47%", label: "Conversão" },
@@ -181,10 +201,8 @@ const mergeWithDefaults = (apiData: any, defaultData: ComoFazemosData): ComoFaze
   
   sections.forEach(section => {
     if (apiData[section]) {
-      // Merge Header
       const header = { ...defaultData[section].header, ...apiData[section].header };
       
-      // Merge Services
       let services = apiData[section].services || [];
       if (services.length === 0 && section === 'home') {
         services = defaultData.home.services;
@@ -208,18 +226,23 @@ const mergeWithDefaults = (apiData: any, defaultData: ComoFazemosData): ComoFaze
         };
       });
       
-      // Merge CTA
       const cta = { ...defaultData[section].cta, ...apiData[section].cta };
 
-      // Merge Stats (Marketing specific)
       let stats = undefined;
+      let flywheel = undefined;
+
       if (section === 'marketing') {
          stats = apiData[section].stats || defaultMarketingData.stats;
+         // Merge profundo simples para o flywheel para garantir que sub-objetos existam
+         const apiFlywheel = apiData[section].flywheel;
+         flywheel = apiFlywheel ? {
+            outerRing: { ...defaultMarketingData.flywheel!.outerRing, ...apiFlywheel.outerRing },
+            middleRing: { ...defaultMarketingData.flywheel!.middleRing, ...apiFlywheel.middleRing },
+            center: { ...defaultMarketingData.flywheel!.center, ...apiFlywheel.center }
+         } : defaultMarketingData.flywheel;
       }
       
-      // Flywheel ignorado para marketing conforme solicitação de estrutura JSON
-      
-      result[section] = { header, services, cta, stats };
+      result[section] = { header, services, cta, stats, flywheel };
     } else {
       result[section] = defaultData[section];
     }
@@ -413,6 +436,18 @@ export default function ComoFazemosPage() {
     updateNested('marketing.stats', newStats);
   };
 
+  // Funções para Flywheel (Marketing)
+  const updateFlywheel = (path: string, value: any) => {
+    updateNested(`marketing.flywheel.${path}`, value);
+  };
+
+  const updateFlywheelRingText = (ring: 'outerRing' | 'middleRing', index: number, value: string) => {
+     const flywheel = pageData.marketing.flywheel || defaultFlywheelData;
+     const currentTexts = [...flywheel[ring].texts];
+     currentTexts[index] = value;
+     updateNested(`marketing.flywheel.${ring}.texts`, currentTexts);
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     try { await save(); } catch (err) { console.error("Erro ao salvar:", err); }
@@ -479,7 +514,6 @@ export default function ComoFazemosPage() {
         </div>
         
         {isMarketing ? (
-          // Layout específico para Marketing conforme JSON solicitado
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              <div className="space-y-4">
                <div>
@@ -503,7 +537,6 @@ export default function ComoFazemosPage() {
              </div>
           </div>
         ) : (
-          // Layout padrão para outras seções
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
@@ -589,6 +622,122 @@ export default function ComoFazemosPage() {
         </div>
       </Card>
      );
+  };
+
+  const renderFlywheelSection = (section: keyof ComoFazemosData) => {
+    if (section !== 'marketing') return null;
+    const flywheel = pageData.marketing.flywheel || defaultFlywheelData;
+
+    return (
+      <Card className="p-6 bg-[var(--color-background)]">
+        <div className="flex items-center gap-3 mb-6">
+           <RefreshCcw className="w-5 h-5 text-[var(--color-secondary)]" />
+           <h4 className="text-lg font-semibold text-[var(--color-secondary)]">Flywheel (Inbound Marketing)</h4>
+        </div>
+
+        <div className="space-y-6">
+          {/* Outer Ring */}
+          <div className="p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
+             <h5 className="font-medium text-[var(--color-secondary)] mb-4 border-b border-[var(--color-border)] pb-2">Anel Externo (Etapas do Funil)</h5>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {flywheel.outerRing.texts.map((text, idx) => (
+                   <div key={`outer-${idx}`}>
+                      <label className="text-xs text-[var(--color-secondary)]">Texto {idx + 1}</label>
+                      <Input value={text} onChange={(e) => updateFlywheelRingText('outerRing', idx, e.target.value)} className="mt-1 bg-[var(--color-background)] border-[var(--color-border)]" />
+                   </div>
+                ))}
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Cor do Traço</label>
+                   <div className="flex gap-2 mt-1">
+                      <Input value={flywheel.outerRing.strokeColor} onChange={(e) => updateFlywheel('outerRing.strokeColor', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
+                      <ColorPicker color={flywheel.outerRing.strokeColor} onChange={(c) => updateFlywheel('outerRing.strokeColor', c)} />
+                   </div>
+                </div>
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Cor do Texto</label>
+                   <div className="flex gap-2 mt-1">
+                      <Input value={flywheel.outerRing.textColor} onChange={(e) => updateFlywheel('outerRing.textColor', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
+                      <ColorPicker color={flywheel.outerRing.textColor} onChange={(c) => updateFlywheel('outerRing.textColor', c)} />
+                   </div>
+                </div>
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Espessura (px)</label>
+                   <Input type="number" value={flywheel.outerRing.strokeWidth} onChange={(e) => updateFlywheel('outerRing.strokeWidth', Number(e.target.value))} className="mt-1 bg-[var(--color-background)] border-[var(--color-border)]" />
+                </div>
+             </div>
+          </div>
+
+          {/* Middle Ring */}
+          <div className="p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
+             <h5 className="font-medium text-[var(--color-secondary)] mb-4 border-b border-[var(--color-border)] pb-2">Anel Médio (Ações)</h5>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                {flywheel.middleRing.texts.map((text, idx) => (
+                   <div key={`middle-${idx}`}>
+                      <label className="text-xs text-[var(--color-secondary)]">Ação {idx + 1}</label>
+                      <Input value={text} onChange={(e) => updateFlywheelRingText('middleRing', idx, e.target.value)} className="mt-1 bg-[var(--color-background)] border-[var(--color-border)]" />
+                   </div>
+                ))}
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Cor do Traço</label>
+                   <div className="flex gap-2 mt-1">
+                      <Input value={flywheel.middleRing.strokeColor} onChange={(e) => updateFlywheel('middleRing.strokeColor', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
+                      <ColorPicker color={flywheel.middleRing.strokeColor} onChange={(c) => updateFlywheel('middleRing.strokeColor', c)} />
+                   </div>
+                </div>
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Cor do Texto</label>
+                   <div className="flex gap-2 mt-1">
+                      <Input value={flywheel.middleRing.textColor} onChange={(e) => updateFlywheel('middleRing.textColor', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
+                      <ColorPicker color={flywheel.middleRing.textColor} onChange={(c) => updateFlywheel('middleRing.textColor', c)} />
+                   </div>
+                </div>
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Espessura (px)</label>
+                   <Input type="number" value={flywheel.middleRing.strokeWidth} onChange={(e) => updateFlywheel('middleRing.strokeWidth', Number(e.target.value))} className="mt-1 bg-[var(--color-background)] border-[var(--color-border)]" />
+                </div>
+             </div>
+          </div>
+
+          {/* Center */}
+          <div className="p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
+             <h5 className="font-medium text-[var(--color-secondary)] mb-4 border-b border-[var(--color-border)] pb-2">Centro (Objetivo)</h5>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label className="text-xs text-[var(--color-secondary)]">Texto Central</label>
+                    <Input value={flywheel.center.text} onChange={(e) => updateFlywheel('center.text', e.target.value)} className="mt-1 bg-[var(--color-background)] border-[var(--color-border)]" />
+                </div>
+                <div>
+                    <label className="text-xs text-[var(--color-secondary)]">Cor do Texto</label>
+                    <div className="flex gap-2 mt-1">
+                      <Input value={flywheel.center.textColor} onChange={(e) => updateFlywheel('center.textColor', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
+                      <ColorPicker color={flywheel.center.textColor} onChange={(c) => updateFlywheel('center.textColor', c)} />
+                    </div>
+                </div>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Gradiente Início</label>
+                   <div className="flex gap-2 mt-1">
+                      <Input value={flywheel.center.gradientStart} onChange={(e) => updateFlywheel('center.gradientStart', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
+                      <ColorPicker color={flywheel.center.gradientStart} onChange={(c) => updateFlywheel('center.gradientStart', c)} />
+                   </div>
+                </div>
+                <div>
+                   <label className="text-xs text-[var(--color-secondary)]">Gradiente Fim</label>
+                   <div className="flex gap-2 mt-1">
+                      <Input value={flywheel.center.gradientEnd} onChange={(e) => updateFlywheel('center.gradientEnd', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
+                      <ColorPicker color={flywheel.center.gradientEnd} onChange={(c) => updateFlywheel('center.gradientEnd', c)} />
+                   </div>
+                </div>
+             </div>
+          </div>
+        </div>
+      </Card>
+    );
   };
 
   const renderCtaSection = (section: keyof ComoFazemosData, sectionTitle: string) => {
@@ -756,7 +905,7 @@ export default function ComoFazemosPage() {
           <div className="space-y-6 mt-4">
             {renderHeaderSection(section, sectionTitle)}
             {renderStatsSection(section)}
-            {/* Flywheel removido para marketing conforme solicitado no novo JSON */}
+            {renderFlywheelSection(section)}
             {renderServicesSection(section, sectionTitle, Icon)}
             {renderCtaSection(section, sectionTitle)}
           </div>
