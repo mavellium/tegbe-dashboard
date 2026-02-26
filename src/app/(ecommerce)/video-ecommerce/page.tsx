@@ -2,6 +2,6 @@ import VideoSectionsPage from "@/components/VideoSectionsPage";
 
 export default function Page(){
   return(
-    <VideoSectionsPage initialSection="sobre"></VideoSectionsPage>
+    <VideoSectionsPage initialSection="ecommerce"></VideoSectionsPage>
   )
 }

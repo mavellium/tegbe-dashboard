@@ -68,7 +68,8 @@
             { "name": "Seção Imagens", "icon": "HelpCircle", "href": "/section-images-ecommerce" },
             { "name": "Equipe", "icon": "HelpCircle", "href": "/equipe-ecommerce" },
             { "name": "Empresa Cases", "icon": "HelpCircle", "href": "/company-ecommerce" },
-            { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-ecommerce" }
+            { "name": "Chamada de ação", "icon": "HelpCircle", "href": "/call-action-ecommerce" },
+            { "name": "Vídeo Ecommerce", "icon": "HelpCircle", "href": "/video-ecommerce" }
           ]
         },
 
