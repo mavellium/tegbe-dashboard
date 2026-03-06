@@ -23,6 +23,16 @@ export * from './enums';
  */
 export type FormData = Prisma.FormDataModel
 /**
+ * Model Component
+ * 
+ */
+export type Component = Prisma.ComponentModel
+/**
+ * Model ComponentData
+ * 
+ */
+export type ComponentData = Prisma.ComponentDataModel
+/**
  * Model User
  * 
  */

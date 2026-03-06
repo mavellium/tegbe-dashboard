@@ -385,6 +385,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   FormData: 'FormData',
+  Component: 'Component',
+  ComponentData: 'ComponentData',
   User: 'User'
 } as const
 
@@ -401,7 +403,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "formData" | "user"
+    modelProps: "formData" | "component" | "componentData" | "user"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -476,6 +478,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.FormDataCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.FormDataCountAggregateOutputType> | number
+        }
+      }
+    }
+    Component: {
+      payload: Prisma.$ComponentPayload<ExtArgs>
+      fields: Prisma.ComponentFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ComponentFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ComponentFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>
+        }
+        findFirst: {
+          args: Prisma.ComponentFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ComponentFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>
+        }
+        findMany: {
+          args: Prisma.ComponentFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>[]
+        }
+        create: {
+          args: Prisma.ComponentCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>
+        }
+        createMany: {
+          args: Prisma.ComponentCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ComponentCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>[]
+        }
+        delete: {
+          args: Prisma.ComponentDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>
+        }
+        update: {
+          args: Prisma.ComponentUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>
+        }
+        deleteMany: {
+          args: Prisma.ComponentDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ComponentUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ComponentUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>[]
+        }
+        upsert: {
+          args: Prisma.ComponentUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentPayload>
+        }
+        aggregate: {
+          args: Prisma.ComponentAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateComponent>
+        }
+        groupBy: {
+          args: Prisma.ComponentGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComponentGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ComponentCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComponentCountAggregateOutputType> | number
+        }
+      }
+    }
+    ComponentData: {
+      payload: Prisma.$ComponentDataPayload<ExtArgs>
+      fields: Prisma.ComponentDataFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.ComponentDataFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.ComponentDataFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>
+        }
+        findFirst: {
+          args: Prisma.ComponentDataFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.ComponentDataFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>
+        }
+        findMany: {
+          args: Prisma.ComponentDataFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>[]
+        }
+        create: {
+          args: Prisma.ComponentDataCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>
+        }
+        createMany: {
+          args: Prisma.ComponentDataCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.ComponentDataCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>[]
+        }
+        delete: {
+          args: Prisma.ComponentDataDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>
+        }
+        update: {
+          args: Prisma.ComponentDataUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>
+        }
+        deleteMany: {
+          args: Prisma.ComponentDataDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.ComponentDataUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.ComponentDataUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>[]
+        }
+        upsert: {
+          args: Prisma.ComponentDataUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$ComponentDataPayload>
+        }
+        aggregate: {
+          args: Prisma.ComponentDataAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateComponentData>
+        }
+        groupBy: {
+          args: Prisma.ComponentDataGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComponentDataGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.ComponentDataCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.ComponentDataCountAggregateOutputType> | number
         }
       }
     }
@@ -601,6 +751,29 @@ export const FormDataScalarFieldEnum = {
 } as const
 
 export type FormDataScalarFieldEnum = (typeof FormDataScalarFieldEnum)[keyof typeof FormDataScalarFieldEnum]
+
+
+export const ComponentScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  html: 'html',
+  config: 'config',
+  formDataId: 'formDataId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComponentScalarFieldEnum = (typeof ComponentScalarFieldEnum)[keyof typeof ComponentScalarFieldEnum]
+
+
+export const ComponentDataScalarFieldEnum = {
+  id: 'id',
+  componentId: 'componentId',
+  data: 'data',
+  createdAt: 'createdAt'
+} as const
+
+export type ComponentDataScalarFieldEnum = (typeof ComponentDataScalarFieldEnum)[keyof typeof ComponentDataScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {
@@ -805,6 +978,8 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   formData?: Prisma.FormDataOmit
+  component?: Prisma.ComponentOmit
+  componentData?: Prisma.ComponentDataOmit
   user?: Prisma.UserOmit
 }
 

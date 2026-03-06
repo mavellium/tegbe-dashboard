@@ -52,6 +52,8 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   FormData: 'FormData',
+  Component: 'Component',
+  ComponentData: 'ComponentData',
   User: 'User'
 } as const
 
@@ -80,6 +82,29 @@ export const FormDataScalarFieldEnum = {
 } as const
 
 export type FormDataScalarFieldEnum = (typeof FormDataScalarFieldEnum)[keyof typeof FormDataScalarFieldEnum]
+
+
+export const ComponentScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  html: 'html',
+  config: 'config',
+  formDataId: 'formDataId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type ComponentScalarFieldEnum = (typeof ComponentScalarFieldEnum)[keyof typeof ComponentScalarFieldEnum]
+
+
+export const ComponentDataScalarFieldEnum = {
+  id: 'id',
+  componentId: 'componentId',
+  data: 'data',
+  createdAt: 'createdAt'
+} as const
+
+export type ComponentDataScalarFieldEnum = (typeof ComponentDataScalarFieldEnum)[keyof typeof ComponentDataScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {

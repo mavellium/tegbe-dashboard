@@ -8,18 +8,49 @@ datasource db {
 }
 
 model FormData {
-  id        String   @id @default(cuid())
-  values    Json
-  type      String
-  subtype   String
-  createdAt DateTime @default(now())
+  id         String      @id @default(cuid())
+  values     Json
+  type       String
+  subtype    String
+  createdAt  DateTime    @default(now())
+  
+  components Component[] 
 
   @@unique([type, subtype])
 }
+
+model Component {
+  id          String          @id @default(cuid())
+  name        String          
+  html        String          @db.Text 
+  config      Json            
+  
+  formDataId  String?
+  formData    FormData?       @relation(fields: [formDataId], references: [id], onDelete: SetNull)
+  
+  collectedData ComponentData[] 
+
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@map("components")
+}
+
+model ComponentData {
+  id          String     @id @default(cuid())
+  componentId String?
+  component   Component? @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  
+  data        Json       
+  createdAt   DateTime   @default(now())
+
+  @@map("component_data")
+}
+
 model User {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  email     String   @unique
+  email     String    @unique
   password  String
   isActive  Boolean   @default(true)
   lastLogin DateTime?

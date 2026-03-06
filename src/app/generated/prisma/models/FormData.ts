@@ -178,6 +178,7 @@ export type FormDataWhereInput = {
   type?: Prisma.StringFilter<"FormData"> | string
   subtype?: Prisma.StringFilter<"FormData"> | string
   createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
+  components?: Prisma.ComponentListRelationFilter
 }
 
 export type FormDataOrderByWithRelationInput = {
@@ -186,6 +187,7 @@ export type FormDataOrderByWithRelationInput = {
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  components?: Prisma.ComponentOrderByRelationAggregateInput
 }
 
 export type FormDataWhereUniqueInput = Prisma.AtLeast<{
@@ -198,6 +200,7 @@ export type FormDataWhereUniqueInput = Prisma.AtLeast<{
   type?: Prisma.StringFilter<"FormData"> | string
   subtype?: Prisma.StringFilter<"FormData"> | string
   createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
+  components?: Prisma.ComponentListRelationFilter
 }, "id" | "type_subtype">
 
 export type FormDataOrderByWithAggregationInput = {
@@ -228,6 +231,7 @@ export type FormDataCreateInput = {
   type: string
   subtype: string
   createdAt?: Date | string
+  components?: Prisma.ComponentCreateNestedManyWithoutFormDataInput
 }
 
 export type FormDataUncheckedCreateInput = {
@@ -236,6 +240,7 @@ export type FormDataUncheckedCreateInput = {
   type: string
   subtype: string
   createdAt?: Date | string
+  components?: Prisma.ComponentUncheckedCreateNestedManyWithoutFormDataInput
 }
 
 export type FormDataUpdateInput = {
@@ -244,6 +249,7 @@ export type FormDataUpdateInput = {
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  components?: Prisma.ComponentUpdateManyWithoutFormDataNestedInput
 }
 
 export type FormDataUncheckedUpdateInput = {
@@ -252,6 +258,7 @@ export type FormDataUncheckedUpdateInput = {
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  components?: Prisma.ComponentUncheckedUpdateManyWithoutFormDataNestedInput
 }
 
 export type FormDataCreateManyInput = {
@@ -305,6 +312,11 @@ export type FormDataMinOrderByAggregateInput = {
   createdAt?: Prisma.SortOrder
 }
 
+export type FormDataNullableScalarRelationFilter = {
+  is?: Prisma.FormDataWhereInput | null
+  isNot?: Prisma.FormDataWhereInput | null
+}
+
 export type StringFieldUpdateOperationsInput = {
   set?: string
 }
@@ -313,6 +325,99 @@ export type DateTimeFieldUpdateOperationsInput = {
   set?: Date | string
 }
 
+export type FormDataCreateNestedOneWithoutComponentsInput = {
+  create?: Prisma.XOR<Prisma.FormDataCreateWithoutComponentsInput, Prisma.FormDataUncheckedCreateWithoutComponentsInput>
+  connectOrCreate?: Prisma.FormDataCreateOrConnectWithoutComponentsInput
+  connect?: Prisma.FormDataWhereUniqueInput
+}
+
+export type FormDataUpdateOneWithoutComponentsNestedInput = {
+  create?: Prisma.XOR<Prisma.FormDataCreateWithoutComponentsInput, Prisma.FormDataUncheckedCreateWithoutComponentsInput>
+  connectOrCreate?: Prisma.FormDataCreateOrConnectWithoutComponentsInput
+  upsert?: Prisma.FormDataUpsertWithoutComponentsInput
+  disconnect?: Prisma.FormDataWhereInput | boolean
+  delete?: Prisma.FormDataWhereInput | boolean
+  connect?: Prisma.FormDataWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.FormDataUpdateToOneWithWhereWithoutComponentsInput, Prisma.FormDataUpdateWithoutComponentsInput>, Prisma.FormDataUncheckedUpdateWithoutComponentsInput>
+}
+
+export type FormDataCreateWithoutComponentsInput = {
+  id?: string
+  values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
+  createdAt?: Date | string
+}
+
+export type FormDataUncheckedCreateWithoutComponentsInput = {
+  id?: string
+  values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
+  createdAt?: Date | string
+}
+
+export type FormDataCreateOrConnectWithoutComponentsInput = {
+  where: Prisma.FormDataWhereUniqueInput
+  create: Prisma.XOR<Prisma.FormDataCreateWithoutComponentsInput, Prisma.FormDataUncheckedCreateWithoutComponentsInput>
+}
+
+export type FormDataUpsertWithoutComponentsInput = {
+  update: Prisma.XOR<Prisma.FormDataUpdateWithoutComponentsInput, Prisma.FormDataUncheckedUpdateWithoutComponentsInput>
+  create: Prisma.XOR<Prisma.FormDataCreateWithoutComponentsInput, Prisma.FormDataUncheckedCreateWithoutComponentsInput>
+  where?: Prisma.FormDataWhereInput
+}
+
+export type FormDataUpdateToOneWithWhereWithoutComponentsInput = {
+  where?: Prisma.FormDataWhereInput
+  data: Prisma.XOR<Prisma.FormDataUpdateWithoutComponentsInput, Prisma.FormDataUncheckedUpdateWithoutComponentsInput>
+}
+
+export type FormDataUpdateWithoutComponentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type FormDataUncheckedUpdateWithoutComponentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+
+/**
+ * Count Type FormDataCountOutputType
+ */
+
+export type FormDataCountOutputType = {
+  components: number
+}
+
+export type FormDataCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  components?: boolean | FormDataCountOutputTypeCountComponentsArgs
+}
+
+/**
+ * FormDataCountOutputType without action
+ */
+export type FormDataCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the FormDataCountOutputType
+   */
+  select?: Prisma.FormDataCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * FormDataCountOutputType without action
+ */
+export type FormDataCountOutputTypeCountComponentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.ComponentWhereInput
+}
 
 
 export type FormDataSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -321,6 +426,8 @@ export type FormDataSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   type?: boolean
   subtype?: boolean
   createdAt?: boolean
+  components?: boolean | Prisma.FormData$componentsArgs<ExtArgs>
+  _count?: boolean | Prisma.FormDataCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["formData"]>
 
 export type FormDataSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -348,10 +455,18 @@ export type FormDataSelectScalar = {
 }
 
 export type FormDataOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "values" | "type" | "subtype" | "createdAt", ExtArgs["result"]["formData"]>
+export type FormDataInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  components?: boolean | Prisma.FormData$componentsArgs<ExtArgs>
+  _count?: boolean | Prisma.FormDataCountOutputTypeDefaultArgs<ExtArgs>
+}
+export type FormDataIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type FormDataIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
 
 export type $FormDataPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "FormData"
-  objects: {}
+  objects: {
+    components: Prisma.$ComponentPayload<ExtArgs>[]
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     values: runtime.JsonValue
@@ -752,6 +867,7 @@ readonly fields: FormDataFieldRefs;
  */
 export interface Prisma__FormDataClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  components<T extends Prisma.FormData$componentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FormData$componentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ComponentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -803,6 +919,10 @@ export type FormDataFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
+  /**
    * Filter, which FormData to fetch.
    */
   where: Prisma.FormDataWhereUniqueInput
@@ -821,6 +941,10 @@ export type FormDataFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
+  /**
    * Filter, which FormData to fetch.
    */
   where: Prisma.FormDataWhereUniqueInput
@@ -838,6 +962,10 @@ export type FormDataFindFirstArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the FormData
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
   /**
    * Filter, which FormData to fetch.
    */
@@ -887,6 +1015,10 @@ export type FormDataFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extension
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
+  /**
    * Filter, which FormData to fetch.
    */
   where?: Prisma.FormDataWhereInput
@@ -935,6 +1067,10 @@ export type FormDataFindManyArgs<ExtArgs extends runtime.Types.Extensions.Intern
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
+  /**
    * Filter, which FormData to fetch.
    */
   where?: Prisma.FormDataWhereInput
@@ -977,6 +1113,10 @@ export type FormDataCreateArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Omit specific fields from the FormData
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
   /**
    * The data needed to create a FormData.
    */
@@ -1025,6 +1165,10 @@ export type FormDataUpdateArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Omit specific fields from the FormData
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
   /**
    * The data needed to update a FormData.
    */
@@ -1092,6 +1236,10 @@ export type FormDataUpsertArgs<ExtArgs extends runtime.Types.Extensions.Internal
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
+  /**
    * The filter to search for the FormData to update in case it exists.
    */
   where: Prisma.FormDataWhereUniqueInput
@@ -1118,6 +1266,10 @@ export type FormDataDeleteArgs<ExtArgs extends runtime.Types.Extensions.Internal
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
+  /**
    * Filter which FormData to delete.
    */
   where: Prisma.FormDataWhereUniqueInput
@@ -1138,6 +1290,30 @@ export type FormDataDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
 }
 
 /**
+ * FormData.components
+ */
+export type FormData$componentsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Component
+   */
+  select?: Prisma.ComponentSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Component
+   */
+  omit?: Prisma.ComponentOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.ComponentInclude<ExtArgs> | null
+  where?: Prisma.ComponentWhereInput
+  orderBy?: Prisma.ComponentOrderByWithRelationInput | Prisma.ComponentOrderByWithRelationInput[]
+  cursor?: Prisma.ComponentWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.ComponentScalarFieldEnum | Prisma.ComponentScalarFieldEnum[]
+}
+
+/**
  * FormData without action
  */
 export type FormDataDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1149,4 +1325,8 @@ export type FormDataDefaultArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Omit specific fields from the FormData
    */
   omit?: Prisma.FormDataOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataInclude<ExtArgs> | null
 }

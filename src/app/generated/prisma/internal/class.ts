@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.0.0",
   "engineVersion": "0c19ccc313cf9911a90d99d2ac2eb0280c76c513",
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel FormData {\n  id        String   @id @default(cuid())\n  values    Json\n  type      String\n  subtype   String\n  createdAt DateTime @default(now())\n\n  @@unique([type, subtype])\n}\n\nmodel User {\n  id        String    @id @default(cuid())\n  name      String\n  email     String    @unique\n  password  String\n  isActive  Boolean   @default(true)\n  lastLogin DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n\n  @@map(\"users\")\n}\n",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel FormData {\n  id        String   @id @default(cuid())\n  values    Json\n  type      String\n  subtype   String\n  createdAt DateTime @default(now())\n\n  components Component[]\n\n  @@unique([type, subtype])\n}\n\nmodel Component {\n  id     String @id @default(cuid())\n  name   String\n  html   String @db.Text\n  config Json\n\n  formDataId String?\n  formData   FormData? @relation(fields: [formDataId], references: [id], onDelete: SetNull)\n\n  collectedData ComponentData[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"components\")\n}\n\nmodel ComponentData {\n  id          String     @id @default(cuid())\n  componentId String?\n  component   Component? @relation(fields: [componentId], references: [id], onDelete: Cascade)\n\n  data      Json\n  createdAt DateTime @default(now())\n\n  @@map(\"component_data\")\n}\n\nmodel User {\n  id        String    @id @default(cuid())\n  name      String\n  email     String    @unique\n  password  String\n  isActive  Boolean   @default(true)\n  lastLogin DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n\n  @@map(\"users\")\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"FormData\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"values\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subtype\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":null},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"isActive\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"lastLogin\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"users\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"FormData\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"values\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subtype\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"components\",\"kind\":\"object\",\"type\":\"Component\",\"relationName\":\"ComponentToFormData\"}],\"dbName\":null},\"Component\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"html\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"config\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"formDataId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"formData\",\"kind\":\"object\",\"type\":\"FormData\",\"relationName\":\"ComponentToFormData\"},{\"name\":\"collectedData\",\"kind\":\"object\",\"type\":\"ComponentData\",\"relationName\":\"ComponentToComponentData\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"components\"},\"ComponentData\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"componentId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"component\",\"kind\":\"object\",\"type\":\"Component\",\"relationName\":\"ComponentToComponentData\"},{\"name\":\"data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"component_data\"},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"isActive\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"lastLogin\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"users\"}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -183,6 +183,26 @@ export interface PrismaClient<
     * ```
     */
   get formData(): Prisma.FormDataDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.component`: Exposes CRUD operations for the **Component** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Components
+    * const components = await prisma.component.findMany()
+    * ```
+    */
+  get component(): Prisma.ComponentDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.componentData`: Exposes CRUD operations for the **ComponentData** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more ComponentData
+    * const componentData = await prisma.componentData.findMany()
+    * ```
+    */
+  get componentData(): Prisma.ComponentDataDelegate<ExtArgs, { omit: OmitOpts }>;
 
   /**
    * `prisma.user`: Exposes CRUD operations for the **User** model.
