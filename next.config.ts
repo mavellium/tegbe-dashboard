@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const FTP_DOMAIN = process.env.FTP_DOMAIN as string;
 
 const nextConfig: NextConfig = {
-  // 1. Sua configuração de Imagens
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -28,7 +27,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Cross-Origin-Embedder-Policy",
-            value: "require-corp",
+            value: "unsafe-none",
           },
         ],
       },
