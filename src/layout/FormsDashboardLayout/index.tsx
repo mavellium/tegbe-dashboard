@@ -86,6 +86,7 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
       const data = await res.json();
       if (data.success && data.component) {
         triggerFeedback(true);
+        router.refresh();
         router.push(`formularios-acoes/${data.component.id}`);
       } else {
         triggerFeedback(false, "Não conseguimos criar o formulário. Verifique sua conexão.");
@@ -108,6 +109,7 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
       if (data.success) {
         setForms(forms.filter(f => f.id !== id));
         triggerFeedback(true); 
+        router.refresh();
       } else {
         triggerFeedback(false, "Não foi possível excluir o formulário.");
       }
@@ -132,6 +134,7 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
         setForms(forms.map(f => f.id === id ? { ...f, name: editName } : f));
         setEditingId(null);
         triggerFeedback(true);
+        router.refresh();
       } else {
         triggerFeedback(false, "Erro ao atualizar o nome do formulário.");
       }
@@ -139,6 +142,11 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
       console.error(error);
       triggerFeedback(false, "Conexão perdida ao renomear.");
     }
+  };
+
+  const getSafeDate = (isoString: string) => {
+    if (!isoString) return "";
+    return isoString.split('T')[0].split('-').reverse().join('/');
   };
 
   return (
@@ -151,8 +159,7 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
     >
       <div className="space-y-6 pb-24">
         
-        {/* BARRA DE AÇÕES */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-background)] p-4 md:p-6 rounded-xl border border-[var(--color-border)]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-background)] p-4 md:p-6 rounded-xl border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)] opacity-50" />
             <input 
@@ -173,7 +180,6 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
           </Button>
         </div>
 
-        {/* ÁREA DE LISTAGEM */}
         {forms.length === 0 ? (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="text-center py-20 bg-[var(--color-background)] border-dashed border-2 border-[var(--color-border)] rounded-xl">
@@ -232,7 +238,7 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
                   )}
                   <p className="text-xs text-[var(--color-secondary)] opacity-60 flex items-center gap-1.5 font-medium">
                     <Calendar className="w-3.5 h-3.5" />
-                    Editado em {new Date(form.updatedAt).toLocaleDateString('pt-BR')}
+                    Editado em {getSafeDate(form.updatedAt)}
                   </p>
                 </div>
 
@@ -258,7 +264,6 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
         )}
       </div>
 
-      {/* MODAL DE CRIAÇÃO (ANIMADO) */}
       <AnimatePresence>
         {isCreateModalOpen && (
           <motion.div 

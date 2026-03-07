@@ -1,6 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -71,7 +73,6 @@ export async function GET(
     }
 
     const valuesData = JSON.parse(JSON.stringify(formData.values));
-
     const jsonFormIds = extractFormIdsFromJson(valuesData);
 
     if (jsonFormIds.length > 0) {
@@ -86,7 +87,6 @@ export async function GET(
       });
 
       const componentsMap = new Map(components.map(c => [c.id, c.html]));
-
       injectHtmlIntoJson(valuesData, componentsMap);
     }
 
