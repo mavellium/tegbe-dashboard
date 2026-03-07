@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import IconSelector from "@/components/IconSelector";
 import { 
   Layout, 
@@ -18,7 +19,8 @@ import {
   Trash2,
   ArrowRight,
   Plus,
-  Link
+  Link,
+  LayoutTemplate
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -45,7 +47,9 @@ interface SectionHeaderData {
 interface CtaData {
   text: string;
   icon: string;
-  href: string; // ADICIONADO: campo para o link
+  href: string; 
+  use_form?: boolean;
+  form_id?: string;  
 }
 
 interface MethodologyData {
@@ -75,7 +79,9 @@ const defaultMethodologyData: MethodologyData = {
     cta: {
       text: "",
       icon: "solar:arrow-right-linear",
-      href: "" // ADICIONADO: valor padrão
+      href: "", 
+      use_form: false,
+      form_id: ""
     }
   }
 };
@@ -90,7 +96,9 @@ const mergeWithDefaults = (apiData: any, defaultData: MethodologyData): Methodol
       cta: {
         text: apiData.methodology?.cta?.text || defaultData.methodology.cta.text,
         icon: apiData.methodology?.cta?.icon || defaultData.methodology.cta.icon,
-        href: apiData.methodology?.cta?.href || defaultData.methodology.cta.href // ADICIONADO
+        href: apiData.methodology?.cta?.href || defaultData.methodology.cta.href,
+        use_form: apiData.methodology?.cta?.use_form ?? defaultData.methodology.cta.use_form,
+        form_id: apiData.methodology?.cta?.form_id || defaultData.methodology.cta.form_id
       },
     },
   };
@@ -115,7 +123,6 @@ export default function MethodologyPage() {
     mergeFunction: mergeWithDefaults,
   });
 
-  // Estado local para gerenciar os steps - MANTIDO como estado local para drag & drop
   const [localSteps, setLocalSteps] = useState<Step[]>(pageData.methodology.steps);
   const [draggingItem, setDraggingItem] = useState<number | null>(null);
 
@@ -125,12 +132,28 @@ export default function MethodologyPage() {
     cta: false,
   });
 
-  // Referência para novo item
   const newStepRef = useRef<HTMLDivElement>(null);
 
-  // Controle de planos
   const currentPlanType = 'pro';
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -139,18 +162,13 @@ export default function MethodologyPage() {
     }));
   };
 
-  // Função para atualizar o estado do hook useJsonManagement
   const updateStepsInPageData = (steps: Step[]) => {
     updateNested('methodology.steps', steps);
   };
 
-  // Função para adicionar passo
   const handleAddStep = () => {
-    if (localSteps.length >= currentPlanLimit) {
-      return false;
-    }
+    if (localSteps.length >= currentPlanLimit) return false;
     
-    // Gera ID sequencial
     const numericIds = localSteps
       .map(step => {
         const num = parseInt(step.id);
@@ -161,29 +179,19 @@ export default function MethodologyPage() {
     const maxId = numericIds.length > 0 ? Math.max(...numericIds) : 0;
     const newId = (maxId + 1).toString().padStart(2, '0');
     
-    const newItem: Step = {
-      id: newId,
-      label: '',
-      title: '',
-      icon: 'solar:question-circle-bold-duotone',
-      desc: ''
-    };
+    const newItem: Step = { id: newId, label: '', title: '', icon: 'solar:question-circle-bold-duotone', desc: '' };
     
     const updated = [...localSteps, newItem];
     setLocalSteps(updated);
     updateStepsInPageData(updated);
     
     setTimeout(() => {
-      newStepRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'nearest'
-      });
+      newStepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
     
     return true;
   };
 
-  // Função para atualizar passo
   const updateStep = (index: number, updates: Partial<Step>) => {
     const updated = [...localSteps];
     if (index >= 0 && index < updated.length) {
@@ -193,36 +201,20 @@ export default function MethodologyPage() {
     }
   };
 
-  // Função para remover passo
   const removeStep = (index: number) => {
     const updated = [...localSteps];
-    
     if (updated.length <= 1) {
-      // Mantém pelo menos um item vazio
-      const emptyItem: Step = {
-        id: '01',
-        label: '',
-        title: '',
-        icon: 'solar:question-circle-bold-duotone',
-        desc: ''
-      };
+      const emptyItem: Step = { id: '01', label: '', title: '', icon: 'solar:question-circle-bold-duotone', desc: '' };
       setLocalSteps([emptyItem]);
       updateStepsInPageData([emptyItem]);
     } else {
       updated.splice(index, 1);
-      
-      // Reajusta IDs após remoção
-      const revalidated = updated.map((item, idx) => ({
-        ...item,
-        id: (idx + 1).toString().padStart(2, '0')
-      }));
-      
+      const revalidated = updated.map((item, idx) => ({ ...item, id: (idx + 1).toString().padStart(2, '0') }));
       setLocalSteps(revalidated);
       updateStepsInPageData(revalidated);
     }
   };
 
-  // Funções de drag & drop para steps
   const handleStepDragStart = (e: React.DragEvent, index: number) => {
     e.dataTransfer.setData('text/plain', index.toString());
     e.currentTarget.classList.add('dragging');
@@ -231,25 +223,13 @@ export default function MethodologyPage() {
 
   const handleStepDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    
     if (draggingItem === null || draggingItem === index) return;
-    
     const updated = [...localSteps];
     const draggedItem = updated[draggingItem];
-    
-    // Remove o item arrastado
     updated.splice(draggingItem, 1);
-    
-    // Insere na nova posição
     const newIndex = index > draggingItem ? index : index;
     updated.splice(newIndex, 0, draggedItem);
-    
-    // Reajusta IDs após reordenação
-    const reorderedItems = updated.map((item, idx) => ({
-      ...item,
-      id: (idx + 1).toString().padStart(2, '0')
-    }));
-    
+    const reorderedItems = updated.map((item, idx) => ({ ...item, id: (idx + 1).toString().padStart(2, '0') }));
     setLocalSteps(reorderedItems);
     updateStepsInPageData(reorderedItems);
     setDraggingItem(index);
@@ -260,43 +240,23 @@ export default function MethodologyPage() {
     setDraggingItem(null);
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-  };
+  const handleDragEnter = (e: React.DragEvent) => { e.currentTarget.classList.add('drag-over'); };
+  const handleDragLeave = (e: React.DragEvent) => { e.currentTarget.classList.remove('drag-over'); };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
-    console.log('Salvando dados:', pageData);
-    
     try {
-      // Primeiro, garante que os dados locais estejam sincronizados
       updateStepsInPageData(localSteps);
-      
-      // Aguarda um momento para garantir a atualização
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Salva no banco
       await save();
     } catch (err) {
       console.error("Erro ao salvar:", err);
     }
   };
 
-  // Validações
   const isStepValid = (item: Step): boolean => {
-    return item.label.trim() !== '' && 
-           item.title.trim() !== '' && 
-           item.desc.trim() !== '';
+    return item.label.trim() !== '' && item.title.trim() !== '' && item.desc.trim() !== '';
   };
 
   const isStepsLimitReached = localSteps.length >= currentPlanLimit;
@@ -312,25 +272,27 @@ export default function MethodologyPage() {
     let completed = 0;
     let total = 0;
 
-    // Section Header (3 campos)
     total += 3;
     if (pageData.methodology.section_header.title_main.trim()) completed++;
     if (pageData.methodology.section_header.title_highlight.trim()) completed++;
     if (pageData.methodology.section_header.manifesto.trim()) completed++;
 
-    // Steps
-    total += localSteps.length * 3; // label, title, desc
+    total += localSteps.length * 3;
     localSteps.forEach(step => {
       if (step.label.trim()) completed++;
       if (step.title.trim()) completed++;
       if (step.desc.trim()) completed++;
     });
 
-    // CTA (3 campos) - ATUALIZADO: agora são 3 campos
     total += 3;
     if (pageData.methodology.cta.text.trim()) completed++;
     if (pageData.methodology.cta.icon.trim()) completed++;
-    if (pageData.methodology.cta.href.trim()) completed++;
+    
+    if (pageData.methodology.cta.use_form) {
+      if (pageData.methodology.cta.form_id?.trim()) completed++;
+    } else {
+      if (pageData.methodology.cta.href.trim()) completed++;
+    }
 
     return { completed, total };
   };
@@ -341,6 +303,11 @@ export default function MethodologyPage() {
     return <Loading layout={Layout} exists={!!exists} />;
   }
 
+  // --- CORREÇÃO DA FUNÇÃO DO SWITCH ---
+  const handleSwitchChange = (checked: boolean) => {
+    updateNested('methodology.cta.use_form', checked);
+  };
+
   return (
     <ManageLayout
       headerIcon={Cpu}
@@ -350,6 +317,7 @@ export default function MethodologyPage() {
       itemName="Metodologia"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
+        
         {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
@@ -359,19 +327,12 @@ export default function MethodologyPage() {
             isExpanded={expandedSections.header}
             onToggle={() => toggleSection("header")}
           />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.header ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
+          <motion.div initial={false} animate={{ height: expandedSections.header ? "auto" : 0 }} className="overflow-hidden">
+            <Card className="p-6 bg-[var(--color-background)] border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Título Principal
-                    </label>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Título Principal</label>
                     <Input
                       value={pageData.methodology.section_header.title_main}
                       onChange={(e) => updateNested('methodology.section_header.title_main', e.target.value)}
@@ -379,11 +340,8 @@ export default function MethodologyPage() {
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
-
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Título Destacado
-                    </label>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Título Destacado</label>
                     <Input
                       value={pageData.methodology.section_header.title_highlight}
                       onChange={(e) => updateNested('methodology.section_header.title_highlight', e.target.value)}
@@ -392,11 +350,8 @@ export default function MethodologyPage() {
                     />
                   </div>
                 </div>
-
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Manifesto
-                  </label>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Manifesto</label>
                   <TextArea
                     value={pageData.methodology.section_header.manifesto}
                     onChange={(e) => updateNested('methodology.section_header.manifesto', e.target.value)}
@@ -419,30 +374,19 @@ export default function MethodologyPage() {
             isExpanded={expandedSections.steps}
             onToggle={() => toggleSection("steps")}
           />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.steps ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)]">
+          <motion.div initial={false} animate={{ height: expandedSections.steps ? "auto" : 0 }} className="overflow-hidden">
+            <Card className="p-6 bg-[var(--color-background)] border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
               <div className="mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                      Configure os passos da metodologia
-                    </h3>
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">Configure os passos</h3>
                     <div className="flex items-center gap-2 mt-1">
                       <div className="flex items-center gap-1">
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-[var(--color-secondary)]/70">
-                          {stepsCompleteCount} de {stepsTotalCount} completos
-                        </span>
+                        <span className="text-sm text-[var(--color-secondary)] opacity-70">{stepsCompleteCount} de {stepsTotalCount} completos</span>
                       </div>
-                      <span className="text-sm text-[var(--color-secondary)]/50">•</span>
-                      <span className="text-sm text-[var(--color-secondary)]/70">
-                        Limite: {currentPlanType === 'pro' ? '10' : '5'} itens
-                      </span>
+                      <span className="text-sm text-[var(--color-secondary)] opacity-50">•</span>
+                      <span className="text-sm text-[var(--color-secondary)] opacity-70">Limite: {currentPlanType === 'pro' ? '10' : '5'} itens</span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
@@ -450,37 +394,23 @@ export default function MethodologyPage() {
                       type="button"
                       onClick={handleAddStep}
                       variant="primary"
-                      className="whitespace-nowrap bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none flex items-center gap-2"
+                      className="whitespace-nowrap flex items-center gap-2 bg-[var(--color-primary)] text-white hover:bg-[var(--color-secondary)] hover:text-[var(--color-primary)]"
                       disabled={!canAddNewStep}
                     >
-                      <Plus className="w-4 h-4" />
-                      Adicionar Passo
+                      <Plus className="w-4 h-4" /> Adicionar Passo
                     </Button>
                     {isStepsLimitReached && (
-                      <p className="text-xs text-red-500 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        Limite do plano atingido
-                      </p>
+                      <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Limite do plano atingido</p>
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Cada passo representa uma etapa da sua metodologia.
-                </p>
               </div>
 
-              {/* Mensagem de erro */}
               {stepsValidationError && (
-                <div className={`p-3 rounded-lg ${isStepsLimitReached ? 'bg-red-900/20 border border-red-800' : 'bg-yellow-900/20 border border-yellow-800'} mb-4`}>
+                <div className={`p-3 rounded-lg ${isStepsLimitReached ? 'bg-red-500/10 border border-red-500/30' : 'bg-yellow-500/10 border border-yellow-500/30'} mb-4`}>
                   <div className="flex items-start gap-2">
-                    {isStepsLimitReached ? (
-                      <XCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-                    )}
-                    <p className={`text-sm ${isStepsLimitReached ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {stepsValidationError}
-                    </p>
+                    {isStepsLimitReached ? <XCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" /> : <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5 shrink-0" />}
+                    <p className={`text-sm ${isStepsLimitReached ? 'text-red-500' : 'text-yellow-600'}`}>{stepsValidationError}</p>
                   </div>
                 </div>
               )}
@@ -490,116 +420,59 @@ export default function MethodologyPage() {
                   <div 
                     key={`step-${step.id || index}`}
                     ref={index === localSteps.length - 1 ? newStepRef : undefined}
-                    draggable
-                    onDragStart={(e) => handleStepDragStart(e, index)}
-                    onDragOver={(e) => handleStepDragOver(e, index)}
-                    onDragEnter={handleDragEnter}
-                    onDragLeave={handleDragLeave}
-                    onDragEnd={handleStepDragEnd}
-                    onDrop={handleDrop}
-                    className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
-                      draggingItem === index 
-                        ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
-                        : 'hover:border-[var(--color-primary)]/50'
-                    }`}
+                    draggable onDragStart={(e) => handleStepDragStart(e, index)} onDragOver={(e) => handleStepDragOver(e, index)} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave} onDragEnd={handleStepDragEnd} onDrop={handleDrop}
+                    className={`p-6 border border-[var(--color-border)] bg-[var(--color-background-body)] rounded-lg space-y-6 transition-all duration-200 ${draggingItem === index ? 'border-[var(--color-primary)] ring-1 ring-[var(--color-primary)] opacity-50' : 'hover:border-[var(--color-primary)]/50'}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-start gap-3 flex-1">
-                        {/* Handle para drag & drop */}
-                        <div 
-                          className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)]/50 rounded transition-colors"
-                          draggable
-                          onDragStart={(e) => handleStepDragStart(e, index)}
-                        >
-                          <GripVertical className="w-5 h-5 text-[var(--color-secondary)]/70" />
+                        <div className="cursor-grab active:cursor-grabbing p-2 hover:bg-[var(--color-background)] rounded transition-colors" draggable onDragStart={(e) => handleStepDragStart(e, index)}>
+                          <GripVertical className="w-5 h-5 text-[var(--color-secondary)] opacity-50" />
                         </div>
-                        
-                        {/* Número do passo */}
                         <div className="flex flex-col items-center">
                           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30">
-                            <span className="text-sm font-bold text-[var(--color-primary)]">
-                              {step.id}
-                            </span>
+                            <span className="text-sm font-bold text-[var(--color-primary)]">{step.id}</span>
                           </div>
                           <div className="w-px h-4 bg-[var(--color-border)] mt-1"></div>
                         </div>
-                        
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-medium text-[var(--color-secondary)]">
-                              {step.title || "Sem título"}
-                            </h4>
+                            <h4 className="font-medium text-[var(--color-secondary)]">{step.title || "Sem título"}</h4>
                             {step.label && step.title && step.desc ? (
-                              <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
-                                Completo
-                              </span>
+                              <span className="px-2 py-1 text-xs bg-green-500/10 text-green-600 font-medium rounded-full">Completo</span>
                             ) : (
-                              <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
-                                Incompleto
-                              </span>
+                              <span className="px-2 py-1 text-xs bg-yellow-500/10 text-yellow-600 font-medium rounded-full">Incompleto</span>
                             )}
                           </div>
-                          
                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             <div className="space-y-4">
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">Label</label>
-                                <Input
-                                  value={step.label}
-                                  onChange={(e) => updateStep(index, { label: e.target.value })}
-                                  placeholder="Ex: Fundação"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
+                                <Input value={step.label} onChange={(e) => updateStep(index, { label: e.target.value })} placeholder="Ex: Fundação" className="bg-[var(--color-background)] border-[var(--color-border)] text-[var(--color-secondary)]" />
                               </div>
                             </div>
-                            
                             <div className="space-y-4">
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">Título</label>
-                                <Input
-                                  value={step.title}
-                                  onChange={(e) => updateStep(index, { title: e.target.value })}
-                                  placeholder="Ex: Auditoria de Margem"
-                                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                                />
+                                <Input value={step.title} onChange={(e) => updateStep(index, { title: e.target.value })} placeholder="Ex: Auditoria de Margem" className="bg-[var(--color-background)] border-[var(--color-border)] text-[var(--color-secondary)]" />
                               </div>
                             </div>
-                            
                             <div className="space-y-4">
                               <div className="space-y-2">
                                 <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone</label>
-                                <IconSelector
-                                  value={step.icon}
-                                  onChange={(value) => updateStep(index, { icon: value })}
-                                  placeholder="solar:bill-check-bold-duotone"
-                                />
+                                <IconSelector value={step.icon} onChange={(value) => updateStep(index, { icon: value })} placeholder="solar:bill-check-bold-duotone" />
                               </div>
                             </div>
                           </div>
-                          
                           <div className="mt-4 space-y-2">
                             <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
-                            <TextArea
-                              value={step.desc}
-                              onChange={(e) => updateStep(index, { desc: e.target.value })}
-                              placeholder="Descrição detalhada do passo"
-                              rows={3}
-                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                            />
+                            <TextArea value={step.desc} onChange={(e) => updateStep(index, { desc: e.target.value })} placeholder="Descrição detalhada do passo" rows={3} className="bg-[var(--color-background)] border-[var(--color-border)] text-[var(--color-secondary)]" />
                           </div>
                         </div>
                       </div>
-                      
                       <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => removeStep(index)}
-                          variant="danger"
-                          className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Remover
-                        </Button>
+                        <button type="button" onClick={() => removeStep(index)} className="p-2 text-[var(--color-secondary)] opacity-50 hover:opacity-100 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all" aria-label="Remover passo">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -609,10 +482,10 @@ export default function MethodologyPage() {
           </motion.div>
         </div>
 
-        {/* Seção CTA - ATUALIZADA com campo de link */}
+        {/* Seção CTA Atualizada (Link vs Formulário) */}
         <div className="space-y-4">
           <SectionHeader
-            title="Call to Action"
+            title="Call to Action (Ação Final)"
             section="cta"
             icon={ArrowRight}
             isExpanded={expandedSections.cta}
@@ -624,13 +497,29 @@ export default function MethodologyPage() {
             animate={{ height: expandedSections.cta ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="p-6 bg-[var(--color-background)] border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
+              
+              {/* Toggle de Ação */}
+              <div className="mb-6 p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                    Abrir Formulário no Clique
+                  </h4>
+                  <p className="text-xs text-[var(--color-secondary)] opacity-70 mt-1">
+                    Ative para abrir um popup de captura ao invés de redirecionar para uma página.
+                  </p>
+                </div>
+                {/* CORREÇÃO DO SWITCH AQUI */}
+                <Switch
+                  checked={pageData.methodology.cta.use_form || false}
+                  onCheckedChange={handleSwitchChange}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                    <ArrowRight className="w-4 h-4" />
-                    Texto do Botão
-                  </label>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Texto do Botão</label>
                   <Input
                     value={pageData.methodology.cta.text}
                     onChange={(e) => updateNested('methodology.cta.text', e.target.value)}
@@ -640,9 +529,7 @@ export default function MethodologyPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Ícone do Botão
-                  </label>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone do Botão</label>
                   <IconSelector
                     value={pageData.methodology.cta.icon}
                     onChange={(value) => updateNested('methodology.cta.icon', value)}
@@ -650,20 +537,45 @@ export default function MethodologyPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                    <Link className="w-4 h-4" />
-                    Link do Botão (href)
-                  </label>
-                  <Input
-                    value={pageData.methodology.cta.href}
-                    onChange={(e) => updateNested('methodology.cta.href', e.target.value)}
-                    placeholder="Ex: /planos, #contato, https://..."
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/50 mt-1">
-                    Use &quot;/&quot; para links internos ou URL completa para externos
-                  </p>
+                <div className="md:col-span-2 pt-2 border-t border-[var(--color-border)]">
+                  {pageData.methodology.cta.use_form ? (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4" />
+                        Formulário Vinculado
+                      </label>
+                      <select
+                        value={pageData.methodology.cta.form_id || ""}
+                        onChange={(e) => updateNested('methodology.cta.form_id', e.target.value)}
+                        className="w-full px-4 py-2.5 bg-[var(--color-background-body)] border border-[var(--color-border)] text-[var(--color-secondary)] rounded-lg outline-none focus:ring-2 transition-shadow"
+                        style={{ '--tw-ring-color': 'var(--color-primary)' } as React.CSSProperties}
+                      >
+                        <option value="">-- Selecione o formulário criado --</option>
+                        {availableForms.map(form => (
+                          <option key={form.id} value={form.id}>{form.name}</option>
+                        ))}
+                      </select>
+                      {availableForms.length === 0 && (
+                        <p className="text-xs text-red-500 mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                        <Link className="w-4 h-4" />
+                        Link de Destino (href)
+                      </label>
+                      <Input
+                        value={pageData.methodology.cta.href}
+                        onChange={(e) => updateNested('methodology.cta.href', e.target.value)}
+                        placeholder="Ex: /contato ou https://wa.me/..."
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                      <p className="text-xs text-[var(--color-secondary)] opacity-50 mt-1">
+                        Use &quot;/&quot; para links internos ou URL completa para links externos.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -676,7 +588,7 @@ export default function MethodologyPage() {
           isAddDisabled={false}
           isSaving={loading}
           exists={!!exists}
-          completeCount={completion.completed} // CORRIGIDO: use completeCount em vez de totalCount
+          completeCount={completion.completed}
           totalCount={completion.total}
           itemName="Metodologia"
           icon={Cpu}

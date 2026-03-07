@@ -135,7 +135,7 @@
           "title": "Ações",
           "icon": "FileText",
           "children": [
-            { "name": "Formulário CTA", "icon": "Newspaper", "href": "/form-acoes" }
+            { "name": "Formulários", "icon": "Newspaper", "href": "/formularios-acoes" }
           ]
         }
       ]
