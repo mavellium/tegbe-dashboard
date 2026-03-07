@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch";
 import { 
   MapPin,
   Building,
@@ -24,7 +25,9 @@ import {
   AlertCircle,
   GripVertical,
   Sparkles,
-  Tag
+  Tag,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -59,6 +62,8 @@ interface HeaderData {
 interface CtaData {
   text: string;
   link: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface CentrosData {
@@ -109,7 +114,9 @@ const defaultData: CentrosData = {
   ],
   cta: {
     text: "Agendar Visita Técnica",
-    link: "#contato"
+    link: "#contato",
+    use_form: false,
+    form_id: ""
   }
 };
 
@@ -137,7 +144,9 @@ const mergeWithDefaults = (apiData: any, defaultData: CentrosData): CentrosData 
     })) || defaultData.locations,
     cta: {
       text: apiData.cta?.text || defaultData.cta.text,
-      link: apiData.cta?.link || defaultData.cta.link
+      link: apiData.cta?.link || defaultData.cta.link,
+      use_form: apiData.cta?.use_form ?? defaultData.cta.use_form,
+      form_id: apiData.cta?.form_id || defaultData.cta.form_id
     }
   };
 };
@@ -175,6 +184,24 @@ export default function CentrosPage() {
   });
 
   const currentData = componentData || defaultData;
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -392,7 +419,12 @@ export default function CentrosPage() {
     // CTA
     total += 2;
     if (currentData.cta.text?.trim()) completed++;
-    if (currentData.cta.link?.trim()) completed++;
+    
+    if (currentData.cta.use_form) {
+      if (currentData.cta.form_id?.trim()) completed++;
+    } else {
+      if (currentData.cta.link?.trim()) completed++;
+    }
 
     return { completed, total };
   };
@@ -539,7 +571,7 @@ export default function CentrosPage() {
                   type="button"
                   onClick={addLocation}
                   variant="primary"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 bg-[var(--color-primary)] text-white hover:opacity-90"
                   disabled={!canAddNewLocation}
                   loading={false}
                 >
@@ -576,7 +608,7 @@ export default function CentrosPage() {
                   className={`p-6 border border-[var(--color-border)] rounded-lg space-y-6 transition-all duration-200 ${
                     draggingLocation === locationIndex 
                       ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10' 
-                      : 'hover:border-[var(--color-primary)]/50'
+                      : 'hover:border-[var(--color-primary)]/50 bg-[var(--color-background)]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -604,11 +636,11 @@ export default function CentrosPage() {
                             {location.city || `Localização ${locationIndex + 1}`}
                           </h4>
                           {isLocationValid(location) ? (
-                            <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                            <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-500 rounded-full border border-[var(--color-success)]/30">
                               Completo
                             </span>
                           ) : (
-                            <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                            <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-500 rounded-full">
                               Incompleto
                             </span>
                           )}
@@ -659,10 +691,10 @@ export default function CentrosPage() {
                                 type="button"
                                 variant="secondary"
                                 onClick={() => addFeature(locationIndex)}
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-2 text-xs h-8"
                                 loading={false}
                               >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3 h-3" />
                                 Adicionar
                               </Button>
                             </div>
@@ -703,10 +735,10 @@ export default function CentrosPage() {
                                     type="button"
                                     variant="danger"
                                     onClick={() => removeFeature(locationIndex, featureIndex)}
-                                    className="flex items-center gap-2"
+                                    className="flex items-center justify-center p-0 h-10 w-10 bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/80"
                                     loading={false}
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-4 h-4 text-white" />
                                   </Button>
                                 </div>
                               ))}
@@ -750,47 +782,35 @@ export default function CentrosPage() {
                                 type="button"
                                 variant="secondary"
                                 onClick={() => addImage(locationIndex)}
-                                className="flex items-center gap-2"
+                                className="flex items-center gap-2 text-xs h-8"
                                 loading={false}
                               >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3 h-3" />
                                 Adicionar Imagem
                               </Button>
                             </div>
 
                             <div className="space-y-3">
                               {location.images.map((image, imageIndex) => (
-                                <div key={imageIndex} className="space-y-2">
+                                <div key={imageIndex} className="space-y-2 p-4 border border-[var(--color-border)] rounded-lg">
                                   <div className="flex items-center gap-3">
                                     <Input
                                       value={image}
                                       onChange={(e) => handleImageChange(locationIndex, imageIndex, e.target.value)}
-                                      placeholder="/imagem.png"
+                                      placeholder="/imagem.png ou https://..."
                                       className="flex-1 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                     />
                                     <Button
                                       type="button"
                                       variant="danger"
                                       onClick={() => removeImage(locationIndex, imageIndex)}
-                                      className="flex items-center gap-2"
+                                      className="flex items-center justify-center p-0 h-10 w-10 bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/80"
                                       loading={false}
                                     >
-                                      <Trash2 className="w-4 h-4" />
+                                      <Trash2 className="w-4 h-4 text-white" />
                                     </Button>
                                   </div>
                                   <div className="flex items-center gap-4">
-                                    {image && (
-                                      <div className="w-20 h-20 rounded-lg overflow-hidden border border-[var(--color-border)]">
-                                        <img 
-                                          src={image} 
-                                          alt={`Preview ${imageIndex}`}
-                                          className="w-full h-full object-cover"
-                                          onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
-                                          }}
-                                        />
-                                      </div>
-                                    )}
                                     <ImageUpload
                                       label=""
                                       currentImage={image}
@@ -813,11 +833,11 @@ export default function CentrosPage() {
                         type="button"
                         onClick={() => removeLocation(locationIndex)}
                         variant="danger"
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-2 bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/80 text-white"
                         loading={false}
                       >
                         <Trash2 className="w-4 h-4" />
-                        Remover
+                        Remover Centro
                       </Button>
                     </div>
                   </div>
@@ -843,6 +863,23 @@ export default function CentrosPage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)] space-y-6">
+              {/* Toggle de Ação */}
+              <div className="mb-6 p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                    Abrir Formulário no Clique
+                  </h4>
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ative para abrir um formulário popup em vez de um link comum.
+                  </p>
+                </div>
+                <Switch
+                  checked={currentData.cta.use_form || false}
+                  onCheckedChange={(checked: boolean) => handleChange('cta.use_form', checked)}
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Input
@@ -854,18 +891,41 @@ export default function CentrosPage() {
                   />
                 </div>
 
-                <div>
-                  <Input
-                    label="Link/Âncora"
-                    value={currentData.cta.link}
-                    onChange={(e) => handleChange('cta.link', e.target.value)}
-                    placeholder="Ex: #contato"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Pode ser um link interno (#seção) ou externo
-                  </p>
-                </div>
+                {currentData.cta.use_form ? (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                    </label>
+                    <select
+                      value={currentData.cta.form_id || ""}
+                      onChange={(e) => handleChange('cta.form_id', e.target.value)}
+                      className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                    >
+                      <option value="">-- Selecione o formulário --</option>
+                      {availableForms.map(form => (
+                        <option key={form.id} value={form.id}>{form.name}</option>
+                      ))}
+                    </select>
+                    {availableForms.length === 0 && (
+                      <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2 mb-2">
+                      <Link2 className="w-4 h-4" /> Link/Âncora
+                    </label>
+                    <Input
+                      value={currentData.cta.link}
+                      onChange={(e) => handleChange('cta.link', e.target.value)}
+                      placeholder="Ex: #contato"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Pode ser um link interno (#seção) ou externo
+                    </p>
+                  </div>
+                )}
               </div>
             </Card>
           </motion.div>

@@ -1,190 +1,130 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
-import { Button } from "@/components/Button";
 import { TextArea } from "@/components/TextArea";
-import IconSelector from "@/components/IconSelector";
+import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch"; // ADICIONADO
 import { 
-  ShieldCheck,
-  Crown,
-  Plus,
-  Trash2,
+  Settings, 
   CheckCircle2,
+  Layers,
   Image as ImageIcon,
-  Settings,
+  MessageSquare,
   Target,
+  Link,
+  Users,
   Eye,
-  EyeOff
+  Shield,
+  LayoutTemplate, // ADICIONADO
+  Link2 // ADICIONADO
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { SectionHeader } from "@/components/SectionHeader";
-import Loading from "@/components/Loading";
-import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ImageUpload } from "@/components/ImageUpload";
+import IconSelector from "@/components/IconSelector";
+import Loading from "@/components/Loading";
 
-interface LogoItem {
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
+interface ConsultoriaData {
+  id?: string;
+  visual: {
+    imageSrc: string;
+    imageAlt: string;
+    badgeText: string;
+  };
+  header: {
+    badgeIcon: string;
+    badgeText: string;
+    titleMain: string;
+    titleSecondary: string;
+  };
+  content: {
+    description: string;
+    details: string;
+    cta: {
+      text: string;
+      link: string;
+      use_form?: boolean; // ADICIONADO
+      form_id?: string;   // ADICIONADO
+    };
+    socialProof: {
+      value: string;
+      label: string;
+    };
+  };
 }
 
-interface LogoRow {
-  row1: LogoItem[];
-  row2: LogoItem[];
-}
-
-interface Badge {
-  text: string;
-  icon: string;
-}
-
-interface Stats {
-  label: string;
-  description: string;
-  icon: string;
-}
-
-interface Footer {
-  label: string;
-  linkText: string;
-}
-
-interface CTA {
-  text: string;
-  link: string;
-  showIcon: boolean;
-  icon: string;
-}
-
-interface MarketingData {
-  badge: Badge;
-  title: string;
-  footer: string;
-  layout: "marquee" | "grid" | "carousel";
-  logos: LogoRow;
-  cta: CTA;
-}
-
-interface SobreData {
-  badge: Badge;
-  title: string;
-  subtitle: string;
-  layout: "bento-grid" | "grid" | "carousel";
-  stats: Stats;
-  footer: Footer;
-}
-
-interface EcosystemData {
-  marketing: MarketingData;
-  sobre: SobreData;
-}
-
-const defaultCTA: CTA = {
-  text: "Falar com um especialista",
-  link: "/contato",
-  showIcon: true,
-  icon: "ph:whatsapp-logo"
-};
-
-const defaultEcosystemData: EcosystemData = {
-  marketing: {
-    badge: {
-      text: "Ecossistema Validado",
-      icon: "mdi:shield-check"
-    },
-    title: "Não testamos com o seu dinheiro. <br/><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FF0F43] to-[#E31B63]'>Validamos com o deles.</span>",
-    footer: "Empresas que escalaram acima de 7 dígitos/ano",
-    layout: "marquee",
-    logos: {
-      row1: [],
-      row2: []
-    },
-    cta: defaultCTA
+const defaultConsultoriaData: ConsultoriaData = {
+  visual: {
+    imageSrc: "/15anos-image.png",
+    imageAlt: "Equipe Tegbe em Operação",
+    badgeText: "Desde 2022"
   },
-  sobre: {
-    badge: {
-      text: "Hall de Clientes",
-      icon: "ph:crown-simple-bold"
+  header: {
+    badgeIcon: "ph:certificate-fill",
+    badgeText: "Consultoria Oficial",
+    titleMain: "Não apenas operamos.",
+    titleSecondary: "Nós ditamos o ritmo."
+  },
+  content: {
+    description: "Como Consultores Oficiais, temos acesso direto a estratégias e ferramentas que vendedores comuns desconhecem.",
+    details: "Sua conta não será apenas gerenciada; ela será <strong>blindada e escalada</strong> com o aval da própria plataforma. O que para outros é 'segredo', para nós é ferramenta de trabalho diária.",
+    cta: {
+      text: "Falar com Especialista",
+      link: "https://api.whatsapp.com/send?phone=5514991779502&text=Gostaria%20de%20falar%20com%20um%20especialista",
+      use_form: false,
+      form_id: ""
     },
-    title: "Onde os gigantes <br/>escolhem escalar.",
-    subtitle: "Não colecionamos logos. Colecionamos cases de expansão de market share.",
-    layout: "bento-grid",
-    stats: {
-      label: "Volume Tracionado",
-      description: "Soma do faturamento gerado sob nossa gestão direta nos últimos 12 meses.",
-      icon: "ph:trend-up-bold"
-    },
-    footer: {
-      label: "Ecossistema Validado",
-      linkText: "Ver todos os cases"
+    socialProof: {
+      value: "+R$ 40M",
+      label: "Gerenciados"
     }
   }
 };
 
-const layoutOptions = [
-  { value: "marquee", label: "Marquee (Rolagem)" },
-  { value: "grid", label: "Grid (Grade)" },
-  { value: "carousel", label: "Carrossel" },
-  { value: "bento-grid", label: "Bento Grid" }
-];
-
-const mergeWithDefaults = (apiData: any, defaultData: EcosystemData): EcosystemData => {
+const mergeWithDefaults = (apiData: any, defaultData: ConsultoriaData): ConsultoriaData => {
   if (!apiData) return defaultData;
   
   return {
-    marketing: {
-      badge: {
-        text: apiData.marketing?.badge?.text || defaultData.marketing.badge.text,
-        icon: apiData.marketing?.badge?.icon || defaultData.marketing.badge.icon
-      },
-      title: apiData.marketing?.title || defaultData.marketing.title,
-      footer: apiData.marketing?.footer || defaultData.marketing.footer,
-      layout: apiData.marketing?.layout || defaultData.marketing.layout,
-      logos: {
-        row1: apiData.marketing?.logos?.row1 || defaultData.marketing.logos.row1,
-        row2: apiData.marketing?.logos?.row2 || defaultData.marketing.logos.row2
-      },
-      cta: {
-        text: apiData.marketing?.cta?.text || defaultData.marketing.cta.text,
-        link: apiData.marketing?.cta?.link || defaultData.marketing.cta.link,
-        showIcon: apiData.marketing?.cta?.showIcon !== undefined 
-          ? apiData.marketing.cta.showIcon 
-          : defaultData.marketing.cta.showIcon,
-        icon: apiData.marketing?.cta?.icon || defaultData.marketing.cta.icon
-      }
+    id: apiData.id,
+    visual: {
+      imageSrc: apiData.visual?.imageSrc || defaultData.visual.imageSrc,
+      imageAlt: apiData.visual?.imageAlt || defaultData.visual.imageAlt,
+      badgeText: apiData.visual?.badgeText || defaultData.visual.badgeText,
     },
-    sobre: {
-      badge: {
-        text: apiData.sobre?.badge?.text || defaultData.sobre.badge.text,
-        icon: apiData.sobre?.badge?.icon || defaultData.sobre.badge.icon
+    header: {
+      badgeIcon: apiData.header?.badgeIcon || defaultData.header.badgeIcon,
+      badgeText: apiData.header?.badgeText || defaultData.header.badgeText,
+      titleMain: apiData.header?.titleMain || defaultData.header.titleMain,
+      titleSecondary: apiData.header?.titleSecondary || defaultData.header.titleSecondary,
+    },
+    content: {
+      description: apiData.content?.description || defaultData.content.description,
+      details: apiData.content?.details || defaultData.content.details,
+      cta: {
+        text: apiData.content?.cta?.text || defaultData.content.cta.text,
+        link: apiData.content?.cta?.link || defaultData.content.cta.link,
+        use_form: apiData.content?.cta?.use_form ?? defaultData.content.cta.use_form,
+        form_id: apiData.content?.cta?.form_id || defaultData.content.cta.form_id
       },
-      title: apiData.sobre?.title || defaultData.sobre.title,
-      subtitle: apiData.sobre?.subtitle || defaultData.sobre.subtitle,
-      layout: apiData.sobre?.layout || defaultData.sobre.layout,
-      stats: {
-        label: apiData.sobre?.stats?.label || defaultData.sobre.stats.label,
-        description: apiData.sobre?.stats?.description || defaultData.sobre.stats.description,
-        icon: apiData.sobre?.stats?.icon || defaultData.sobre.stats.icon
+      socialProof: {
+        value: apiData.content?.socialProof?.value || defaultData.content.socialProof.value,
+        label: apiData.content?.socialProof?.label || defaultData.content.socialProof.label,
       },
-      footer: {
-        label: apiData.sobre?.footer?.label || defaultData.sobre.footer.label,
-        linkText: apiData.sobre?.footer?.linkText || defaultData.sobre.footer.linkText
-      }
     }
   };
 };
 
-export default function EcosystemPage() {
+export default function ConsultoriaPage() {
   const {
-    data: ecosystemData,
+    data: consultoriaData,
     exists,
     loading,
     success,
@@ -195,16 +135,38 @@ export default function EcosystemPage() {
     openDeleteAllModal,
     closeDeleteModal,
     confirmDelete,
-  } = useJsonManagement<EcosystemData>({
-    apiPath: "/api/tegbe-institucional/json/empresas",
-    defaultData: defaultEcosystemData,
+  } = useJsonManagement<ConsultoriaData>({
+    apiPath: "/api/tegbe-institucional/json/anos-mercado",
+    defaultData: defaultConsultoriaData,
     mergeFunction: mergeWithDefaults,
   });
 
   const [expandedSections, setExpandedSections] = useState({
-    marketing: true,
-    sobre: false,
+    visual: true,
+    header: false,
+    content: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
+  // Referência para scroll
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -213,42 +175,7 @@ export default function EcosystemPage() {
     }));
   };
 
-  const handleSectionChange = (section: "marketing" | "sobre", path: string, value: any) => {
-    updateNested(`${section}.${path}`, value);
-  };
-
-  const handleCtaChange = (field: keyof CTA, value: any) => {
-    updateNested(`marketing.cta.${field}`, value);
-  };
-
-  const handleLogoChange = (
-    section: "marketing",
-    row: "row1" | "row2",
-    index: number,
-    field: keyof LogoItem,
-    value: any
-  ) => {
-    updateNested(`${section}.logos.${row}.${index}.${field}`, value);
-  };
-
-  const addLogo = (section: "marketing", row: "row1" | "row2") => {
-    const currentLogos = [...ecosystemData[section].logos[row]];
-    const newLogo: LogoItem = {
-      src: "",
-      alt: `Cliente ${currentLogos.length + 1}`,
-      width: 120,
-      height: 40
-    };
-
-    updateNested(`${section}.logos.${row}`, [...currentLogos, newLogo]);
-  };
-
-  const removeLogo = (section: "marketing", row: "row1" | "row2", index: number) => {
-    const currentLogos = [...ecosystemData[section].logos[row]];
-    currentLogos.splice(index, 1);
-    updateNested(`${section}.logos.${row}`, currentLogos);
-  };
-
+  // Função para salvar
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     
@@ -259,53 +186,46 @@ export default function EcosystemPage() {
     }
   };
 
+  // Validações
+  const visualCompleteCount = [
+    consultoriaData.visual.imageSrc.trim() !== '',
+    consultoriaData.visual.imageAlt.trim() !== '',
+    consultoriaData.visual.badgeText.trim() !== ''
+  ].filter(Boolean).length;
+
+  const headerCompleteCount = [
+    consultoriaData.header.badgeIcon.trim() !== '',
+    consultoriaData.header.badgeText.trim() !== '',
+    consultoriaData.header.titleMain.trim() !== '',
+    consultoriaData.header.titleSecondary.trim() !== ''
+  ].filter(Boolean).length;
+
+  const contentCompleteCount = [
+    consultoriaData.content.description.trim() !== '',
+    consultoriaData.content.details.trim() !== '',
+    consultoriaData.content.cta.text.trim() !== '',
+    consultoriaData.content.cta.use_form 
+      ? consultoriaData.content.cta.form_id?.trim() !== '' 
+      : consultoriaData.content.cta.link.trim() !== '',
+    consultoriaData.content.socialProof.value.trim() !== '',
+    consultoriaData.content.socialProof.label.trim() !== ''
+  ].filter(Boolean).length;
+
   const calculateCompletion = () => {
     let completed = 0;
     let total = 0;
 
-    // Seção Marketing
-    const marketing = ecosystemData.marketing;
-    total += 4; // badge.text, badge.icon, title, footer
-    if (marketing.badge.text.trim()) completed++;
-    if (marketing.badge.icon.trim()) completed++;
-    if (marketing.title.trim()) completed++;
-    if (marketing.footer.trim()) completed++;
+    // Visual (3 campos)
+    total += 3;
+    completed += visualCompleteCount;
 
-    // CTA Marketing (4 campos)
+    // Header (4 campos)
     total += 4;
-    if (marketing.cta.text.trim()) completed++;
-    if (marketing.cta.link.trim()) completed++;
-    if (marketing.cta.icon.trim()) completed++;
-    completed++; // showIcon é boolean
+    completed += headerCompleteCount;
 
-    // Logos Marketing - Row 1
-    total += marketing.logos.row1.length * 3; // src, alt, width/height
-    marketing.logos.row1.forEach(logo => {
-      if (logo.src.trim()) completed++;
-      if (logo.alt.trim()) completed++;
-      if (logo.width && logo.height) completed++;
-    });
-
-    // Logos Marketing - Row 2
-    total += marketing.logos.row2.length * 3;
-    marketing.logos.row2.forEach(logo => {
-      if (logo.src.trim()) completed++;
-      if (logo.alt.trim()) completed++;
-      if (logo.width && logo.height) completed++;
-    });
-
-    // Seção Sobre
-    const sobre = ecosystemData.sobre;
-    total += 8; // badge.text, badge.icon, title, subtitle, layout, stats.label, stats.icon, footer.label, footer.linkText
-    if (sobre.badge.text.trim()) completed++;
-    if (sobre.badge.icon.trim()) completed++;
-    if (sobre.title.trim()) completed++;
-    if (sobre.subtitle.trim()) completed++;
-    if (sobre.layout) completed++;
-    if (sobre.stats.label.trim()) completed++;
-    if (sobre.stats.icon.trim()) completed++;
-    if (sobre.footer.label.trim()) completed++;
-    if (sobre.footer.linkText.trim()) completed++;
+    // Content (6 campos)
+    total += 6;
+    completed += contentCompleteCount;
 
     return { completed, total };
   };
@@ -316,539 +236,354 @@ export default function EcosystemPage() {
     return <Loading layout={Settings} exists={!!exists} />;
   }
 
-  const renderLogoItemEditor = (logo: LogoItem, index: number, row: "row1" | "row2", section: "marketing") => {
-    return (
-      <Card className="p-4 border border-[var(--color-border)]" key={index}>
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-12 flex items-center justify-center bg-[var(--color-background-body)] rounded border border-[var(--color-border)]">
-              {logo.src ? (
-                <div className="w-full h-full flex items-center justify-center bg-[var(--color-background-body)]">
-                  <div className="text-xs text-[var(--color-secondary)]/50 text-center">
-                    Logo {index + 1}
-                  </div>
-                </div>
-              ) : (
-                <ImageIcon className="w-6 h-6 text-[var(--color-secondary)]/50" />
-              )}
-            </div>
-            <div>
-              <h4 className="font-semibold text-[var(--color-secondary)]">
-                Logo {index + 1}
-              </h4>
-              <p className="text-sm text-[var(--color-secondary)]/70">
-                {logo.alt || "Sem descrição"}
-              </p>
-            </div>
-          </div>
-          
-          <Button
-            type="button"
-            variant="danger"
-            onClick={() => removeLogo(section, row, index)}
-            className="bg-red-600 hover:bg-red-700 border-none"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Upload da Logo */}
-          <div className="md:col-span-1">
-            <ImageUpload
-              label="Imagem da Logo"
-              currentImage={logo.src}
-              onChange={(url) => handleLogoChange(section, row, index, "src", url)}
-              aspectRatio="aspect-[3/2]"
-              previewWidth={120}
-              previewHeight={80}
-              description="Faça upload da logo do cliente"
-            />
-          </div>
-
-          {/* Campos da Logo */}
-          <div className="md:col-span-2 space-y-4">
-            <Input
-              label="Texto Alt (acessibilidade)"
-              value={logo.alt}
-              onChange={(e) => handleLogoChange(section, row, index, "alt", e.target.value)}
-              placeholder="Ex: Nome da Empresa"
-              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Largura (px)"
-                type="number"
-                value={logo.width.toString()}
-                onChange={(e) => handleLogoChange(section, row, index, "width", parseInt(e.target.value) || 120)}
-                placeholder="120"
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-              />
-
-              <Input
-                label="Altura (px)"
-                type="number"
-                value={logo.height.toString()}
-                onChange={(e) => handleLogoChange(section, row, index, "height", parseInt(e.target.value) || 40)}
-                placeholder="40"
-                className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-              />
-            </div>
-
-            <Input
-              label="URL da Logo (alternativa)"
-              value={logo.src}
-              onChange={(e) => handleLogoChange(section, row, index, "src", e.target.value)}
-              placeholder="/logos/logo1.svg"
-              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-            />
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
-  const renderCtaSection = () => {
-    const cta = ecosystemData.marketing.cta;
-    
-    return (
-      <Card className="p-6 bg-[var(--color-background)]">
-        <div className="flex items-center gap-3 mb-6">
-          <Target className="w-5 h-5 text-[var(--color-secondary)]" />
-          <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
-            Call to Action (CTA)
-          </h4>
-        </div>
-        
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Texto do CTA
-                </label>
-                <Input
-                  type="text"
-                  value={cta.text}
-                  onChange={(e) => handleCtaChange("text", e.target.value)}
-                  placeholder="Ex: Falar com um especialista"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Link do CTA
-                </label>
-                <Input
-                  type="text"
-                  value={cta.link}
-                  onChange={(e) => handleCtaChange("link", e.target.value)}
-                  placeholder="Ex: /contato"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Ícone do CTA
-                </label>
-                <IconSelector
-                  value={cta.icon}
-                  onChange={(value) => handleCtaChange("icon", value)}
-                  placeholder="ph:whatsapp-logo"
-                />
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)]">
-                <div className="flex items-center gap-3">
-                  {cta.showIcon ? (
-                    <Eye className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <EyeOff className="w-5 h-5 text-gray-500" />
-                  )}
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Mostrar Ícone
-                    </label>
-                    <p className="text-sm text-[var(--color-secondary)]/70">
-                      Exibir ícone ao lado do texto
-                    </p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleCtaChange("showIcon", !cta.showIcon)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    cta.showIcon 
-                      ? 'bg-green-500' 
-                      : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      cta.showIcon 
-                        ? 'translate-x-6' 
-                        : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  };
-
   return (
     <ManageLayout
-      headerIcon={ShieldCheck}
-      title="Ecossistema Validado"
-      description="Gerencie os logos de clientes e configurações das seções Marketing e Sobre"
+      headerIcon={Shield}
+      title="Consultoria"
+      description="Gerencie a seção de consultoria oficial da empresa"
       exists={!!exists}
-      itemName="Configuração de Ecossistema"
+      itemName="Consultoria"
     >
       <form onSubmit={handleSubmit} className="space-y-6 pb-32">
-        {/* Seção Marketing */}
+        {/* Seção Visual */}
         <div className="space-y-4">
           <SectionHeader
-            title="Ecossistema Validado - Marketing"
-            section="marketing"
-            icon={ShieldCheck}
-            isExpanded={expandedSections.marketing}
-            onToggle={() => toggleSection("marketing")}
+            title="Elementos Visuais"
+            section="visual"
+            icon={Eye}
+            isExpanded={expandedSections.visual}
+            onToggle={() => toggleSection("visual")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.marketing ? "auto" : 0 }}
+            animate={{ height: expandedSections.visual ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <div className="space-y-6">
-              <Card className="p-6 bg-[var(--color-background)] space-y-6">
-                {/* Badge e Título */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Texto do Badge"
-                    value={ecosystemData.marketing.badge.text}
-                    onChange={(e) => handleSectionChange("marketing", "badge.text", e.target.value)}
-                    placeholder="Ex: Ecossistema Validado"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      Ícone do Badge
-                    </label>
-                    <IconSelector
-                      value={ecosystemData.marketing.badge.icon}
-                      onChange={(value) => handleSectionChange("marketing", "badge.icon", value)}
-                      placeholder="Selecione um ícone"
-                    />
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                      <Eye className="w-5 h-5" />
+                      Elementos Visuais da Seção
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {visualCompleteCount} de 3 campos preenchidos
+                      </span>
+                    </div>
                   </div>
-                </div>
+                  
+                  <div className="w-full">
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4" />
+                          Imagem de Destaque
+                        </label>
+                        <ImageUpload
+                          label="Imagem Principal"
+                          description="Formatos suportados: JPG, PNG, WEBP. Tamanho recomendado: 800x600px."
+                          currentImage={consultoriaData.visual.imageSrc}
+                          onChange={(url) => updateNested('visual.imageSrc', url)}
+                          aspectRatio="aspect-[4/3]"
+                          previewWidth={400}
+                          previewHeight={300}
+                        />
+                      </div>
 
-                {/* Título com HTML */}
-                <div>
-                  <TextArea
-                    label="Título (HTML permitido)"
-                    value={ecosystemData.marketing.title}
-                    onChange={(e) => handleSectionChange("marketing", "title", e.target.value)}
-                    placeholder="Não testamos com o seu dinheiro. <br/><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FF0F43] to-[#E31B63]'>Validamos com o deles.</span>"
-                    rows={3}
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/50 mt-1">
-                    Use HTML para estilização, como spans com classes de gradiente
-                  </p>
-                </div>
-
-                {/* Footer e Layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Texto do Footer"
-                    value={ecosystemData.marketing.footer}
-                    onChange={(e) => handleSectionChange("marketing", "footer", e.target.value)}
-                    placeholder="Ex: Empresas que escalaram acima de 7 dígitos/ano"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      Layout de Exibição
-                    </label>
-                    <select
-                      value={ecosystemData.marketing.layout}
-                      onChange={(e) => handleSectionChange("marketing", "layout", e.target.value)}
-                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-                    >
-                      {layoutOptions.filter(opt => opt.value !== "bento-grid").map((layout) => (
-                        <option key={layout.value} value={layout.value}>
-                          {layout.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </Card>
-
-              {/* CTA Section */}
-              {renderCtaSection()}
-
-              {/* Logos - Row 1 */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
-                      Logos - Linha 1
-                    </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-[var(--color-secondary)]/70">
-                          {ecosystemData.marketing.logos.row1.filter(logo => logo.src && logo.alt).length} de {ecosystemData.marketing.logos.row1.length} completos
-                        </span>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                          Texto Alternativo da Imagem
+                        </label>
+                        <Input
+                          type="text"
+                          value={consultoriaData.visual.imageAlt}
+                          onChange={(e) => updateNested('visual.imageAlt', e.target.value)}
+                          placeholder="Ex: Equipe Tegbe em Operação"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                        <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                          Descreva a imagem para acessibilidade e SEO
+                        </p>
                       </div>
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={() => addLogo("marketing", "row1")}
-                    variant="primary"
-                    className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar Logo
-                  </Button>
                 </div>
-
-                {ecosystemData.marketing.logos.row1.length === 0 ? (
-                  <Card className="p-8 text-center border border-[var(--color-border)]">
-                    <ImageIcon className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                      Nenhum logo adicionado
-                    </h4>
-                    <p className="text-[var(--color-secondary)]/70 mb-4">
-                      Comece adicionando os primeiros logos de clientes
-                    </p>
-                    <Button
-                      type="button"
-                      onClick={() => addLogo("marketing", "row1")}
-                      variant="primary"
-                      className="flex items-center gap-2 mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar Primeiro Logo
-                    </Button>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {ecosystemData.marketing.logos.row1.map((logo, index) => 
-                      renderLogoItemEditor(logo, index, "row1", "marketing")
-                    )}
-                  </div>
-                )}
               </div>
-
-              {/* Logos - Row 2 */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
-                      Logos - Linha 2
-                    </h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                        <span className="text-sm text-[var(--color-secondary)]/70">
-                          {ecosystemData.marketing.logos.row2.filter(logo => logo.src && logo.alt).length} de {ecosystemData.marketing.logos.row2.length} completos
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={() => addLogo("marketing", "row2")}
-                    variant="primary"
-                    className="flex items-center gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Adicionar Logo
-                  </Button>
-                </div>
-
-                {ecosystemData.marketing.logos.row2.length === 0 ? (
-                  <Card className="p-8 text-center border border-[var(--color-border)]">
-                    <ImageIcon className="w-12 h-12 text-[var(--color-secondary)]/50 mx-auto mb-4" />
-                    <h4 className="text-lg font-medium text-[var(--color-secondary)] mb-2">
-                      Nenhum logo adicionado
-                    </h4>
-                    <p className="text-[var(--color-secondary)]/70 mb-4">
-                      Adicione logos para a segunda linha
-                    </p>
-                    <Button
-                      type="button"
-                      onClick={() => addLogo("marketing", "row2")}
-                      variant="primary"
-                      className="flex items-center gap-2 mx-auto bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white border-none"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Adicionar Primeiro Logo
-                    </Button>
-                  </Card>
-                ) : (
-                  <div className="space-y-4">
-                    {ecosystemData.marketing.logos.row2.map((logo, index) => 
-                      renderLogoItemEditor(logo, index, "row2", "marketing")
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            </Card>
           </motion.div>
         </div>
 
-        {/* Seção Sobre */}
+        {/* Seção Header */}
         <div className="space-y-4">
           <SectionHeader
-            title="Hall de Clientes - Sobre"
-            section="sobre"
-            icon={Crown}
-            isExpanded={expandedSections.sobre}
-            onToggle={() => toggleSection("sobre")}
+            title="Cabeçalho da Seção"
+            section="header"
+            icon={Layers}
+            isExpanded={expandedSections.header}
+            onToggle={() => toggleSection("header")}
           />
 
           <motion.div
             initial={false}
-            animate={{ height: expandedSections.sobre ? "auto" : 0 }}
+            animate={{ height: expandedSections.header ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              {/* Badge e Título */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input
-                  label="Texto do Badge"
-                  value={ecosystemData.sobre.badge.text}
-                  onChange={(e) => handleSectionChange("sobre", "badge.text", e.target.value)}
-                  placeholder="Ex: Hall de Clientes"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                      <Layers className="w-5 h-5" />
+                      Informações do Cabeçalho
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {headerCompleteCount} de 4 campos preenchidos
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                          Ícone do Badge
+                        </label>
+                        <IconSelector
+                          value={consultoriaData.header.badgeIcon}
+                          onChange={(value: string) => updateNested('header.badgeIcon', value)}
+                          label="Selecione um ícone para o badge"
+                        />
+                        <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                          Ícone exibido ao lado do texto do badge
+                        </p>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    Ícone do Badge
-                  </label>
-                  <IconSelector
-                    value={ecosystemData.sobre.badge.icon}
-                    onChange={(value) => handleSectionChange("sobre", "badge.icon", value)}
-                    placeholder="Selecione um ícone"
-                  />
-                </div>
-              </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                          Texto do Badge
+                        </label>
+                        <Input
+                          type="text"
+                          value={consultoriaData.header.badgeText}
+                          onChange={(e) => updateNested('header.badgeText', e.target.value)}
+                          placeholder="Ex: Consultoria Oficial"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    </div>
 
-              {/* Título e Subtítulo */}
-              <div className="space-y-4">
-                <TextArea
-                  label="Título (HTML permitido)"
-                  value={ecosystemData.sobre.title}
-                  onChange={(e) => handleSectionChange("sobre", "title", e.target.value)}
-                  placeholder="Onde os gigantes <br/>escolhem escalar."
-                  rows={2}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Título Principal
+                      </label>
+                      <Input
+                        type="text"
+                        value={consultoriaData.header.titleMain}
+                        onChange={(e) => updateNested('header.titleMain', e.target.value)}
+                        placeholder="Ex: Não apenas operamos."
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] text-lg font-semibold"
+                      />
+                    </div>
 
-                <Input
-                  label="Subtítulo"
-                  value={ecosystemData.sobre.subtitle}
-                  onChange={(e) => handleSectionChange("sobre", "subtitle", e.target.value)}
-                  placeholder="Não colecionamos logos. Colecionamos cases de expansão de market share."
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-
-              {/* Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    Layout de Exibição
-                  </label>
-                  <select
-                    value={ecosystemData.sobre.layout}
-                    onChange={(e) => handleSectionChange("sobre", "layout", e.target.value)}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-                  >
-                    {layoutOptions.map((layout) => (
-                      <option key={layout.value} value={layout.value}>
-                        {layout.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Estatísticas */}
-              <div className="space-y-4 p-4 border border-[var(--color-border)] rounded-lg">
-                <h4 className="font-medium text-[var(--color-secondary)]">
-                  Estatísticas
-                </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Rótulo"
-                    value={ecosystemData.sobre.stats.label}
-                    onChange={(e) => handleSectionChange("sobre", "stats.label", e.target.value)}
-                    placeholder="Ex: Volume Tracionado"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      Ícone da Estatística
-                    </label>
-                    <IconSelector
-                      value={ecosystemData.sobre.stats.icon}
-                      onChange={(value) => handleSectionChange("sobre", "stats.icon", value)}
-                      placeholder="ph:trend-up-bold"
-                    />
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Título Secundário
+                      </label>
+                      <Input
+                        type="text"
+                        value={consultoriaData.header.titleSecondary}
+                        onChange={(e) => updateNested('header.titleSecondary', e.target.value)}
+                        placeholder="Ex: Nós ditamos o ritmo."
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
                   </div>
                 </div>
-
-                <TextArea
-                  label="Descrição"
-                  value={ecosystemData.sobre.stats.description}
-                  onChange={(e) => handleSectionChange("sobre", "stats.description", e.target.value)}
-                  rows={2}
-                  placeholder="Soma do faturamento gerado sob nossa gestão direta nos últimos 12 meses."
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
               </div>
+            </Card>
+          </motion.div>
+        </div>
 
-              {/* Footer */}
-              <div className="space-y-4 p-4 border border-[var(--color-border)] rounded-lg">
-                <h4 className="font-medium text-[var(--color-secondary)]">
-                  Rodapé
-                </h4>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Rótulo"
-                    value={ecosystemData.sobre.footer.label}
-                    onChange={(e) => handleSectionChange("sobre", "footer.label", e.target.value)}
-                    placeholder="Ex: Ecossistema Validado"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+        {/* Seção Content */}
+        <div className="space-y-4">
+          <SectionHeader
+            title="Conteúdo Principal"
+            section="content"
+            icon={MessageSquare}
+            isExpanded={expandedSections.content}
+            onToggle={() => toggleSection("content")}
+          />
 
-                  <Input
-                    label="Texto do Link"
-                    value={ecosystemData.sobre.footer.linkText}
-                    onChange={(e) => handleSectionChange("sobre", "footer.linkText", e.target.value)}
-                    placeholder="Ex: Ver todos os cases"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+          <motion.div
+            initial={false}
+            animate={{ height: expandedSections.content ? "auto" : 0 }}
+            className="overflow-hidden"
+            ref={contentRef}
+          >
+            <Card className="p-6 bg-[var(--color-background)]">
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5" />
+                      Conteúdo da Seção
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-[var(--color-secondary)]/70">
+                        {contentCompleteCount} de 6 campos preenchidos
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Descrição Principal
+                      </label>
+                      <TextArea
+                        placeholder="Ex: Como Consultores Oficiais, temos acesso direto a estratégias e ferramentas que vendedores comuns desconhecem."
+                        value={consultoriaData.content.description}
+                        onChange={(e) => updateNested('content.description', e.target.value)}
+                        rows={3}
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Detalhes (HTML permitido)
+                      </label>
+                      <TextArea
+                        placeholder="Ex: Sua conta não será apenas gerenciada; ela será <strong>blindada e escalada</strong> com o aval da própria plataforma."
+                        value={consultoriaData.content.details}
+                        onChange={(e) => updateNested('content.details', e.target.value)}
+                        rows={4}
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono"
+                      />
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                        Use tags HTML como &lt;strong&gt;, &lt;em&gt;, &lt;span&gt; para formatação
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      
+                      {/* --- INÍCIO DA ATUALIZAÇÃO DO CTA --- */}
+                      <div className="space-y-4 border-t border-[var(--color-border)] pt-4 md:border-none md:pt-0">
+                        <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <Target className="w-4 h-4" />
+                          Call-to-Action (CTA)
+                        </h4>
+                        
+                        {/* Toggle de Form/Link */}
+                        <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                              <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                              Abrir Formulário no Clique
+                            </h4>
+                            <p className="text-xs text-[var(--color-secondary)] opacity-70 mt-1">
+                              Ative para abrir um formulário popup em vez de redirecionar para um link.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={consultoriaData.content.cta.use_form || false}
+                            onCheckedChange={(checked: boolean) => updateNested('content.cta.use_form', checked)}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Texto do Botão
+                          </label>
+                          <Input
+                            type="text"
+                            value={consultoriaData.content.cta.text}
+                            onChange={(e) => updateNested('content.cta.text', e.target.value)}
+                            placeholder="Ex: Falar com Especialista"
+                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                          />
+                        </div>
+
+                        {consultoriaData.content.cta.use_form ? (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                              <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                            </label>
+                            <select
+                              value={consultoriaData.content.cta.form_id || ""}
+                              onChange={(e) => updateNested('content.cta.form_id', e.target.value)}
+                              className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                            >
+                              <option value="">-- Selecione o formulário --</option>
+                              {availableForms.map(form => (
+                                <option key={form.id} value={form.id}>{form.name}</option>
+                              ))}
+                            </select>
+                            {availableForms.length === 0 && (
+                              <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                              <Link2 className="w-4 h-4" /> Link do Botão
+                            </label>
+                            <Input
+                              type="url"
+                              value={consultoriaData.content.cta.link}
+                              onChange={(e) => updateNested('content.cta.link', e.target.value)}
+                              placeholder="Ex: https://api.whatsapp.com/send?phone=..."
+                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                            />
+                            <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                              Link externo para WhatsApp, site, etc.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      {/* --- FIM DA ATUALIZAÇÃO DO CTA --- */}
+
+                      <div className="space-y-4 border-t border-[var(--color-border)] pt-4 md:border-none md:pt-0">
+                        <h4 className="font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          Prova Social
+                        </h4>
+                        
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Valor
+                          </label>
+                          <Input
+                            type="text"
+                            value={consultoriaData.content.socialProof.value}
+                            onChange={(e) => updateNested('content.socialProof.value', e.target.value)}
+                            placeholder="Ex: +R$ 40M"
+                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                            Rótulo
+                          </label>
+                          <Input
+                            type="text"
+                            value={consultoriaData.content.socialProof.label}
+                            onChange={(e) => updateNested('content.socialProof.label', e.target.value)}
+                            placeholder="Ex: Gerenciados"
+                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </Card>
@@ -863,8 +598,8 @@ export default function EcosystemPage() {
           exists={!!exists}
           completeCount={completion.completed}
           totalCount={completion.total}
-          itemName="Seção"
-          icon={ShieldCheck}
+          itemName="Consultoria"
+          icon={Shield}
         />
       </form>
 
@@ -874,8 +609,8 @@ export default function EcosystemPage() {
         onConfirm={confirmDelete}
         type={deleteModal.type}
         itemTitle={deleteModal.title}
-        totalItems={2}
-        itemName="Configuração de Ecossistema"
+        totalItems={1}
+        itemName="Configuração de Consultoria"
       />
 
       <FeedbackMessages success={success} errorMsg={errorMsg} />

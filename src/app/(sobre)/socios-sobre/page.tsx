@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -15,8 +15,6 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
-  Brain,
-  Diamond,
   UserStar,
   Trash2,
   Plus,
@@ -31,11 +29,13 @@ import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { Button } from "@/components/Button";
+import { ImageUpload } from "@/components/ImageUpload"; // ADICIONADO
 
 interface Value {
+  image: string;
+  icon: string;
   title: string;
   description: string;
-  icon: string;
 }
 
 interface Header {
@@ -54,25 +54,28 @@ interface SobreData {
 const defaultSobreData: SobreData = {
   sobre: {
     header: {
-      preTitle: "Nossa Essência",
-      title: "Não fundamos uma agência.<br /><span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] via-[#F5C400] to-white'>Criamos um padrão de excelência.</span>",
-      subtitle: "A Tegbe nasceu de uma inquietação: o mercado aceitava o 'bom' como suficiente. Nós não. Somos um time de mentes analíticas obcecadas por elevar a barra do que é possível em performance digital."
+      title: 'Crescimento <span class="text-[#FFD700]">estratégico</span> para sócios',
+      preTitle: "DIFERENCIAL",
+      subtitle: "Construímos máquinas de vendas baseadas em fundamentos econômicos que sustentam o crescimento por anos."
     },
     values: [
       {
-        title: "Inteligência Estratégica",
-        description: "Antes de apertar qualquer botão, nós pensamos. Nossa cultura valoriza o planejamento profundo e a visão de longo prazo em detrimento de hacks imediatistas.",
-        icon: "ph:brain-bold"
+        image: "/icone1.png",
+        icon: "solar:chart-2-bold",
+        title: "Auditoria de Margem",
+        description: "Analisamos CMV, impostos e margem de contribuição para garantir que cada venda seja lucrativa antes mesmo de acontecer."
       },
       {
-        title: "Mentes de Dono",
-        description: "Aqui dentro, ninguém é apenas funcionário. Atuamos com 'Skin in the Game'. Sentimos a dor e a vitória do cliente como se fosse nossa própria operação.",
-        icon: "ph:users-three-bold"
+        image: "/icone2.png",
+        icon: "solar:graph-up-bold",
+        title: "Engenharia de Conversão",
+        description: "Otimizamos a taxa de conversão (CRO) para que o tráfego não seja desperdiçado em um site que não vende."
       },
       {
-        title: "Rigor Técnico",
-        description: "Rejeitamos o amadorismo. Nossos processos são auditáveis, nossa tecnologia é de ponta e nossa busca por precisão é inegociável.",
-        icon: "ph:diamond-bold"
+        image: "/icone3.png",
+        icon: "solar:rocket-bold",
+        title: "Escala com Dados",
+        description: "Ativamos tráfego de alta intenção e CRM, transformando o crescimento em um processo previsível e escalável."
       }
     ]
   }
@@ -93,9 +96,10 @@ const mergeWithDefaults = (apiData: any, defaultData: SobreData): SobreData => {
       },
       values: apiSobreData.values?.length 
         ? apiSobreData.values.map((value: any, index: number) => ({
+            image: value.image || defaultData.sobre.values[index]?.image || "",
+            icon: value.icon || defaultData.sobre.values[index]?.icon || "solar:star-bold",
             title: value.title || defaultData.sobre.values[index]?.title || `Valor ${index + 1}`,
             description: value.description || defaultData.sobre.values[index]?.description || "",
-            icon: value.icon || defaultData.sobre.values[index]?.icon || "ph:star-bold",
           }))
         : defaultData.sobre.values
     }
@@ -145,9 +149,10 @@ export default function SobrePage() {
     }
     
     const newItem: Value = {
+      image: "",
+      icon: "solar:star-bold",
       title: `Valor ${values.length + 1}`,
       description: "",
-      icon: "ph:star-bold",
     };
     
     const updated = [...values, newItem];
@@ -171,9 +176,10 @@ export default function SobrePage() {
     if (values.length <= 1) {
       // Mantém pelo menos um item vazio
       const emptyItem: Value = {
+        image: "",
+        icon: "solar:star-bold",
         title: "Valor",
         description: "",
-        icon: "ph:star-bold",
       };
       updateNested('sobre.values', [emptyItem]);
     } else {
@@ -243,7 +249,8 @@ export default function SobrePage() {
   const isValueValid = (item: Value): boolean => {
     return item.title.trim() !== '' && 
            item.description.trim() !== '' && 
-           item.icon.trim() !== '';
+           item.icon.trim() !== '' &&
+           item.image.trim() !== '';
   };
 
   const values = pageData.sobre.values;
@@ -267,12 +274,13 @@ export default function SobrePage() {
     if (pageData.sobre.header.title?.trim()) completed++;
     if (pageData.sobre.header.subtitle?.trim()) completed++;
 
-    // Values (cada um com 3 campos)
-    total += values.length * 3;
+    // Values (cada um com 4 campos)
+    total += values.length * 4;
     values.forEach(item => {
       if (item.title.trim()) completed++;
       if (item.description.trim()) completed++;
       if (item.icon.trim()) completed++;
+      if (item.image.trim()) completed++;
     });
 
     return { completed, total };
@@ -329,7 +337,7 @@ export default function SobrePage() {
                     <Input
                       value={pageData.sobre.header.subtitle}
                       onChange={(e) => updateNested('sobre.header.subtitle', e.target.value)}
-                      placeholder="Ex: A Tegbe nasceu de uma inquietação..."
+                      placeholder="Ex: Construímos máquinas de vendas baseadas em fundamentos..."
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
@@ -340,7 +348,7 @@ export default function SobrePage() {
                   <TextArea
                     value={pageData.sobre.header.title}
                     onChange={(e) => updateNested('sobre.header.title', e.target.value)}
-                    placeholder="Pode conter HTML, ex: &lt;span class='text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] via-[#F5C400] to-white'&gt;texto&lt;/span&gt;"
+                    placeholder="Pode conter HTML, ex: &lt;span class='text-[#FFD700]'&gt;texto&lt;/span&gt;"
                     rows={3}
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)] font-mono text-sm"
                   />
@@ -348,9 +356,9 @@ export default function SobrePage() {
                     <p>Pode incluir HTML para estilização.</p>
                     <p className="flex items-center gap-1">
                       <Palette className="w-3 h-3" />
-                      Sugestão de gradiente: 
+                      Exemplo de cor no texto: 
                       <code className="ml-1 px-1 py-0.5 bg-[var(--color-background-body)] rounded">
-                        from-[#FFD700] via-[#F5C400] to-white
+                        &lt;span class=&quot;text-[#FFD700]&quot;&gt;estratégico&lt;/span&gt;
                       </code>
                     </p>
                   </div>
@@ -363,7 +371,7 @@ export default function SobrePage() {
         {/* Seção Valores */}
         <div className="space-y-4">
           <SectionHeader
-            title="Valores da Empresa"
+            title="Diferenciais / Valores da Empresa"
             section="values"
             icon={UserStar}
             isExpanded={expandedSections.values}
@@ -468,59 +476,70 @@ export default function SobrePage() {
                           </div>
                           
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-3 mb-6">
                               <h4 className="font-medium text-[var(--color-secondary)]">
                                 Valor #{index + 1}
                               </h4>
                               {isValueValid(value) ? (
-                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full border border-green-500/20">
                                   Completo
                                 </span>
                               ) : (
-                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full border border-yellow-500/20">
                                   Incompleto
                                 </span>
                               )}
                             </div>
                             
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                              <div className="space-y-4">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                              {/* Coluna 1: Imagens e Ícones */}
+                              <div className="space-y-6">
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Imagem</label>
+                                  <ImageUpload
+                                    label=""
+                                    currentImage={value.image}
+                                    onChange={(url) => handleUpdateValue(index, { image: url })}
+                                    aspectRatio="aspect-square"
+                                    previewWidth={120}
+                                    previewHeight={120}
+                                    description="Imagem/ícone ilustrativo (ex: /icone1.png)"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone Vector</label>
+                                  <IconSelector
+                                    value={value.icon}
+                                    onChange={(val) => handleUpdateValue(index, { icon: val })}
+                                    placeholder="solar:star-bold"
+                                  />
+                                </div>
+                              </div>
+                              
+                              {/* Coluna 2 e 3: Textos */}
+                              <div className="lg:col-span-2 space-y-4">
                                 <div className="space-y-2">
                                   <label className="block text-sm font-medium text-[var(--color-secondary)]">Título</label>
                                   <Input
                                     value={value.title}
                                     onChange={(e) => handleUpdateValue(index, { title: e.target.value })}
-                                    placeholder="Ex: Inteligência Estratégica"
+                                    placeholder="Ex: Auditoria de Margem"
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
                                 </div>
-                                
-                                <div className="space-y-2">
-                                  <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone</label>
-                                  <IconSelector
-                                    value={value.icon}
-                                    onChange={(value) => handleUpdateValue(index, { icon: value })}
-                                    placeholder="ph:brain-bold"
-                                  />
-                                  <p className="text-xs text-[var(--color-secondary)]/50">
-                                    Use ícones do Phosphor (ex: ph:brain-bold)
-                                  </p>
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-4">
                                 <div className="space-y-2">
                                   <label className="block text-sm font-medium text-[var(--color-secondary)]">Descrição</label>
                                   <TextArea
                                     value={value.description}
                                     onChange={(e) => handleUpdateValue(index, { description: e.target.value })}
-                                    placeholder="Descrição detalhada do valor..."
-                                    rows={6}
+                                    placeholder="Descrição detalhada do diferencial..."
+                                    rows={5}
                                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                                   />
                                 </div>
                               </div>
                             </div>
+
                           </div>
                         </div>
                         

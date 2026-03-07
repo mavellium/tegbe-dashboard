@@ -12,14 +12,11 @@ import IconSelector from "@/components/IconSelector";
 import { 
   Layout, 
   TextIcon,
-  ListIcon,
-  Zap,
   GripVertical,
   AlertCircle,
   CheckCircle2,
   XCircle,
   Palette,
-  Tag,
   Settings,
   Crown,
   TrendingUp,
@@ -28,7 +25,9 @@ import {
   Package,
   Target,
   Plus,
-  Trash2
+  Trash2,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -50,6 +49,21 @@ interface Track {
   order: number;
 }
 
+interface MainTowerCard {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  badge: string; // CORRIGIDO: Adicionado badge aqui
+  tags: string[];
+  cta: string;
+  href: string;
+  icon: string;
+  enabled: boolean;
+  use_form?: boolean; 
+  form_id?: string;   
+}
+
 interface TegProRefinedData {
   tegpro_refined: {
     theme: {
@@ -63,16 +77,7 @@ interface TegProRefinedData {
       title: string;
       subtitle: string;
     };
-    hero_card: {
-      id: string;
-      title: string;
-      subtitle: string;
-      description: string;
-      badge: string;
-      cta: string;
-      href: string;
-      enabled: boolean;
-    };
+    hero_card: MainTowerCard;
     tracks: Track[];
     visual_metadata: {
       grain_opacity: string;
@@ -101,9 +106,13 @@ const defaultTegProData: TegProRefinedData = {
       subtitle: "O Método TegPro.",
       description: "Abra a caixa preta da operação. Domine CMV, squads e engenharia logística com quem dita o ritmo do mercado.",
       badge: "Formação de Elite",
+      tags: ["Gestão", "E-commerce", "Escala"],
       cta: "Conhecer Metodologia",
       href: "/cursos",
-      enabled: true
+      icon: "solar:graph-new-up-bold",
+      enabled: true,
+      use_form: false,
+      form_id: ""
     },
     tracks: [
       {
@@ -165,7 +174,11 @@ const mergeWithDefaults = (apiData: any, defaultData: TegProRefinedData): TegPro
         badge: data.hero_card?.badge || defaultData.tegpro_refined.hero_card.badge,
         cta: data.hero_card?.cta || defaultData.tegpro_refined.hero_card.cta,
         href: data.hero_card?.href || defaultData.tegpro_refined.hero_card.href,
-        enabled: data.hero_card?.enabled !== undefined ? data.hero_card.enabled : defaultData.tegpro_refined.hero_card.enabled
+        icon: data.hero_card?.icon || defaultData.tegpro_refined.hero_card.icon,
+        enabled: data.hero_card?.enabled !== undefined ? data.hero_card.enabled : defaultData.tegpro_refined.hero_card.enabled,
+        use_form: data.hero_card?.use_form ?? defaultData.tegpro_refined.hero_card.use_form,
+        form_id: data.hero_card?.form_id || defaultData.tegpro_refined.hero_card.form_id,
+        tags: data.hero_card?.tags || defaultData.tegpro_refined.hero_card.tags
       },
       tracks: data.tracks?.map((track: any, index: number) => ({
         id: track.id || `track_${Date.now()}_${index}`,
@@ -219,6 +232,26 @@ export default function TegProPage() {
     theme: false,
     visual: false,
   });
+
+  const [tagInput, setTagInput] = useState("");
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -360,6 +393,31 @@ export default function TegProPage() {
     }
   };
 
+  // Funções para manipular tags do main_tower
+  const addTag = () => {
+    if (tagInput.trim()) {
+      const currentTags = [...innerData.hero_card.tags];
+      if (!currentTags.includes(tagInput.trim())) {
+        currentTags.push(tagInput.trim());
+        updateNested('tegpro_refined.hero_card.tags', currentTags);
+      }
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (index: number) => {
+    const currentTags = [...innerData.hero_card.tags];
+    currentTags.splice(index, 1);
+    updateNested('tegpro_refined.hero_card.tags', currentTags);
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addTag();
+    }
+  };
+
   // Cálculos de validação
   const isTrackValid = (track: Track): boolean => {
     return track.title.trim() !== '' && 
@@ -400,10 +458,16 @@ export default function TegProPage() {
     if (innerData.hero_card.title.trim()) completed++;
     if (innerData.hero_card.subtitle.trim()) completed++;
     if (innerData.hero_card.description.trim()) completed++;
-    if (innerData.hero_card.badge.trim()) completed++;
+    if (innerData.hero_card.badge?.trim()) completed++;
     if (innerData.hero_card.cta.trim()) completed++;
-    if (innerData.hero_card.href.trim()) completed++;
     total++; // enabled sempre tem valor
+
+    // Form vs Link
+    if (innerData.hero_card.use_form) {
+      if (innerData.hero_card.form_id?.trim()) completed++;
+    } else {
+      if (innerData.hero_card.href?.trim()) completed++;
+    }
 
     // Tracks
     total += tracks.length * 3; // title, desc, icon
@@ -526,9 +590,7 @@ export default function TegProPage() {
                     placeholder="Ex: O Método TegPro."
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
-                </div>
 
-                <div className="space-y-4">
                   <TextArea
                     label="Descrição"
                     value={innerData.hero_card.description}
@@ -537,7 +599,9 @@ export default function TegProPage() {
                     rows={3}
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
+                </div>
 
+                <div className="space-y-4">
                   <Input
                     label="Badge/Etiqueta"
                     value={innerData.hero_card.badge}
@@ -545,37 +609,145 @@ export default function TegProPage() {
                     placeholder="Ex: Formação de Elite"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
-                </div>
 
-                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Texto do CTA"
-                    value={innerData.hero_card.cta}
-                    onChange={(e) => updateNested('tegpro_refined.hero_card.cta', e.target.value)}
-                    placeholder="Ex: Conhecer Metodologia"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  <Input
-                    label="Link do CTA"
-                    value={innerData.hero_card.href}
-                    onChange={(e) => updateNested('tegpro_refined.hero_card.href', e.target.value)}
-                    placeholder="Ex: /cursos"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
-                  <div>
-                    <h4 className="font-medium text-[var(--color-secondary)]">Status do Cartão</h4>
-                    <p className="text-sm text-[var(--color-secondary)]/70">
-                      {innerData.hero_card.enabled ? "Ativo e visível" : "Oculto"}
-                    </p>
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)]">Ícone (Opcional)</label>
+                    <IconSelector
+                      value={innerData.hero_card.icon}
+                      onChange={(value) => updateNested('tegpro_refined.hero_card.icon', value)}
+                      placeholder="solar:graph-new-up-bold"
+                    />
                   </div>
-                  <Switch
-                    checked={innerData.hero_card.enabled}
-                    onCheckedChange={(checked) => updateNested('tegpro_refined.hero_card.enabled', checked)}
-                  />
+
+                  <div className="flex items-center justify-between p-4 border border-[var(--color-border)] rounded-lg bg-[var(--color-background-body)]">
+                    <div>
+                      <h4 className="font-medium text-[var(--color-secondary)]">Status do Cartão</h4>
+                      <p className="text-sm text-[var(--color-secondary)]/70">
+                        {innerData.hero_card.enabled ? "Ativo e visível" : "Oculto"}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={innerData.hero_card.enabled}
+                      onCheckedChange={(checked) => updateNested('tegpro_refined.hero_card.enabled', checked)}
+                    />
+                  </div>
+                </div>
+
+                {/* Tags */}
+                <div className="md:col-span-2 pt-2 pb-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                        Tags (até 5 tags)
+                      </label>
+                      <span className="text-xs text-[var(--color-secondary)]/70">
+                        {innerData.hero_card.tags?.length || 0}/5 tags
+                      </span>
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <Input
+                        value={tagInput}
+                        onChange={(e) => setTagInput(e.target.value)}
+                        onKeyDown={handleTagKeyDown}
+                        placeholder="Digite uma tag e pressione Enter"
+                        className="flex-1 bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        disabled={(innerData.hero_card.tags?.length || 0) >= 5}
+                      />
+                      <Button
+                        type="button"
+                        onClick={addTag}
+                        variant="secondary"
+                        className="whitespace-nowrap"
+                        disabled={(innerData.hero_card.tags?.length || 0) >= 5 || !tagInput.trim()}
+                      >
+                        Adicionar
+                      </Button>
+                    </div>
+                    
+                    {(innerData.hero_card.tags?.length || 0) >= 5 && (
+                      <p className="text-xs text-amber-600">
+                        Limite de 5 tags atingido. Remova uma tag para adicionar outra.
+                      </p>
+                    )}
+                    
+                    {/* Lista de tags */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {innerData.hero_card.tags?.map((tag, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 px-3 py-1 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full"
+                        >
+                          <span className="text-sm">{tag}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeTag(index)}
+                            className="text-[var(--color-primary)] hover:text-red-500"
+                          >
+                            <XCircle className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Call to Action Integrado com Form */}
+                <div className="md:col-span-2 pt-4 border-t border-[var(--color-border)]">
+                  <h4 className="text-sm font-semibold text-[var(--color-secondary)] mb-4">Call to Action (CTA)</h4>
+                  
+                  <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                        Abrir Formulário no Clique
+                      </h4>
+                    </div>
+                    <Switch
+                      checked={innerData.hero_card.use_form || false}
+                      onCheckedChange={(checked: boolean) => updateNested('tegpro_refined.hero_card.use_form', checked)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                      label="Texto do CTA"
+                      value={innerData.hero_card.cta}
+                      onChange={(e) => updateNested('tegpro_refined.hero_card.cta', e.target.value)}
+                      placeholder="Ex: Conhecer Metodologia"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+
+                    {innerData.hero_card.use_form ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                        </label>
+                        <select
+                          value={innerData.hero_card.form_id || ""}
+                          onChange={(e) => updateNested('tegpro_refined.hero_card.form_id', e.target.value)}
+                          className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                        >
+                          <option value="">-- Selecione o formulário --</option>
+                          {availableForms.map(form => (
+                            <option key={form.id} value={form.id}>{form.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <Link2 className="w-4 h-4" /> Link de Destino
+                        </label>
+                        <Input
+                          value={innerData.hero_card.href}
+                          onChange={(e) => updateNested('tegpro_refined.hero_card.href', e.target.value)}
+                          placeholder="Ex: /cursos"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>

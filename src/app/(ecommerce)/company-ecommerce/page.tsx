@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch"; // ADICIONADO
 import { 
   Users, 
   ChevronDown, 
@@ -16,13 +17,13 @@ import {
   X,
   Plus,
   Trash2,
-  TrendingUp,
   Building,
   ExternalLink,
   MessageCircle,
-  ArrowRight,
   CheckCircle2,
-  Tag as TagIcon
+  LayoutTemplate,
+  Link2,
+  TrendingUp
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -45,6 +46,8 @@ interface CTAData {
   text: string;
   url: string;
   description: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface SuccessCasesData {
@@ -83,7 +86,9 @@ const defaultSuccessCasesData: SuccessCasesData = {
   cta: {
     text: "",
     url: "",
-    description: ""
+    description: "",
+    use_form: false,
+    form_id: ""
   }
 };
 
@@ -129,7 +134,13 @@ const mergeWithDefaults = (apiData: any, defaultData: SuccessCasesData): Success
     badge: apiData.badge || defaultData.badge,
     title: apiData.title || defaultData.title,
     testimonials: apiData.testimonials || defaultData.testimonials,
-    cta: apiData.cta || defaultData.cta
+    cta: {
+      text: apiData.cta?.text || defaultData.cta.text,
+      url: apiData.cta?.url || defaultData.cta.url,
+      description: apiData.cta?.description || defaultData.cta.description,
+      use_form: apiData.cta?.use_form ?? defaultData.cta.use_form,
+      form_id: apiData.cta?.form_id || defaultData.cta.form_id
+    }
   };
 };
 
@@ -300,6 +311,24 @@ export default function SuccessCasesPage() {
     mergeFunction: mergeWithDefaults,
   });
 
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -337,7 +366,7 @@ export default function SuccessCasesPage() {
   };
 
   // Funções para gerenciar CTA
-  const handleCTAChange = (field: keyof CTAData, value: string) => {
+  const handleCTAChange = (field: keyof CTAData, value: any) => {
     updateNested(`cta.${field}`, value);
   };
 
@@ -407,8 +436,14 @@ export default function SuccessCasesPage() {
     // CTA
     total += 3;
     if (pageData.cta.text.trim()) completed++;
-    if (pageData.cta.url.trim()) completed++;
     if (pageData.cta.description.trim()) completed++;
+
+    // Verifica se link ou form id foi preenchido
+    if (pageData.cta.use_form) {
+      if (pageData.cta.form_id?.trim()) completed++;
+    } else {
+      if (pageData.cta.url.trim()) completed++;
+    }
 
     return { completed, total };
   };
@@ -783,6 +818,24 @@ export default function SuccessCasesPage() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="space-y-6">
+                
+                {/* Toggle de Ação */}
+                <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                      <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                      Abrir Formulário no Clique
+                    </h4>
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Ative para abrir um formulário popup em vez de redirecionar para um link.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={pageData.cta.use_form || false}
+                    onCheckedChange={(checked: boolean) => handleCTAChange("use_form", checked)}
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
@@ -798,12 +851,30 @@ export default function SuccessCasesPage() {
                       />
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                        URL de Destino
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <ExternalLink className="w-4 h-4 text-[var(--color-secondary)]" />
+                    {pageData.cta.use_form ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                        </label>
+                        <select
+                          value={pageData.cta.form_id || ""}
+                          onChange={(e) => handleCTAChange("form_id", e.target.value)}
+                          className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                        >
+                          <option value="">-- Selecione o formulário --</option>
+                          {availableForms.map(form => (
+                            <option key={form.id} value={form.id}>{form.name}</option>
+                          ))}
+                        </select>
+                        {availableForms.length === 0 && (
+                          <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                          <Link2 className="w-4 h-4" /> URL de Destino
+                        </label>
                         <Input
                           type="text"
                           value={pageData.cta.url || ""}
@@ -812,7 +883,7 @@ export default function SuccessCasesPage() {
                           className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                         />
                       </div>
-                    </div>
+                    )}
                   </div>
                   
                   <div className="space-y-4">

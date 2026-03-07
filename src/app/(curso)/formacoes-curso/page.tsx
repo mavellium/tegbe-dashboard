@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import IconSelector from "@/components/IconSelector";
 import { 
   Layout, 
@@ -22,7 +23,9 @@ import {
   Plus,
   Heading,
   Zap,
-  Link as LinkIcon
+  Link as LinkIcon,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -57,6 +60,8 @@ interface Module {
 interface CTA {
   text: string;
   link: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface TegProProtocolData {
@@ -112,7 +117,9 @@ const defaultTegProProtocolData: TegProProtocolData = {
   ],
   cta: {
     text: "Ver Grade Detalhada",
-    link: "#grade"
+    link: "#grade",
+    use_form: false,
+    form_id: ""
   }
 };
 
@@ -133,6 +140,8 @@ const mergeWithDefaults = (apiData: any, defaultData: TegProProtocolData): TegPr
     cta: {
       text: apiData.cta?.text || defaultData.cta.text,
       link: apiData.cta?.link || defaultData.cta.link,
+      use_form: apiData.cta?.use_form ?? defaultData.cta.use_form,
+      form_id: apiData.cta?.form_id || defaultData.cta.form_id
     },
   };
 };
@@ -164,6 +173,24 @@ export default function Page() {
     modules: false,
     cta: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   // Referência para novo item
   const newModuleRef = useRef<HTMLDivElement>(null);
@@ -395,7 +422,13 @@ export default function Page() {
     // CTA (2 campos)
     total += 2;
     if (pageData.cta.text.trim()) completed++;
-    if (pageData.cta.link.trim()) completed++;
+    
+    // Condição do Link ou Form
+    if (pageData.cta.use_form) {
+      if (pageData.cta.form_id?.trim()) completed++;
+    } else {
+      if (pageData.cta.link.trim()) completed++;
+    }
 
     return { completed, total };
   };
@@ -636,11 +669,11 @@ export default function Page() {
                                   Módulo {module.id} - {module.title || "Sem título"}
                                 </h4>
                                 {isModuleValid(module) ? (
-                                  <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                  <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-400 rounded-full border border-[var(--color-success)]/30">
                                     Completo
                                   </span>
                                 ) : (
-                                  <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                  <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-400 rounded-full">
                                     Incompleto
                                   </span>
                                 )}
@@ -697,7 +730,7 @@ export default function Page() {
                                         type="button"
                                         onClick={() => handleAddModuleTag(index)}
                                         variant="secondary"
-                                        className="text-xs h-6 px-2"
+                                        className="text-xs h-6 px-2 bg-[var(--color-background-body)] text-[var(--color-secondary)] border-[var(--color-border)] hover:border-[var(--color-primary)]"
                                       >
                                         <Plus className="w-3 h-3 mr-1" />
                                         Adicionar Tag
@@ -717,9 +750,9 @@ export default function Page() {
                                               type="button"
                                               onClick={() => handleRemoveModuleTag(index, tagIndex)}
                                               variant="danger"
-                                              className="h-9 w-9 p-0 flex items-center justify-center"
+                                              className="h-9 w-9 p-0 flex items-center justify-center bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90"
                                             >
-                                              <Trash2 className="w-4 h-4" color="white" fill="white" />
+                                              <Trash2 className="w-4 h-4 text-white" />
                                             </Button>
                                           )}
                                         </div>
@@ -739,7 +772,7 @@ export default function Page() {
                               type="button"
                               onClick={() => handleRemoveModule(index)}
                               variant="danger"
-                              className="whitespace-nowrap bg-red-600 hover:bg-red-700 border-none flex items-center gap-2"
+                              className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 text-white border-none flex items-center gap-2"
                             >
                               <Trash2 className="w-4 h-4" />
                               Remover
@@ -780,6 +813,23 @@ export default function Page() {
                 </p>
               </div>
 
+              {/* Toggle de Ação */}
+              <div className="mb-6 p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                    Abrir Formulário no Clique
+                  </h4>
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ative para abrir um formulário ao invés de redirecionar para um link.
+                  </p>
+                </div>
+                <Switch
+                  checked={pageData.cta.use_form || false}
+                  onCheckedChange={(checked: boolean) => updateNested('cta.use_form', checked)}
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-[var(--color-secondary)]">
@@ -793,20 +843,41 @@ export default function Page() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                    Link do Botão
-                  </label>
-                  <Input
-                    value={pageData.cta.link}
-                    onChange={(e) => updateNested('cta.link', e.target.value)}
-                    placeholder="Ex: #grade, /protocolo-completo"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/50">
-                    Pode ser um link interno (#seção) ou externo (/página)
-                  </p>
-                </div>
+                {pageData.cta.use_form ? (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                    </label>
+                    <select
+                      value={pageData.cta.form_id || ""}
+                      onChange={(e) => updateNested('cta.form_id', e.target.value)}
+                      className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                    >
+                      <option value="">-- Selecione o formulário --</option>
+                      {availableForms.map(form => (
+                        <option key={form.id} value={form.id}>{form.name}</option>
+                      ))}
+                    </select>
+                    {availableForms.length === 0 && (
+                      <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <Link2 className="w-4 h-4" /> Link do Botão
+                    </label>
+                    <Input
+                      value={pageData.cta.link}
+                      onChange={(e) => updateNested('cta.link', e.target.value)}
+                      placeholder="Ex: #grade, /protocolo-completo"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/50 mt-1">
+                      Pode ser um link interno (#seção) ou externo (/página)
+                    </p>
+                  </div>
+                )}
               </div>
             </Card>
           </motion.div>

@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import { 
   Layers,
   Settings,
@@ -14,7 +15,9 @@ import {
   Plus,
   ExternalLink,
   MessageCircle,
-  ArrowRight
+  ArrowRight,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -37,6 +40,8 @@ interface CTAData {
   text: string;
   url: string;
   description: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface FluxoEstagiosData {
@@ -63,7 +68,9 @@ const defaultFluxoEstagiosData: FluxoEstagiosData = {
   cta: {
     text: "",
     url: "",
-    description: ""
+    description: "",
+    use_form: false,
+    form_id: ""
   }
 };
 
@@ -75,7 +82,13 @@ const mergeWithDefaults = (apiData: any, defaultData: FluxoEstagiosData): FluxoE
     type: apiData.type || defaultData.type,
     subtype: apiData.subtype || defaultData.subtype,
     values: apiData.values || defaultData.values,
-    cta: apiData.cta || defaultData.cta
+    cta: {
+      text: apiData.cta?.text || defaultData.cta.text,
+      url: apiData.cta?.url || defaultData.cta.url,
+      description: apiData.cta?.description || defaultData.cta.description,
+      use_form: apiData.cta?.use_form ?? defaultData.cta.use_form,
+      form_id: apiData.cta?.form_id || defaultData.cta.form_id
+    }
   };
 };
 
@@ -103,6 +116,24 @@ export default function FluxoEstagiosEcommercePage() {
     estagios: false,
     cta: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -155,7 +186,7 @@ export default function FluxoEstagiosEcommercePage() {
   };
 
   // Funções para gerenciar CTA
-  const handleCTAChange = (field: keyof CTAData, value: string) => {
+  const handleCTAChange = (field: keyof CTAData, value: any) => {
     updateNested(`cta.${field}`, value);
   };
 
@@ -190,8 +221,13 @@ export default function FluxoEstagiosEcommercePage() {
     // CTA
     total += 3;
     if (pageData.cta.text.trim()) completed++;
-    if (pageData.cta.url.trim()) completed++;
     if (pageData.cta.description.trim()) completed++;
+
+    if (pageData.cta.use_form) {
+      if (pageData.cta.form_id?.trim()) completed++;
+    } else {
+      if (pageData.cta.url.trim()) completed++;
+    }
 
     return { completed, total };
   };
@@ -341,7 +377,7 @@ export default function FluxoEstagiosEcommercePage() {
                               {estagio.title || "Novo Estágio"}
                             </h4>
                             {estagio.title && estagio.description && estagio.image ? (
-                              <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                              <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-[var(--color-success)] rounded-full">
                                 Completo
                               </span>
                             ) : (
@@ -420,7 +456,7 @@ export default function FluxoEstagiosEcommercePage() {
                                   type="button"
                                   onClick={() => handleRemoveEstagio(index)}
                                   variant="danger"
-                                  className="w-full bg-red-600 hover:bg-red-700 border-none"
+                                  className="w-full bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/80 border-none"
                                 >
                                   Remover Estágio
                                 </Button>
@@ -477,6 +513,24 @@ export default function FluxoEstagiosEcommercePage() {
           >
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="space-y-6">
+
+                {/* Toggle de Ação */}
+                <div className="mb-6 p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                      <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                      Abrir Formulário no Clique
+                    </h4>
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Ative para abrir um formulário em formato popup.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={pageData.cta.use_form || false}
+                    onCheckedChange={(checked: boolean) => handleCTAChange("use_form", checked)}
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-4">
                     <div>
@@ -492,12 +546,30 @@ export default function FluxoEstagiosEcommercePage() {
                       />
                     </div>
                     
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                        URL de Destino
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <ExternalLink className="w-4 h-4 text-[var(--color-secondary)]" />
+                    {pageData.cta.use_form ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                        </label>
+                        <select
+                          value={pageData.cta.form_id || ""}
+                          onChange={(e) => handleCTAChange("form_id", e.target.value)}
+                          className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                        >
+                          <option value="">-- Selecione o formulário --</option>
+                          {availableForms.map(form => (
+                            <option key={form.id} value={form.id}>{form.name}</option>
+                          ))}
+                        </select>
+                        {availableForms.length === 0 && (
+                          <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                          <Link2 className="w-4 h-4" /> URL de Destino
+                        </label>
                         <Input
                           type="text"
                           value={pageData.cta.url || ""}
@@ -506,7 +578,7 @@ export default function FluxoEstagiosEcommercePage() {
                           className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                         />
                       </div>
-                    </div>
+                    )}
                   </div>
                   
                   <div className="space-y-4">

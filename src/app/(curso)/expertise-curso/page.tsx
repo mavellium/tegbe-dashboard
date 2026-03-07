@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import IconSelector from "@/components/IconSelector";
+import { Switch } from "@/components/Switch";
 import { 
   TrendingUp,
   Palette,
@@ -18,7 +19,8 @@ import {
   Target,
   Star,
   Link as LinkIcon,
-  Layers
+  Layers,
+  LayoutTemplate
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -63,6 +65,8 @@ interface ContentData {
 interface CTAData {
   text: string;
   link: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface SectionData {
@@ -107,7 +111,9 @@ const defaultData: ShowcaseData = {
     },
     cta: {
       text: "Escalar meu faturamento",
-      link: "#contato"
+      link: "#contato",
+      use_form: false,
+      form_id: ""
     }
   },
   cursos: {
@@ -138,7 +144,9 @@ const defaultData: ShowcaseData = {
     },
     cta: {
       text: "Profissionalizar meu curso",
-      link: "#contato"
+      link: "#contato",
+      use_form: false,
+      form_id: ""
     }
   }
 };
@@ -177,7 +185,9 @@ const mergeWithDefaults = (apiData: any, defaultData: ShowcaseData): ShowcaseDat
       },
       cta: {
         text: apiSection.cta?.text || defaultSection.cta.text,
-        link: apiSection.cta?.link || defaultSection.cta.link
+        link: apiSection.cta?.link || defaultSection.cta.link,
+        use_form: apiSection.cta?.use_form ?? defaultSection.cta.use_form,
+        form_id: apiSection.cta?.form_id || defaultSection.cta.form_id
       }
     };
   };
@@ -215,6 +225,24 @@ export default function DualShowcasePage() {
     defaultData: defaultData,
     mergeFunction: mergeWithDefaults,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const currentData = componentData || defaultData;
   const currentSectionData = currentData[activeSection];
@@ -272,7 +300,12 @@ export default function DualShowcasePage() {
       // CTA
       total += 2;
       if (section.cta.text?.trim()) completed++;
-      if (section.cta.link?.trim()) completed++;
+      
+      if (section.cta.use_form) {
+        if (section.cta.form_id?.trim()) completed++;
+      } else {
+        if (section.cta.link?.trim()) completed++;
+      }
     };
 
     // Contar ambas as seções
@@ -631,6 +664,23 @@ export default function DualShowcasePage() {
             className="overflow-hidden"
           >
             <Card className="p-6 bg-[var(--color-background)] space-y-6">
+              {/* Toggle de Ação */}
+              <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                    Abrir Formulário no Clique
+                  </h4>
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ative para abrir um popup de captura ao invés de redirecionar para uma página.
+                  </p>
+                </div>
+                <Switch
+                  checked={currentSectionData.cta.use_form || false}
+                  onCheckedChange={(checked: boolean) => handleChange('cta.use_form', checked)}
+                />
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Input
@@ -645,24 +695,49 @@ export default function DualShowcasePage() {
                   </p>
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <LinkIcon className="w-4 h-4 text-[var(--color-secondary)]" />
-                    <label className="text-sm font-medium text-[var(--color-secondary)]">
-                      Link do Botão
-                    </label>
+                {/* Destino Dinâmico (Form ou Link) */}
+                {currentSectionData.cta.use_form ? (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <LayoutTemplate className="w-4 h-4 text-[var(--color-secondary)]" />
+                      <label className="text-sm font-medium text-[var(--color-secondary)]">
+                        Formulário Vinculado
+                      </label>
+                    </div>
+                    <select
+                      value={currentSectionData.cta.form_id || ""}
+                      onChange={(e) => handleChange('cta.form_id', e.target.value)}
+                      className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                    >
+                      <option value="">-- Selecione o formulário --</option>
+                      {availableForms.map(form => (
+                        <option key={form.id} value={form.id}>{form.name}</option>
+                      ))}
+                    </select>
+                    {availableForms.length === 0 && (
+                      <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                    )}
                   </div>
-                  <Input
-                    type="text"
-                    value={currentSectionData.cta.link}
-                    onChange={(e) => handleChange('cta.link', e.target.value)}
-                    placeholder="#contato ou /contato"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Use âncoras (#) ou caminhos relativos
-                  </p>
-                </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <LinkIcon className="w-4 h-4 text-[var(--color-secondary)]" />
+                      <label className="text-sm font-medium text-[var(--color-secondary)]">
+                        Link do Botão
+                      </label>
+                    </div>
+                    <Input
+                      type="text"
+                      value={currentSectionData.cta.link}
+                      onChange={(e) => handleChange('cta.link', e.target.value)}
+                      placeholder="#contato ou /contato"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Use âncoras (#) ou caminhos relativos
+                    </p>
+                  </div>
+                )}
               </div>
             </Card>
           </motion.div>

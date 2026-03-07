@@ -8,6 +8,7 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch";
 import { 
   Type, 
   Tag, 
@@ -17,7 +18,9 @@ import {
   LucideIcon,
   CheckCircle2,
   AlertCircle,
-  XCircle
+  XCircle,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -47,6 +50,8 @@ interface CtaData {
   text?: string;
   icon?: string;
   href?: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface CtaSubtitleData {
@@ -71,7 +76,7 @@ const createDefaultHeroPageData = (): HeroPageData => ({
   badge: { text: "" },
   title: { part1: "", part2: "", highlight: "", gradient: "" },
   subtitle: { text: "", highlight: "", strong1: "", strong2: "" },
-  cta: { text: "", icon: "", href: "" },
+  cta: { text: "", icon: "", href: "", use_form: false, form_id: "" },
   ctaSubtitle: ""
 });
 
@@ -154,10 +159,10 @@ const SectionHeader = ({
   <button
     type="button"
     onClick={() => onToggle(section)}
-    className="w-full flex items-center justify-between p-4 bg-[var(--color-background)] rounded-lg hover:bg-[var(--color-background-body)] transition-colors"
+    className="w-full flex items-center justify-between p-4 bg-[var(--color-background)] rounded-lg hover:bg-[var(--color-background-body)] transition-colors border border-[var(--color-border)]"
   >
     <div className="flex items-center gap-3">
-      <Icon className="w-5 h-5 text-[var(--color-secondary)]" />
+      <Icon className="w-5 h-5 text-[var(--color-primary)]" />
       <h3 className="text-lg font-semibold text-[var(--color-secondary)]">
         {title}
       </h3>
@@ -185,51 +190,12 @@ const ThemeTab = ({ themeKey, label, isActive, onClick }: ThemeTabProps) => (
     className={`px-6 py-3 font-medium rounded-lg transition-all duration-200 ${
       isActive
         ? "bg-[var(--color-primary)] text-white shadow-lg shadow-[var(--color-primary)]/20"
-        : "bg-[var(--color-background-body)] text-[var(--color-secondary)] hover:bg-[var(--color-background)]"
+        : "bg-[var(--color-background-body)] text-[var(--color-secondary)] hover:bg-[var(--color-background)] border border-[var(--color-border)]"
     }`}
   >
     {label}
   </button>
 );
-
-// Componente FieldPreview
-interface FieldPreviewProps {
-  label: string;
-  value: string;
-  placeholder?: string;
-  type?: "text" | "textarea";
-}
-
-const FieldPreview = ({ label, value, placeholder, type = "text" }: FieldPreviewProps) => {
-  const displayValue = value || placeholder;
-  
-  if (!displayValue) return null;
-
-  return (
-    <div className="space-y-2">
-      <span className="text-sm font-medium text-[var(--color-secondary)]">{label}</span>
-      <div className="p-3 bg-[var(--color-background-body)] rounded-lg">
-        <p className="text-[var(--color-secondary)] break-words">
-          {type === "textarea" ? (
-            displayValue.split('\n').map((line, i) => (
-              <span key={i}>
-                {line}
-                {i < displayValue.split('\n').length - 1 && <br />}
-              </span>
-            ))
-          ) : (
-            displayValue
-          )}
-        </p>
-        {!value && (
-          <p className="text-xs text-[var(--color-secondary)]/70 mt-1 italic">
-            Valor de exemplo
-          </p>
-        )}
-      </div>
-    </div>
-  );
-};
 
 // Helper para obter valores de exemplo com type safety
 const getExampleValue = (theme: "ecommerce" | "marketing", path: string): string => {
@@ -275,6 +241,24 @@ export default function HeroTextsPage() {
   // Estado local para os dados do tema atual
   const [currentThemeData, setCurrentThemeData] = useState<HeroPageData>(createDefaultHeroPageData());
 
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
   // Atualizar dados do tema atual quando activeTheme ou heroTextsData mudar
   useEffect(() => {
     if (heroTextsData && heroTextsData[activeTheme]) {
@@ -292,20 +276,22 @@ export default function HeroTextsPage() {
   const calculateCompleteCount = useCallback(() => {
     let count = 0;
     
-    // Verificar campos básicos com encadeamento opcional
+    // Verificar campos básicos
     if (currentThemeData.badge?.text?.trim() !== "") count++;
     if (currentThemeData.title?.part1?.trim() !== "" || currentThemeData.title?.part2?.trim() !== "") count++;
     if (currentThemeData.subtitle?.text?.trim() !== "") count++;
+    
+    // Verificar CTA
     if (currentThemeData.cta?.text?.trim() !== "") count++;
     
-    // Verificar ctaSubtitle (pode ser string ou objeto)
+    // Verificar ctaSubtitle
     if (typeof currentThemeData.ctaSubtitle === 'string') {
       if (currentThemeData.ctaSubtitle.trim() !== "") count++;
     } else if (currentThemeData.ctaSubtitle?.text?.trim() !== "") {
       count++;
     }
     
-    return count;
+    return Math.min(count, 5); // Limitar a 5 para não quebrar a barra de progresso caso tenhamos adicionado mais critérios na checagem
   }, [currentThemeData]);
 
   const completeCount = calculateCompleteCount();
@@ -354,8 +340,6 @@ export default function HeroTextsPage() {
       setHeroTextsData(updatedData);
       
       // Depois salvar
-      const fd = new FormData();
-      fd.append("values", JSON.stringify(updatedData));
       await save();
       
       // Recarregar dados da API
@@ -426,7 +410,7 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.badge ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 bg-[var(--color-background)]">
+          <Card className="p-6 bg-[var(--color-background)] border-[var(--color-border)] shadow-sm">
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
@@ -442,8 +426,8 @@ export default function HeroTextsPage() {
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
                 <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                  <p className="text-xs text-[var(--color-secondary)]">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                  <p className="text-xs text-[var(--color-secondary)] opacity-70">
                     Texto curto e impactante que aparece no topo da seção
                   </p>
                 </div>
@@ -473,7 +457,7 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.title ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 bg-[var(--color-background)] space-y-6">
+          <Card className="p-6 bg-[var(--color-background)] border-[var(--color-border)] shadow-sm space-y-6">
             <div>
               <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Primeira Parte do Título
@@ -488,8 +472,8 @@ export default function HeroTextsPage() {
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
               <div className="flex items-center gap-2 mt-2">
-                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                <p className="text-xs text-[var(--color-secondary)]">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                <p className="text-xs text-[var(--color-secondary)] opacity-70">
                   Texto antes do destaque
                 </p>
               </div>
@@ -509,8 +493,8 @@ export default function HeroTextsPage() {
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
               <div className="flex items-center gap-2 mt-2">
-                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                <p className="text-xs text-[var(--color-secondary)]">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                <p className="text-xs text-[var(--color-secondary)] opacity-70">
                   Parte destacada do título
                 </p>
               </div>
@@ -531,8 +515,8 @@ export default function HeroTextsPage() {
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
                 <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                  <p className="text-xs text-[var(--color-secondary)]">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                  <p className="text-xs text-[var(--color-secondary)] opacity-70">
                     Texto que aparece com destaque especial
                   </p>
                 </div>
@@ -554,8 +538,8 @@ export default function HeroTextsPage() {
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
                 <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                  <p className="text-xs text-[var(--color-secondary)]">
+                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                  <p className="text-xs text-[var(--color-secondary)] opacity-70">
                     Texto que aparece com efeito gradiente
                   </p>
                 </div>
@@ -585,7 +569,7 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.subtitle ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 bg-[var(--color-background)] space-y-6">
+          <Card className="p-6 bg-[var(--color-background)] border-[var(--color-border)] shadow-sm space-y-6">
             <div>
               <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Texto do Subtítulo
@@ -600,8 +584,8 @@ export default function HeroTextsPage() {
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
               <div className="flex items-center gap-2 mt-2">
-                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                <p className="text-xs text-[var(--color-secondary)]">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                <p className="text-xs text-[var(--color-secondary)] opacity-70">
                   Texto principal do subtítulo
                 </p>
               </div>
@@ -621,8 +605,8 @@ export default function HeroTextsPage() {
                 className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
               />
               <div className="flex items-center gap-2 mt-2">
-                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                <p className="text-xs text-[var(--color-secondary)]">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                <p className="text-xs text-[var(--color-secondary)] opacity-70">
                   Palavras ou frase em destaque
                 </p>
               </div>
@@ -644,8 +628,8 @@ export default function HeroTextsPage() {
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <div className="flex items-center gap-2 mt-2">
-                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                    <p className="text-xs text-[var(--color-secondary)]">
+                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                    <p className="text-xs text-[var(--color-secondary)] opacity-70">
                       Primeira parte em negrito
                     </p>
                   </div>
@@ -665,8 +649,8 @@ export default function HeroTextsPage() {
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <div className="flex items-center gap-2 mt-2">
-                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                    <p className="text-xs text-[var(--color-secondary)]">
+                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                    <p className="text-xs text-[var(--color-secondary)] opacity-70">
                       Segunda parte em negrito
                     </p>
                   </div>
@@ -697,57 +681,97 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.cta ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 bg-[var(--color-background)]">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <div className="space-y-2">
+          <Card className="p-6 bg-[var(--color-background)] border-[var(--color-border)] shadow-sm">
+            <div className="space-y-6">
+
+              {/* Toggle Formulário/Link */}
+              <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                    Abrir Formulário no Clique
+                  </h4>
+                  <p className="text-xs text-[var(--color-secondary)] opacity-70 mt-1">
+                    Ative para abrir um formulário popup em vez de redirecionar para um link.
+                  </p>
+                </div>
+                <Switch
+                  checked={ctaData.use_form || false}
+                  onCheckedChange={(checked: boolean) => handleThemeChange('cta.use_form', checked)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Texto do Botão
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder={getExampleValue(activeTheme, 'cta.text')}
+                      value={ctaData.text || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                        handleThemeChange('cta.text', e.target.value)
+                      }
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {ctaData.use_form ? (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4 text-[var(--color-secondary)]" /> Formulário Vinculado
+                      </label>
+                      <select
+                        value={ctaData.form_id || ""}
+                        onChange={(e) => handleThemeChange('cta.form_id', e.target.value)}
+                        className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                      >
+                        <option value="">-- Selecione o formulário --</option>
+                        {availableForms.map(form => (
+                          <option key={form.id} value={form.id}>{form.name}</option>
+                        ))}
+                      </select>
+                      {availableForms.length === 0 && (
+                        <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                        <Link2 className="w-4 h-4 text-[var(--color-secondary)]" /> Link (URL)
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder={getExampleValue(activeTheme, 'cta.href') || "#"}
+                        value={ctaData.href || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
+                          handleThemeChange('cta.href', e.target.value)
+                        }
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                    Ícone do Botão
+                  </label>
                   <IconSelector
                     value={ctaData.icon || ""}
                     onChange={(value) => handleThemeChange('cta.icon', value)}
-                    label="Ícone do Botão"
+                    placeholder="ph:chart-line-up-bold"
                   />
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                    <p className="text-xs text-[var(--color-secondary)]">
+                  <div className="flex items-center gap-2 mt-2">
+                    <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                    <p className="text-xs text-[var(--color-secondary)] opacity-70">
                       Selecione um ícone para o botão principal
                     </p>
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Texto do Botão
-                </label>
-                <Input
-                  type="text"
-                  placeholder={getExampleValue(activeTheme, 'cta.text')}
-                  value={ctaData.text || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                    handleThemeChange('cta.text', e.target.value)
-                  }
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Link (URL)
-                </label>
-                <Input
-                  type="text"
-                  placeholder={getExampleValue(activeTheme, 'cta.href') || "#"}
-                  value={ctaData.href || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => 
-                    handleThemeChange('cta.href', e.target.value)
-                  }
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-                <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                  <p className="text-xs text-[var(--color-secondary)]">
-                    Use # para âncora ou URL completa
-                  </p>
                 </div>
               </div>
             </div>
@@ -775,7 +799,7 @@ export default function HeroTextsPage() {
           animate={{ height: expandedSections.ctaSubtitle ? 'auto' : 0 }}
           className="overflow-hidden"
         >
-          <Card className="p-6 bg-[var(--color-background)]">
+          <Card className="p-6 bg-[var(--color-background)] border-[var(--color-border)] shadow-sm">
             <div>
               <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                 Texto do Subtítulo do CTA
@@ -802,8 +826,8 @@ export default function HeroTextsPage() {
                 />
               )}
               <div className="flex items-center gap-2 mt-2">
-                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)]" />
-                <p className="text-xs text-[var(--color-secondary)]">
+                <CheckCircle2 className="w-4 h-4 text-[var(--color-secondary)] opacity-50" />
+                <p className="text-xs text-[var(--color-secondary)] opacity-70">
                   {activeTheme === "ecommerce" 
                     ? "Texto abaixo do botão principal" 
                     : "Texto abaixo do botão principal"}
@@ -825,8 +849,8 @@ export default function HeroTextsPage() {
       itemName="Textos Equipe"
     >
       <div className="space-y-6 pb-32">
-        {/* Tabs de Temas e Preview */}
-        <Card className="p-6 bg-[var(--color-background)]">
+        {/* Tabs de Temas */}
+        <Card className="p-6 bg-[var(--color-background)] border-[var(--color-border)] shadow-sm">
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-semibold text-[var(--color-secondary)] mb-4">

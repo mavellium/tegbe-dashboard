@@ -1,24 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch"; // ADICIONADO
 import { 
   Settings, 
   CheckCircle2,
   Layers,
-  Image,
+  Image as ImageIcon, // Renomeado para não conflitar
   MessageSquare,
   Target,
   Link,
   Users,
   Eye,
-  Shield
+  Shield,
+  LayoutTemplate // ADICIONADO
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -47,6 +49,8 @@ interface ConsultoriaData {
     cta: {
       text: string;
       link: string;
+      use_form?: boolean; // ADICIONADO
+      form_id?: string;   // ADICIONADO
     };
     socialProof: {
       value: string;
@@ -72,7 +76,9 @@ const defaultConsultoriaData: ConsultoriaData = {
     details: "Sua conta não será apenas gerenciada; ela será <strong>blindada e escalada</strong> com o aval da própria plataforma. O que para outros é 'segredo', para nós é ferramenta de trabalho diária.",
     cta: {
       text: "Falar com Especialista",
-      link: "https://api.whatsapp.com/send?phone=5514991779502&text=Gostaria%20de%20falar%20com%20um%20especialista"
+      link: "https://api.whatsapp.com/send?phone=5514991779502&text=Gostaria%20de%20falar%20com%20um%20especialista",
+      use_form: false,
+      form_id: ""
     },
     socialProof: {
       value: "+R$ 40M",
@@ -103,6 +109,8 @@ const mergeWithDefaults = (apiData: any, defaultData: ConsultoriaData): Consulto
       cta: {
         text: apiData.content?.cta?.text || defaultData.content.cta.text,
         link: apiData.content?.cta?.link || defaultData.content.cta.link,
+        use_form: apiData.content?.cta?.use_form ?? defaultData.content.cta.use_form,
+        form_id: apiData.content?.cta?.form_id || defaultData.content.cta.form_id
       },
       socialProof: {
         value: apiData.content?.socialProof?.value || defaultData.content.socialProof.value,
@@ -136,6 +144,24 @@ export default function ConsultoriaPage() {
     header: false,
     content: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   // Referência para scroll
   const contentRef = useRef<HTMLDivElement>(null);
@@ -176,7 +202,7 @@ export default function ConsultoriaPage() {
     consultoriaData.content.description.trim() !== '',
     consultoriaData.content.details.trim() !== '',
     consultoriaData.content.cta.text.trim() !== '',
-    consultoriaData.content.cta.link.trim() !== '',
+    consultoriaData.content.cta.use_form ? consultoriaData.content.cta.form_id?.trim() !== '' : consultoriaData.content.cta.link.trim() !== '',
     consultoriaData.content.socialProof.value.trim() !== '',
     consultoriaData.content.socialProof.label.trim() !== ''
   ].filter(Boolean).length;
@@ -250,7 +276,7 @@ export default function ConsultoriaPage() {
                     <div className="space-y-6">
                       <div>
                         <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                          <Image className="w-4 h-4" />
+                          <ImageIcon className="w-4 h-4" />
                           Imagem de Destaque
                         </label>
                         <ImageUpload
@@ -449,6 +475,20 @@ export default function ConsultoriaPage() {
                           Call-to-Action (CTA)
                         </h4>
                         
+                        {/* Toggle de Form/Link */}
+                        <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                              <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                              Abrir Formulário no Clique
+                            </h4>
+                          </div>
+                          <Switch
+                            checked={consultoriaData.content.cta.use_form || false}
+                            onCheckedChange={(checked: boolean) => updateNested('content.cta.use_form', checked)}
+                          />
+                        </div>
+
                         <div className="space-y-2">
                           <label className="block text-sm font-medium text-[var(--color-secondary)]">
                             Texto do Botão
@@ -462,22 +502,43 @@ export default function ConsultoriaPage() {
                           />
                         </div>
 
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
-                            <Link className="w-4 h-4" />
-                            Link do Botão
-                          </label>
-                          <Input
-                            type="url"
-                            value={consultoriaData.content.cta.link}
-                            onChange={(e) => updateNested('content.cta.link', e.target.value)}
-                            placeholder="Ex: https://api.whatsapp.com/send?phone=..."
-                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                          />
-                          <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                            Link externo para WhatsApp, site, etc.
-                          </p>
-                        </div>
+                        {consultoriaData.content.cta.use_form ? (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                              <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                            </label>
+                            <select
+                              value={consultoriaData.content.cta.form_id || ""}
+                              onChange={(e) => updateNested('content.cta.form_id', e.target.value)}
+                              className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                            >
+                              <option value="">-- Selecione o formulário --</option>
+                              {availableForms.map(form => (
+                                <option key={form.id} value={form.id}>{form.name}</option>
+                              ))}
+                            </select>
+                            {availableForms.length === 0 && (
+                              <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                              <Link className="w-4 h-4" />
+                              Link do Botão
+                            </label>
+                            <Input
+                              type="url"
+                              value={consultoriaData.content.cta.link}
+                              onChange={(e) => updateNested('content.cta.link', e.target.value)}
+                              placeholder="Ex: https://api.whatsapp.com/send?phone=..."
+                              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                            />
+                            <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                              Link externo para WhatsApp, site, etc.
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="space-y-4">

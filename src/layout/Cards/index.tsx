@@ -9,6 +9,7 @@ import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import IconSelector from "@/components/IconSelector";
+import { Switch } from "@/components/Switch";
 import { 
   Layout, 
   Type,
@@ -24,7 +25,8 @@ import {
   Target,
   MessageSquare,
   BarChart3,
-  RefreshCcw
+  RefreshCcw,
+  LayoutTemplate
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -55,6 +57,8 @@ interface CTASection {
   description: string;
   primary?: CTAButton;
   secondary?: CTAButton;
+  use_form?: boolean; // ADICIONADO: controle do toggle
+  form_id?: string;   // ADICIONADO: id do form vinculado
 }
 
 interface FlywheelRing {
@@ -109,13 +113,17 @@ interface ComoFazemosData {
 const defaultCTASection: CTASection = {
   text: "Quero Estruturar e Escalar Meu Negócio",
   url: "https://api.whatsapp.com/send?phone=5514991779502",
-  description: "Anúncios, operação e dados trabalhando juntos para vender mais."
+  description: "Anúncios, operação e dados trabalhando juntos para vender mais.",
+  use_form: false,
+  form_id: ""
 };
 
 const defaultMarketingCTA: CTASection = {
   text: "Começar Agora",
   url: "https://api.whatsapp.com/send?phone=5514991779502",
-  description: ""
+  description: "",
+  use_form: false,
+  form_id: ""
 };
 
 const defaultFlywheelData: FlywheelData = {
@@ -230,7 +238,13 @@ const mergeWithDefaults = (apiData: unknown, defaultData: ComoFazemosData): Como
         };
       });
       
-      const cta = { ...defaultData[section].cta, ...sectionData.cta };
+      // Preservando os novos campos do form ao realizar o merge
+      const cta = { 
+        ...defaultData[section].cta, 
+        ...sectionData.cta,
+        use_form: sectionData.cta?.use_form ?? defaultData[section].cta.use_form,
+        form_id: sectionData.cta?.form_id || defaultData[section].cta.form_id
+      };
 
       let stats = undefined;
       let flywheel = undefined;
@@ -288,6 +302,24 @@ export default function ComoFazemosComponent({ initialActiveSection = 'marketing
     marketing: initialActiveSection === 'marketing',
     sobre: initialActiveSection === 'sobre',
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const newServiceEcommerceRef = useRef<HTMLDivElement>(null);
   const newServiceMarketingRef = useRef<HTMLDivElement>(null);
@@ -410,7 +442,7 @@ export default function ComoFazemosComponent({ initialActiveSection = 'marketing
   const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); };
 
   const handleHeaderChange = (section: keyof ComoFazemosData, field: string, value: string) => updateNested(`${section}.header.${field}`, value);
-  const handleCtaChange = (section: keyof ComoFazemosData, field: string, value: string) => updateNested(`${section}.cta.${field}`, value);
+  const handleCtaChange = (section: keyof ComoFazemosData, field: string, value: any) => updateNested(`${section}.cta.${field}`, value);
   
   const addStat = () => {
     const currentStats = pageData.marketing.stats || [];
@@ -490,7 +522,13 @@ export default function ComoFazemosComponent({ initialActiveSection = 'marketing
       
       total += section === 'marketing' ? 2 : 3;
       if (sectionData.cta.text?.trim()) completed++;
-      if (sectionData.cta.url?.trim()) completed++;
+      
+      if (sectionData.cta.use_form) {
+        if (sectionData.cta.form_id?.trim()) completed++;
+      } else {
+        if (sectionData.cta.url?.trim()) completed++;
+      }
+
       if (section !== 'marketing' && sectionData.cta.description?.trim()) completed++;
     });
 
@@ -701,15 +739,15 @@ export default function ComoFazemosComponent({ initialActiveSection = 'marketing
              <h5 className="font-medium text-[var(--color-secondary)] mb-4 border-b border-[var(--color-border)] pb-2">Centro (Objetivo)</h5>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                    <label className="text-xs text-[var(--color-secondary)]">Texto Central</label>
-                    <Input value={flywheel.center.text} onChange={(e) => updateFlywheel('center.text', e.target.value)} className="mt-1 bg-[var(--color-background)] border-[var(--color-border)]" />
+                   <label className="text-xs text-[var(--color-secondary)]">Texto Central</label>
+                   <Input value={flywheel.center.text} onChange={(e) => updateFlywheel('center.text', e.target.value)} className="mt-1 bg-[var(--color-background)] border-[var(--color-border)]" />
                 </div>
                 <div>
-                    <label className="text-xs text-[var(--color-secondary)]">Cor do Texto</label>
-                    <div className="flex gap-2 mt-1">
+                   <label className="text-xs text-[var(--color-secondary)]">Cor do Texto</label>
+                   <div className="flex gap-2 mt-1">
                       <Input value={flywheel.center.textColor} onChange={(e) => updateFlywheel('center.textColor', e.target.value)} className="bg-[var(--color-background)] border-[var(--color-border)]" />
                       <ColorPicker color={flywheel.center.textColor} onChange={(c) => updateFlywheel('center.textColor', c)} />
-                    </div>
+                   </div>
                 </div>
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -743,17 +781,61 @@ export default function ComoFazemosComponent({ initialActiveSection = 'marketing
           <MessageSquare className="w-5 h-5 text-[var(--color-secondary)]" />
           <h4 className="text-lg font-semibold text-[var(--color-secondary)]">Call to Action (CTA) - {sectionTitle}</h4>
         </div>
+
+        {/* Toggle Form / Link */}
+        <div className="mb-6 p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+              <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+              Abrir Formulário no Clique
+            </h4>
+            <p className="text-xs text-[var(--color-secondary)] opacity-70 mt-1">
+              Ative para abrir um formulário ao invés de redirecionar para um link.
+            </p>
+          </div>
+          <Switch
+            checked={cta.use_form || false}
+            onCheckedChange={(checked: boolean) => handleCtaChange(section, 'use_form', checked)}
+          />
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">Texto do Botão</label>
               <Input type="text" value={cta.text} onChange={(e) => handleCtaChange(section, "text", e.target.value)} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">URL do Botão</label>
-              <Input type="text" value={cta.url} onChange={(e) => handleCtaChange(section, "url", e.target.value)} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
-            </div>
+
+            {/* Destino Dinâmico */}
+            {cta.use_form ? (
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                  <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                </label>
+                <select
+                  value={cta.form_id || ""}
+                  onChange={(e) => handleCtaChange(section, "form_id", e.target.value)}
+                  className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                >
+                  <option value="">-- Selecione o formulário --</option>
+                  {availableForms.map(form => (
+                    <option key={form.id} value={form.id}>{form.name}</option>
+                  ))}
+                </select>
+                {availableForms.length === 0 && (
+                  <p className="text-xs text-red-500 mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                  <Type className="w-4 h-4" /> URL do Botão
+                </label>
+                <Input type="text" value={cta.url} onChange={(e) => handleCtaChange(section, "url", e.target.value)} className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]" />
+              </div>
+            )}
           </div>
+          
           {section !== 'marketing' && (
             <div className="space-y-4">
               <div>

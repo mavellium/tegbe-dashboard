@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
@@ -21,7 +21,9 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
-  Zap
+  Zap,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -51,6 +53,8 @@ interface CTAButton {
   href: string;
   icon: string;
   type: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface CallsToAction {
@@ -92,13 +96,17 @@ const defaultCTAConfig: FinalCTAConfig = {
         label: "",
         href: "",
         icon: "solar:arrow-right-up-linear",
-        type: "High-Impact"
+        type: "High-Impact",
+        use_form: false,
+        form_id: ""
       },
       secondary: {
         label: "",
         href: "",
         icon: "solar:arrow-right-linear",
-        type: "Low-Friction"
+        type: "Low-Friction",
+        use_form: false,
+        form_id: ""
       }
     },
     visual_metadata: {
@@ -134,13 +142,17 @@ const mergeWithDefaults = (apiData: any, defaultData: FinalCTAConfig): FinalCTAC
           label: data.final_cta?.calls_to_action?.primary?.label || defaultData.final_cta.calls_to_action.primary.label,
           href: data.final_cta?.calls_to_action?.primary?.href || defaultData.final_cta.calls_to_action.primary.href,
           icon: data.final_cta?.calls_to_action?.primary?.icon || defaultData.final_cta.calls_to_action.primary.icon,
-          type: data.final_cta?.calls_to_action?.primary?.type || defaultData.final_cta.calls_to_action.primary.type
+          type: data.final_cta?.calls_to_action?.primary?.type || defaultData.final_cta.calls_to_action.primary.type,
+          use_form: data.final_cta?.calls_to_action?.primary?.use_form ?? defaultData.final_cta.calls_to_action.primary.use_form,
+          form_id: data.final_cta?.calls_to_action?.primary?.form_id || defaultData.final_cta.calls_to_action.primary.form_id
         },
         secondary: {
           label: data.final_cta?.calls_to_action?.secondary?.label || defaultData.final_cta.calls_to_action.secondary.label,
           href: data.final_cta?.calls_to_action?.secondary?.href || defaultData.final_cta.calls_to_action.secondary.href,
           icon: data.final_cta?.calls_to_action?.secondary?.icon || defaultData.final_cta.calls_to_action.secondary.icon,
-          type: data.final_cta?.calls_to_action?.secondary?.type || defaultData.final_cta.calls_to_action.secondary.type
+          type: data.final_cta?.calls_to_action?.secondary?.type || defaultData.final_cta.calls_to_action.secondary.type,
+          use_form: data.final_cta?.calls_to_action?.secondary?.use_form ?? defaultData.final_cta.calls_to_action.secondary.use_form,
+          form_id: data.final_cta?.calls_to_action?.secondary?.form_id || defaultData.final_cta.calls_to_action.secondary.form_id
         }
       },
       visual_metadata: {
@@ -178,6 +190,24 @@ export default function CTAPage() {
     visualMetadata: false,
   });
 
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -194,7 +224,6 @@ export default function CTAPage() {
     }
   };
 
-  // Funções para atualizar cores
   const handleThemeColorChange = (property: keyof CTATheme, hexColor: string) => {
     updateNested(`final_cta.theme.${property}`, hexColor);
   };
@@ -222,14 +251,22 @@ export default function CTAPage() {
     const secondary = ctaData.final_cta.calls_to_action.secondary;
     
     if (primary.label.trim()) completed++;
-    if (primary.href.trim()) completed++;
     if (primary.icon.trim()) completed++;
     if (primary.type.trim()) completed++;
+    if (primary.use_form) {
+      if (primary.form_id?.trim()) completed++;
+    } else {
+      if (primary.href.trim()) completed++;
+    }
     
     if (secondary.label.trim()) completed++;
-    if (secondary.href.trim()) completed++;
     if (secondary.icon.trim()) completed++;
     if (secondary.type.trim()) completed++;
+    if (secondary.use_form) {
+      if (secondary.form_id?.trim()) completed++;
+    } else {
+      if (secondary.href.trim()) completed++;
+    }
 
     // Visual Metadata - 3 campos
     total += 3;
@@ -270,7 +307,7 @@ export default function CTAPage() {
             animate={{ height: expandedSections.theme ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
+            <Card className="p-6 bg-[var(--color-background)] border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
                   Configuração do Gradiente Ouro e Cores
@@ -336,7 +373,7 @@ export default function CTAPage() {
             animate={{ height: expandedSections.text ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
+            <Card className="p-6 bg-[var(--color-background)] border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
                   Mensagem do CTA
@@ -394,18 +431,19 @@ export default function CTAPage() {
             animate={{ height: expandedSections.callsToAction ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
+            <Card className="p-6 bg-[var(--color-background)] border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
                   Configure os botões de ação
                 </h4>
                 <p className="text-sm text-[var(--color-secondary)]/70">
-                  Defina os botões primário e secundário com seus respectivos links e estilos
+                  Defina os botões primário e secundário com seus respectivos formulários ou links.
                 </p>
               </div>
 
               <div className="space-y-8">
-                {/* Botão Primário */}
+                
+                {/* ---------------- BOTÃO PRIMÁRIO ---------------- */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="px-3 py-1 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full text-sm font-medium">
@@ -414,6 +452,23 @@ export default function CTAPage() {
                     <span className="text-sm text-[var(--color-secondary)]/70">
                       {ctaData.final_cta.calls_to_action.primary.type}
                     </span>
+                  </div>
+
+                  {/* Toggle de Ação Primária */}
+                  <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                        Abrir Formulário no Clique
+                      </h4>
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                        Ative para abrir um popup de captura ao invés de redirecionar.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={ctaData.final_cta.calls_to_action.primary.use_form || false}
+                      onCheckedChange={(checked: boolean) => updateNested('final_cta.calls_to_action.primary.use_form', checked)}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -427,14 +482,40 @@ export default function CTAPage() {
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
 
-                      <Input
-                        label="URL/Link"
-                        value={ctaData.final_cta.calls_to_action.primary.href}
-                        onChange={(e) => updateNested('final_cta.calls_to_action.primary.href', e.target.value)}
-                        placeholder="https://api.whatsapp.com/send?phone=..."
-                        required
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      />
+                      {/* Destino Primário (Formulário ou Link) */}
+                      {ctaData.final_cta.calls_to_action.primary.use_form ? (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                            <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                          </label>
+                          <select
+                            value={ctaData.final_cta.calls_to_action.primary.form_id || ""}
+                            onChange={(e) => updateNested('final_cta.calls_to_action.primary.form_id', e.target.value)}
+                            className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                          >
+                            <option value="">-- Selecione o formulário --</option>
+                            {availableForms.map(form => (
+                              <option key={form.id} value={form.id}>{form.name}</option>
+                            ))}
+                          </select>
+                          {availableForms.length === 0 && (
+                            <p className="text-xs text-red-500 mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                            <Link2 className="w-4 h-4" /> URL/Link
+                          </label>
+                          <Input
+                            value={ctaData.final_cta.calls_to_action.primary.href}
+                            onChange={(e) => updateNested('final_cta.calls_to_action.primary.href', e.target.value)}
+                            placeholder="https://api.whatsapp.com/send?phone=..."
+                            required
+                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-4">
@@ -448,7 +529,7 @@ export default function CTAPage() {
                           placeholder="solar:arrow-right-up-linear"
                         />
                         <p className="text-xs text-[var(--color-secondary)]/50">
-                          Use ícones do Material Design Icons (mdi:) ou Solar Icons (solar:)
+                          Use ícones do Material Design Icons ou Solar Icons
                         </p>
                       </div>
 
@@ -475,7 +556,7 @@ export default function CTAPage() {
                   </div>
                 </div>
 
-                {/* Botão Secundário */}
+                {/* ---------------- BOTÃO SECUNDÁRIO ---------------- */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="px-3 py-1 bg-[var(--color-secondary)]/20 text-[var(--color-secondary)] rounded-full text-sm font-medium">
@@ -484,6 +565,20 @@ export default function CTAPage() {
                     <span className="text-sm text-[var(--color-secondary)]/70">
                       {ctaData.final_cta.calls_to_action.secondary.type}
                     </span>
+                  </div>
+
+                  {/* Toggle de Ação Secundária */}
+                  <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                        Abrir Formulário no Clique
+                      </h4>
+                    </div>
+                    <Switch
+                      checked={ctaData.final_cta.calls_to_action.secondary.use_form || false}
+                      onCheckedChange={(checked: boolean) => updateNested('final_cta.calls_to_action.secondary.use_form', checked)}
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -497,14 +592,37 @@ export default function CTAPage() {
                         className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                       />
 
-                      <Input
-                        label="URL/Link"
-                        value={ctaData.final_cta.calls_to_action.secondary.href}
-                        onChange={(e) => updateNested('final_cta.calls_to_action.secondary.href', e.target.value)}
-                        placeholder="/cursos"
-                        required
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      />
+                      {/* Destino Secundário (Formulário ou Link) */}
+                      {ctaData.final_cta.calls_to_action.secondary.use_form ? (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                            <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                          </label>
+                          <select
+                            value={ctaData.final_cta.calls_to_action.secondary.form_id || ""}
+                            onChange={(e) => updateNested('final_cta.calls_to_action.secondary.form_id', e.target.value)}
+                            className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                          >
+                            <option value="">-- Selecione o formulário --</option>
+                            {availableForms.map(form => (
+                              <option key={form.id} value={form.id}>{form.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                            <Link2 className="w-4 h-4" /> URL/Link
+                          </label>
+                          <Input
+                            value={ctaData.final_cta.calls_to_action.secondary.href}
+                            onChange={(e) => updateNested('final_cta.calls_to_action.secondary.href', e.target.value)}
+                            placeholder="/cursos"
+                            required
+                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-4">
@@ -518,7 +636,7 @@ export default function CTAPage() {
                           placeholder="solar:arrow-right-linear"
                         />
                         <p className="text-xs text-[var(--color-secondary)]/50">
-                          Use ícones do Material Design Icons (mdi:) ou Solar Icons (solar:)
+                          Use ícones do Material Design Icons ou Solar Icons
                         </p>
                       </div>
 
@@ -552,7 +670,7 @@ export default function CTAPage() {
             animate={{ height: expandedSections.visualMetadata ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
+            <Card className="p-6 bg-[var(--color-background)] border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
                   Efeitos Visuais e Estilo

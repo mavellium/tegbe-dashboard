@@ -2,12 +2,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { ImageUpload } from "@/components/ImageUpload";
 import IconSelector from "@/components/IconSelector";
+import { Switch } from "@/components/Switch"; // ADICIONADO
 import { 
   Layout, 
   Settings, 
@@ -27,7 +28,9 @@ import {
   Maximize2,
   Eye,
   EyeOff,
-  Power
+  Power,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -82,6 +85,8 @@ type HeaderData = {
     consultantBadge: string;
     ctaLink: string;
     ctaText: string;
+    use_form?: boolean; // ADICIONADO
+    form_id?: string;   // ADICIONADO
   };
   links: LinkItem[];
   variants: {
@@ -99,7 +104,9 @@ const defaultHeaderData: HeaderData = {
     logoAlt: "",
     consultantBadge: "",
     ctaLink: "",
-    ctaText: ""
+    ctaText: "",
+    use_form: false,
+    form_id: ""
   },
   links: [
     { name: "Home", href: "/" },
@@ -177,6 +184,8 @@ const mergeWithDefaults = (apiData: any, defaultData: HeaderData): HeaderData =>
       consultantBadge: apiData.general?.consultantBadge || defaultData.general.consultantBadge,
       ctaLink: apiData.general?.ctaLink || defaultData.general.ctaLink,
       ctaText: apiData.general?.ctaText || defaultData.general.ctaText,
+      use_form: apiData.general?.use_form ?? defaultData.general.use_form,
+      form_id: apiData.general?.form_id || defaultData.general.form_id
     },
     links: apiData.links || defaultData.links,
     variants: {
@@ -259,11 +268,29 @@ export default function Page() {
     colors: false,
   });
 
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
   // Referências para novos itens
   const newLinkRef = useRef<HTMLDivElement>(null);
 
   // Controle de planos
-  const currentPlanType = 'pro'; // Altere conforme sua lógica de planos
+  const currentPlanType = 'pro'; 
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 5;
 
   // Sincroniza os dados quando carregam do banco
@@ -282,26 +309,15 @@ export default function Page() {
 
   // Funções para links
   const handleAddLink = () => {
-    if (localLinks.length >= currentPlanLimit) {
-      return false;
-    }
-    
-    const newItem: LinkItem = {
-      name: '',
-      href: ''
-    };
-    
+    if (localLinks.length >= currentPlanLimit) return false;
+    const newItem: LinkItem = { name: '', href: '' };
     const updated = [...localLinks, newItem];
     setLocalLinks(updated);
     updateNested('links', updated);
     
     setTimeout(() => {
-      newLinkRef.current?.scrollIntoView({ 
-        behavior: 'smooth',
-        block: 'nearest'
-      });
+      newLinkRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 100);
-    
     return true;
   };
 
@@ -316,13 +332,8 @@ export default function Page() {
 
   const removeLink = (index: number) => {
     const updated = [...localLinks];
-    
     if (updated.length <= 1) {
-      // Mantém pelo menos um item vazio
-      const emptyItem: LinkItem = {
-        name: '',
-        href: ''
-      };
+      const emptyItem: LinkItem = { name: '', href: '' };
       setLocalLinks([emptyItem]);
       updateNested('links', [emptyItem]);
     } else {
@@ -341,19 +352,12 @@ export default function Page() {
 
   const handleLinkDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    
     if (draggingLink === null || draggingLink === index) return;
-    
     const updated = [...localLinks];
     const draggedItem = updated[draggingLink];
-    
-    // Remove o item arrastado
     updated.splice(draggingLink, 1);
-    
-    // Insere na nova posição
     const newIndex = index > draggingLink ? index : index;
     updated.splice(newIndex, 0, draggedItem);
-    
     setLocalLinks(updated);
     updateNested('links', updated);
     setDraggingLink(index);
@@ -364,23 +368,13 @@ export default function Page() {
     setDraggingLink(null);
   };
 
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.currentTarget.classList.add('drag-over');
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.currentTarget.classList.remove('drag-over');
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.currentTarget.classList.remove('drag-over');
-  };
+  const handleDragEnter = (e: React.DragEvent) => { e.currentTarget.classList.add('drag-over'); };
+  const handleDragLeave = (e: React.DragEvent) => { e.currentTarget.classList.remove('drag-over'); };
+  const handleDrop = (e: React.DragEvent) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); };
 
   // Função para atualizar cores
   const handleColorsChange = (property: keyof VariantTheme, hexColor: string) => {
     const tailwindClass = hexToTailwindClass(property as any, hexColor);
-    
     const updatedVariants = { ...headerData.variants };
     
     (Object.keys(updatedVariants) as Array<keyof typeof updatedVariants>).forEach((variant) => {
@@ -395,12 +389,7 @@ export default function Page() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
-    try {
-      await save();
-    } catch (err) {
-      console.error("Erro ao salvar:", err);
-    }
+    try { await save(); } catch (err) { console.error("Erro ao salvar:", err); }
   };
 
   // Validações
@@ -417,8 +406,8 @@ export default function Page() {
     headerData.general.logo.trim() !== '',
     headerData.general.logoAlt.trim() !== '',
     headerData.general.consultantBadge.trim() !== '',
-    headerData.general.ctaLink.trim() !== '',
-    headerData.general.ctaText.trim() !== ''
+    headerData.general.ctaText.trim() !== '',
+    headerData.general.use_form ? headerData.general.form_id?.trim() !== '' : headerData.general.ctaLink.trim() !== ''
   ].filter(Boolean).length;
 
   const linksValidationError = isLinksLimitReached 
@@ -432,14 +421,13 @@ export default function Page() {
     // Announcement Bar (7 campos - incluindo enabled)
     const ab = headerData.announcementBar;
     total += 7;
-    if (ab.enabled) completed++; // enabled é boolean
+    if (ab.enabled) completed++; 
     if (ab.content.text.trim()) completed++;
     if (ab.content.linkText.trim()) completed++;
     if (ab.content.linkUrl.trim()) completed++;
     if (ab.content.icon.trim()) completed++;
     completed++; // showIcon é boolean
     if (ab.styles.variant.trim()) completed++;
-    // fullWidth não conta como campo preenchível (é boolean sempre true/false)
 
     // Geral (5 campos)
     total += 5;
@@ -845,21 +833,62 @@ export default function Page() {
                     Call to Action (CTA)
                   </h3>
                   
-                  <Input
-                    label="Link do CTA"
-                    value={headerData.general.ctaLink}
-                    onChange={(e) => updateNested('general.ctaLink', e.target.value)}
-                    placeholder="Ex: https://api.whatsapp.com/send?phone=5514991779502"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+                  {/* Toggle de Form/Link para o botão do Header */}
+                  <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                        Abrir Formulário no Clique
+                      </h4>
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                        Ative para abrir um formulário popup em vez de direcionar para um link.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={headerData.general.use_form || false}
+                      onCheckedChange={(checked: boolean) => updateNested('general.use_form', checked)}
+                    />
+                  </div>
 
-                  <Input
-                    label="Texto do CTA"
-                    value={headerData.general.ctaText}
-                    onChange={(e) => updateNested('general.ctaText', e.target.value)}
-                    placeholder="Ex: Agendar agora"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input
+                      label="Texto do CTA"
+                      value={headerData.general.ctaText}
+                      onChange={(e) => updateNested('general.ctaText', e.target.value)}
+                      placeholder="Ex: Agendar agora"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+
+                    {headerData.general.use_form ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                        </label>
+                        <select
+                          value={headerData.general.form_id || ""}
+                          onChange={(e) => updateNested('general.form_id', e.target.value)}
+                          className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                        >
+                          <option value="">-- Selecione o formulário --</option>
+                          {availableForms.map(form => (
+                            <option key={form.id} value={form.id}>{form.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2 mb-2">
+                          <Link2 className="w-4 h-4" /> Link do CTA
+                        </label>
+                        <Input
+                          value={headerData.general.ctaLink}
+                          onChange={(e) => updateNested('general.ctaLink', e.target.value)}
+                          placeholder="Ex: https://api.whatsapp.com/send?phone=..."
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>

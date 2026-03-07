@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import IconSelector from "@/components/IconSelector";
 import { 
   ShieldCheck,
@@ -19,7 +20,9 @@ import {
   Settings,
   Target,
   Eye,
-  EyeOff
+  EyeOff,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -62,6 +65,8 @@ interface CTA {
   link: string;
   showIcon: boolean;
   icon: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface MarketingData {
@@ -91,7 +96,9 @@ const defaultCTA: CTA = {
   text: "Falar com um especialista",
   link: "/contato",
   showIcon: true,
-  icon: "ph:whatsapp-logo"
+  icon: "ph:whatsapp-logo",
+  use_form: false,
+  form_id: ""
 };
 
 const defaultEcosystemData: EcosystemData = {
@@ -158,7 +165,9 @@ const mergeWithDefaults = (apiData: any, defaultData: EcosystemData): EcosystemD
         showIcon: apiData.marketing?.cta?.showIcon !== undefined 
           ? apiData.marketing.cta.showIcon 
           : defaultData.marketing.cta.showIcon,
-        icon: apiData.marketing?.cta?.icon || defaultData.marketing.cta.icon
+        icon: apiData.marketing?.cta?.icon || defaultData.marketing.cta.icon,
+        use_form: apiData.marketing?.cta?.use_form ?? defaultData.marketing.cta.use_form,
+        form_id: apiData.marketing?.cta?.form_id || defaultData.marketing.cta.form_id
       }
     },
     sobre: {
@@ -205,6 +214,24 @@ export default function EcosystemPage() {
     marketing: true,
     sobre: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -271,11 +298,15 @@ export default function EcosystemPage() {
     if (marketing.title.trim()) completed++;
     if (marketing.footer.trim()) completed++;
 
-    // CTA Marketing (4 campos)
-    total += 4;
+    // CTA Marketing
+    total += 4; // text, icon, condition (form vs link), showIcon
     if (marketing.cta.text.trim()) completed++;
-    if (marketing.cta.link.trim()) completed++;
     if (marketing.cta.icon.trim()) completed++;
+    if (marketing.cta.use_form) {
+      if (marketing.cta.form_id?.trim()) completed++;
+    } else {
+      if (marketing.cta.link.trim()) completed++;
+    }
     completed++; // showIcon é boolean
 
     // Logos Marketing - Row 1
@@ -422,6 +453,24 @@ export default function EcosystemPage() {
         </div>
         
         <div className="space-y-6">
+
+          {/* Toggle de Form/Link */}
+          <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                Abrir Formulário no Clique
+              </h4>
+              <p className="text-xs text-[var(--color-secondary)] opacity-70 mt-1">
+                Ative para abrir um formulário popup em vez de redirecionar para um link.
+              </p>
+            </div>
+            <Switch
+              checked={cta.use_form || false}
+              onCheckedChange={(checked: boolean) => handleCtaChange('use_form', checked)}
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div>
@@ -437,18 +486,39 @@ export default function EcosystemPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Link do CTA
-                </label>
-                <Input
-                  type="text"
-                  value={cta.link}
-                  onChange={(e) => handleCtaChange("link", e.target.value)}
-                  placeholder="Ex: /contato"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
+              {cta.use_form ? (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                  </label>
+                  <select
+                    value={cta.form_id || ""}
+                    onChange={(e) => handleCtaChange("form_id", e.target.value)}
+                    className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                  >
+                    <option value="">-- Selecione o formulário --</option>
+                    {availableForms.map(form => (
+                      <option key={form.id} value={form.id}>{form.name}</option>
+                    ))}
+                  </select>
+                  {availableForms.length === 0 && (
+                    <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                    <Link2 className="w-4 h-4" /> Link de Destino
+                  </label>
+                  <Input
+                    type="text"
+                    value={cta.link}
+                    onChange={(e) => handleCtaChange("link", e.target.value)}
+                    placeholder="Ex: /contato"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -779,7 +849,7 @@ export default function EcosystemPage() {
                   <select
                     value={ecosystemData.sobre.layout}
                     onChange={(e) => handleSectionChange("sobre", "layout", e.target.value)}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
                   >
                     {layoutOptions.map((layout) => (
                       <option key={layout.value} value={layout.value}>

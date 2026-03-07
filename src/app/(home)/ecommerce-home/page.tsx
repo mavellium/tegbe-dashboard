@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch";
 import { 
   Palette,
   Settings,
@@ -23,6 +24,8 @@ import {
   ShoppingCart,
   Rocket,
   Zap,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -62,6 +65,8 @@ interface BentoCard {
   stat?: string;
   ctaText?: string;
   href?: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface EcommerceSectionData {
@@ -118,7 +123,9 @@ const defaultEcommerceSectionData: EcommerceSectionData = {
       title: "4 Planos de Aceleração.",
       description: "Do setup inicial à escala agressiva. Escolha a velocidade do seu crescimento.",
       ctaText: "Ver Comparativo de Planos",
-      href: "/ecommerce"
+      href: "/ecommerce",
+      use_form: false,
+      form_id: ""
     }
   ]
 };
@@ -129,7 +136,11 @@ const mergeWithDefaults = (apiData: any, defaultData: EcommerceSectionData): Eco
   return {
     theme: apiData.theme || defaultData.theme,
     header: apiData.header || defaultData.header,
-    bento_cards: apiData.bento_cards || defaultData.bento_cards,
+    bento_cards: apiData.bento_cards?.map((card: any) => ({
+      ...card,
+      use_form: card.use_form ?? false,
+      form_id: card.form_id || ""
+    })) || defaultData.bento_cards,
   };
 };
 
@@ -166,6 +177,24 @@ export default function EcommerceSectionPage() {
     bento_cards: false,
     theme: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -211,9 +240,11 @@ export default function EcommerceSectionPage() {
             colSpan: "md:col-span-2",
             ctaText: "",
             href: "#",
+            use_form: false,
+            form_id: ""
           };
         default:
-          return baseCard;
+          return baseCard as BentoCard;
       }
     };
 
@@ -336,7 +367,7 @@ export default function EcommerceSectionPage() {
       case 'stat':
         return baseComplete && (card.icon?.trim() || '') !== '' && (card.stat?.trim() || '') !== '';
       case 'action':
-        return baseComplete && (card.ctaText?.trim() || '') !== '' && (card.href?.trim() || '') !== '';
+        return baseComplete && (card.ctaText?.trim() || '') !== '' && (card.use_form ? (card.form_id?.trim() || '') !== '' : (card.href?.trim() || '') !== '');
       default:
         return baseComplete;
     }
@@ -407,6 +438,21 @@ export default function EcommerceSectionPage() {
       case 'action':
         return (
           <div className="space-y-4">
+            
+            {/* Toggle de Ação */}
+            <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                  <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                  Abrir Formulário no Clique
+                </h4>
+              </div>
+              <Switch
+                checked={card.use_form || false}
+                onCheckedChange={(checked: boolean) => updateCard(index, { use_form: checked })}
+              />
+            </div>
+
             <Input
               label="Texto do CTA"
               value={card.ctaText || ""}
@@ -414,13 +460,36 @@ export default function EcommerceSectionPage() {
               placeholder="Ex: Ver Comparativo de Planos"
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
-            <Input
-              label="Link do CTA"
-              value={card.href || ""}
-              onChange={(e) => updateCard(index, { href: e.target.value })}
-              placeholder="/ecommerce"
-              className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-            />
+
+            {card.use_form ? (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                  <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                </label>
+                <select
+                  value={card.form_id || ""}
+                  onChange={(e) => updateCard(index, { form_id: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                >
+                  <option value="">-- Selecione o formulário --</option>
+                  {availableForms.map(form => (
+                    <option key={form.id} value={form.id}>{form.name}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                  <Link2 className="w-4 h-4" /> URL do CTA
+                </label>
+                <Input
+                  value={card.href || ""}
+                  onChange={(e) => updateCard(index, { href: e.target.value })}
+                  placeholder="/ecommerce"
+                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                />
+              </div>
+            )}
           </div>
         );
       
@@ -463,7 +532,11 @@ export default function EcommerceSectionPage() {
         case 'action':
           total += 2;
           if (card.ctaText?.trim()) completed++;
-          if (card.href?.trim()) completed++;
+          if (card.use_form) {
+            if (card.form_id?.trim()) completed++;
+          } else {
+            if (card.href?.trim()) completed++;
+          }
           break;
       }
     });

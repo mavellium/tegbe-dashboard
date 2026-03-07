@@ -1,13 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch"; // ADICIONADO
 import { 
   Palette,
   Settings,
@@ -22,6 +23,8 @@ import {
   Trash2,
   Hash,
   TrendingUp,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -51,6 +54,8 @@ interface ContentData {
   cta: string;
   href: string;
   image_bg: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface StatItem {
@@ -93,6 +98,8 @@ const defaultAboutRefinedSectionData: AboutRefinedSectionData = {
     cta: "",
     href: "",
     image_bg: "",
+    use_form: false,
+    form_id: ""
   },
   stats: [
     { label: "", value: "" },
@@ -113,7 +120,17 @@ const mergeWithDefaults = (apiData: any, defaultData: AboutRefinedSectionData): 
   
   return {
     theme: apiData.theme || defaultData.theme,
-    content: apiData.content || defaultData.content,
+    content: {
+      tag: apiData.content?.tag || defaultData.content.tag,
+      title: apiData.content?.title || defaultData.content.title,
+      description: apiData.content?.description || defaultData.content.description,
+      long_text: apiData.content?.long_text || defaultData.content.long_text,
+      cta: apiData.content?.cta || defaultData.content.cta,
+      href: apiData.content?.href || defaultData.content.href,
+      image_bg: apiData.content?.image_bg || defaultData.content.image_bg,
+      use_form: apiData.content?.use_form ?? defaultData.content.use_form,
+      form_id: apiData.content?.form_id || defaultData.content.form_id
+    },
     stats: apiData.stats || defaultData.stats,
     visual_metadata: apiData.visual_metadata || defaultData.visual_metadata,
   };
@@ -151,6 +168,24 @@ export default function AboutRefinedSectionPage() {
     theme: false,
     visual_metadata: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -288,8 +323,12 @@ export default function AboutRefinedSectionPage() {
     if (aboutData.content.description.trim()) completed++;
     if (aboutData.content.long_text.trim()) completed++;
     if (aboutData.content.cta.trim()) completed++;
-    if (aboutData.content.href.trim()) completed++;
     if (aboutData.content.image_bg.trim()) completed++;
+    if (aboutData.content.use_form) {
+      if (aboutData.content.form_id?.trim()) completed++;
+    } else {
+      if (aboutData.content.href.trim()) completed++;
+    }
 
     // Stats
     total += stats.length * 2;
@@ -326,7 +365,7 @@ export default function AboutRefinedSectionPage() {
   return (
     <ManageLayout
       headerIcon={Target}
-      title="Seção Sobre "
+      title="Seção Sobre"
       description="Gerencie a seção sobre com design refinado"
       exists={!!exists}
       itemName="Seção Sobre"
@@ -378,22 +417,67 @@ export default function AboutRefinedSectionPage() {
                   rows={4}
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Input
-                    label="Texto do CTA"
-                    value={aboutData.content.cta}
-                    onChange={(e) => updateNested('content.cta', e.target.value)}
-                    placeholder="Ex: Nossa Metodologia"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <Input
-                    label="Link do CTA"
-                    value={aboutData.content.href}
-                    onChange={(e) => updateNested('content.href', e.target.value)}
-                    placeholder="/sobre"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
+
+                <div className="pt-4 border-t border-[var(--color-border)]">
+                  <h4 className="text-sm font-semibold text-[var(--color-secondary)] mb-4">
+                    Call to Action (CTA)
+                  </h4>
+
+                  {/* Toggle de Ação */}
+                  <div className="mb-6 p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                        Abrir Formulário no Clique
+                      </h4>
+                    </div>
+                    <Switch
+                      checked={aboutData.content.use_form || false}
+                      onCheckedChange={(checked: boolean) => updateNested('content.use_form', checked)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Input
+                      label="Texto do CTA"
+                      value={aboutData.content.cta}
+                      onChange={(e) => updateNested('content.cta', e.target.value)}
+                      placeholder="Ex: Nossa Metodologia"
+                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    />
+
+                    {aboutData.content.use_form ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                        </label>
+                        <select
+                          value={aboutData.content.form_id || ""}
+                          onChange={(e) => updateNested('content.form_id', e.target.value)}
+                          className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                        >
+                          <option value="">-- Selecione o formulário --</option>
+                          {availableForms.map(form => (
+                            <option key={form.id} value={form.id}>{form.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <Link2 className="w-4 h-4" /> Link do CTA
+                        </label>
+                        <Input
+                          value={aboutData.content.href}
+                          onChange={(e) => updateNested('content.href', e.target.value)}
+                          placeholder="/sobre"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
                     Imagem de Fundo

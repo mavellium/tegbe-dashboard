@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useId } from "react";
+import { useState, useMemo, useId, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -13,6 +13,7 @@ import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
 import IconSelector from "@/components/IconSelector";
+import { Switch } from "@/components/Switch";
 import { 
   ImageIcon, 
   GripVertical, 
@@ -28,7 +29,9 @@ import {
   Image as ImageLucide,
   Type,
   MessageSquare,
-  Instagram
+  Instagram,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -66,6 +69,9 @@ interface GalleryData {
       button: string;
       cardTitle?: string;
       cardDescription?: string;
+      use_form?: boolean; // ADICIONADO
+      form_id?: string;   // ADICIONADO
+      url?: string;       // ADICIONADO (link do botão normal, pois antes só tinha "button")
     };
   };
 }
@@ -93,7 +99,10 @@ const defaultData: GalleryData = {
     cta: {
       button: "",
       cardTitle: "",
-      cardDescription: ""
+      cardDescription: "",
+      use_form: false,
+      form_id: "",
+      url: ""
     }
   }
 };
@@ -122,7 +131,10 @@ const mergeWithDefaults = (apiData: any, defaultData: GalleryData): GalleryData 
       cta: {
         button: apiData.textContent?.cta?.button || defaultData?.textContent?.cta?.button,
         cardTitle: apiData.textContent?.cta?.cardTitle || defaultData?.textContent?.cta?.cardTitle,
-        cardDescription: apiData.textContent?.cta?.cardDescription || defaultData?.textContent?.cta?.cardDescription
+        cardDescription: apiData.textContent?.cta?.cardDescription || defaultData?.textContent?.cta?.cardDescription,
+        use_form: apiData.textContent?.cta?.use_form ?? defaultData?.textContent?.cta?.use_form,
+        form_id: apiData.textContent?.cta?.form_id || defaultData?.textContent?.cta?.form_id,
+        url: apiData.textContent?.cta?.url || defaultData?.textContent?.cta?.url
       }
     }
   };
@@ -334,6 +346,24 @@ export default function GalleryPage() {
   const images = currentData.data;
   const textContent = currentData.textContent;
 
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -431,6 +461,7 @@ export default function GalleryPage() {
     if (textContent.description) total += 1;
     if (textContent.description?.trim()) completed++;
     
+    // CTA Opcional
     if (textContent.cta?.button) total += 1;
     if (textContent.cta?.button?.trim()) completed++;
     
@@ -439,6 +470,14 @@ export default function GalleryPage() {
     
     if (textContent.cta?.cardDescription) total += 1;
     if (textContent.cta?.cardDescription?.trim()) completed++;
+
+    // Condição Form ou Link no CTA
+    total += 1;
+    if (textContent.cta?.use_form) {
+      if (textContent.cta?.form_id?.trim()) completed++;
+    } else {
+      if (textContent.cta?.url?.trim()) completed++;
+    }
 
     // Contar campos das imagens
     total += images.length * 3; // alt, image, span para cada imagem
@@ -589,14 +628,62 @@ export default function GalleryPage() {
                     </h3>
                   </div>
                   
-                  <div className="space-y-4">
-                    <Input
-                      label="Texto do Botão"
-                      value={textContent.cta?.button || ""}
-                      onChange={(e) => handleTextContentChange('cta.button', e.target.value)}
-                      placeholder="Ver Galeria Completa no Instagram"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
+                  <div className="space-y-6">
+                    {/* Toggle de Form/Link */}
+                    <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                          Abrir Formulário no Clique
+                        </h4>
+                        <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                          Ative para abrir um popup de captura ao invés de redirecionar para um link.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={textContent.cta?.use_form || false}
+                        onCheckedChange={(checked: boolean) => handleTextContentChange('cta.use_form', checked)}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        label="Texto do Botão Principal"
+                        value={textContent.cta?.button || ""}
+                        onChange={(e) => handleTextContentChange('cta.button', e.target.value)}
+                        placeholder="Ver Galeria Completa"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+
+                      {/* Destino Dinâmico */}
+                      {textContent.cta?.use_form ? (
+                        <div className="space-y-2">
+                          <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                            <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                          </label>
+                          <select
+                            value={textContent.cta?.form_id || ""}
+                            onChange={(e) => handleTextContentChange('cta.form_id', e.target.value)}
+                            className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                          >
+                            <option value="">-- Selecione o formulário --</option>
+                            {availableForms.map(form => (
+                              <option key={form.id} value={form.id}>{form.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : (
+                        <div>
+                          <Input
+                            label="URL do Botão"
+                            value={textContent.cta?.url || ""}
+                            onChange={(e) => handleTextContentChange('cta.url', e.target.value)}
+                            placeholder="https://instagram.com/..."
+                            className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                          />
+                        </div>
+                      )}
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input

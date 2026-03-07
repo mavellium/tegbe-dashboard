@@ -1,12 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import { 
   Award,
   Shield,
@@ -16,7 +17,8 @@ import {
   BadgeCheck,
   Sparkles,
   LinkIcon,
-  ListChecks
+  ListChecks,
+  LayoutTemplate
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -40,6 +42,8 @@ interface ImagesSection {
 interface CTA {
   text: string;
   link: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface CertificacaoMLData {
@@ -75,7 +79,9 @@ const defaultCertificacaoMLData: CertificacaoMLData = {
     },
     cta: {
       text: "",
-      link: ""
+      link: "",
+      use_form: false,
+      form_id: ""
     }
   }
 };
@@ -92,7 +98,12 @@ const mergeWithDefaults = (apiData: any, defaultData: CertificacaoMLData): Certi
       title: apiData.values?.title || defaultData.values.title,
       descriptions: apiData.values?.descriptions || defaultData.values.descriptions,
       images: apiData.values?.images || defaultData.values.images,
-      cta: apiData.values?.cta || defaultData.values.cta,
+      cta: {
+        text: apiData.values?.cta?.text || defaultData.values.cta.text,
+        link: apiData.values?.cta?.link || defaultData.values.cta.link,
+        use_form: apiData.values?.cta?.use_form ?? defaultData.values.cta.use_form,
+        form_id: apiData.values?.cta?.form_id || defaultData.values.cta.form_id
+      },
     }
   };
 };
@@ -124,6 +135,24 @@ export default function CertificacaoMLPage() {
     images: false,
     cta: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -207,7 +236,12 @@ export default function CertificacaoMLPage() {
     // CTA
     total += 2;
     if (pageData.values.cta.text.trim()) completed++;
-    if (pageData.values.cta.link.trim()) completed++;
+    
+    if (pageData.values.cta.use_form) {
+      if (pageData.values.cta.form_id?.trim()) completed++;
+    } else {
+      if (pageData.values.cta.link.trim()) completed++;
+    }
 
     return { completed, total };
   };
@@ -441,11 +475,11 @@ export default function CertificacaoMLPage() {
                                 Descrição {index + 1}
                               </span>
                               {desc.trim() ? (
-                                <span className="px-2 py-1 text-xs bg-green-900/30 text-green-300 rounded-full">
+                                <span className="px-2 py-1 text-xs bg-[var(--color-success)]/20 text-green-500 rounded-full">
                                   Completa
                                 </span>
                               ) : (
-                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-300 rounded-full">
+                                <span className="px-2 py-1 text-xs bg-yellow-900/30 text-yellow-500 rounded-full">
                                   Vazia
                                 </span>
                               )}
@@ -472,7 +506,7 @@ export default function CertificacaoMLPage() {
                           type="button"
                           onClick={() => handleRemoveDescription(index)}
                           variant="danger"
-                          className="bg-red-600 hover:bg-red-700 border-none"
+                          className="bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none text-white"
                         >
                           Remover
                         </Button>
@@ -594,33 +628,70 @@ export default function CertificacaoMLPage() {
             animate={{ height: expandedSections.cta ? "auto" : 0 }}
             className="overflow-hidden"
           >
-            <Card className="p-6 bg-[var(--color-background)]">
-              <div className="space-y-6">
-                <div className="mb-4">
-                  <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                    Botão de Ação
+            <Card className="p-6 bg-[var(--color-background)] space-y-6">
+              <div className="mb-4">
+                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
+                  Botão de Ação
+                </h4>
+                <p className="text-sm text-[var(--color-secondary)]/70">
+                  Configure o botão que direciona o usuário para mais informações
+                </p>
+              </div>
+
+              {/* Toggle de Ação */}
+              <div className="mb-6 p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                    Abrir Formulário no Clique
                   </h4>
-                  <p className="text-sm text-[var(--color-secondary)]/70">
-                    Configure o botão que direciona o usuário para mais informações
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ative para abrir um formulário popup em vez de redirecionar para um link.
                   </p>
                 </div>
+                <Switch
+                  checked={pageData.values.cta.use_form || false}
+                  onCheckedChange={(checked: boolean) => updateNested('values.cta.use_form', checked)}
+                />
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-[var(--color-secondary)]">
+                    Texto do Botão
+                  </label>
+                  <Input
+                    value={pageData.values.cta.text}
+                    onChange={(e) => updateNested('values.cta.text', e.target.value)}
+                    placeholder="Ex: DESCUBRA O PODER DO SELO"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                </div>
+
+                {/* Destino Dinâmico (Formulário ou Link) */}
+                {pageData.values.cta.use_form ? (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Texto do Botão
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
                     </label>
-                    <Input
-                      value={pageData.values.cta.text}
-                      onChange={(e) => updateNested('values.cta.text', e.target.value)}
-                      placeholder="Ex: DESCUBRA O PODER DO SELO"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
+                    <select
+                      value={pageData.values.cta.form_id || ""}
+                      onChange={(e) => updateNested('values.cta.form_id', e.target.value)}
+                      className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                    >
+                      <option value="">-- Selecione o formulário --</option>
+                      {availableForms.map(form => (
+                        <option key={form.id} value={form.id}>{form.name}</option>
+                      ))}
+                    </select>
+                    {availableForms.length === 0 && (
+                      <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                    )}
                   </div>
-
+                ) : (
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Link do Botão
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4" /> Link do Botão
                     </label>
                     <Input
                       value={pageData.values.cta.link}
@@ -628,8 +699,11 @@ export default function CertificacaoMLPage() {
                       placeholder="Ex: /consultoria, /contato, https://..."
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
+                    <p className="text-xs text-[var(--color-secondary)]/50 mt-1">
+                      Pode ser um link interno (#seção) ou externo
+                    </p>
                   </div>
-                </div>
+                )}
               </div>
             </Card>
           </motion.div>

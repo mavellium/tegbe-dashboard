@@ -9,6 +9,7 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch"; // ADICIONADO
 import { 
   Settings, 
   GripVertical,
@@ -26,7 +27,9 @@ import {
   Layers,
   Eye,
   EyeOff,
-  Power
+  Power,
+  LayoutTemplate, // ADICIONADO
+  Link2 // ADICIONADO
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -59,6 +62,8 @@ interface CTA {
   showIcon: boolean;
   icon: string;
   position: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface ServicesData {
@@ -78,7 +83,9 @@ const defaultCTA: CTA = {
   style: "default",
   showIcon: true,
   icon: "ph:calendar-check",
-  position: "below-content"
+  position: "below-content",
+  use_form: false,
+  form_id: ""
 };
 
 const defaultServicesData: ServicesData = {
@@ -120,7 +127,7 @@ const extractHexFromTailwindString = (tailwindClass: string): string => {
     return normalizeHexColor(tailwindClass);
   }
   
-  // Se for classe Tailwind com hex customizado [hex]
+  // Se for classe Tailwind com hex customizado [#hex]
   const hexMatch = tailwindClass.match(/\[#([0-9A-Fa-f]{3,6})\]/);
   if (hexMatch) {
     return normalizeHexColor(`#${hexMatch[1]}`);
@@ -162,7 +169,6 @@ const mergeWithDefaults = (apiData: any, defaultData: ServicesData): ServicesDat
       description: service.description || "",
       icon: service.icon || "",
       image: service.image || "",
-      // Converte classes Tailwind para hex se necessário
       color: extractHexFromTailwindString(service.color || defaultData.services[0].color),
       badgeColor: extractHexFromTailwindString(service.badgeColor || defaultData.services[0].badgeColor),
       effect: service.effect || "none",
@@ -175,6 +181,8 @@ const mergeWithDefaults = (apiData: any, defaultData: ServicesData): ServicesDat
       showIcon: apiData.cta?.showIcon ?? defaultData.cta.showIcon,
       icon: apiData.cta?.icon || defaultData.cta.icon,
       position: apiData.cta?.position || defaultData.cta.position,
+      use_form: apiData.cta?.use_form ?? defaultData.cta.use_form,
+      form_id: apiData.cta?.form_id || defaultData.cta.form_id
     }
   };
 };
@@ -207,6 +215,24 @@ export default function ServicesPage() {
     services: false,
     cta: false,
   });
+
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
 
   // Referências para novos itens
   const newServiceRef = useRef<HTMLDivElement>(null);
@@ -401,7 +427,7 @@ export default function ServicesPage() {
   const ctaCompleteCount = [
     servicesData.cta.enabled,
     servicesData.cta.text.trim() !== '',
-    servicesData.cta.link.trim() !== '',
+    servicesData.cta.use_form ? servicesData.cta.form_id?.trim() !== '' : servicesData.cta.link.trim() !== '',
     servicesData.cta.icon.trim() !== '',
     servicesData.cta.showIcon
   ].filter(Boolean).length;
@@ -450,7 +476,11 @@ export default function ServicesPage() {
     total += 7;
     if (servicesData.cta.enabled) completed++;
     if (servicesData.cta.text.trim()) completed++;
-    if (servicesData.cta.link.trim()) completed++;
+    if (servicesData.cta.use_form) {
+      if (servicesData.cta.form_id?.trim()) completed++;
+    } else {
+      if (servicesData.cta.link.trim()) completed++;
+    }
     if (servicesData.cta.style.trim()) completed++;
     if (servicesData.cta.showIcon) completed++;
     if (servicesData.cta.icon.trim()) completed++;
@@ -900,7 +930,7 @@ export default function ServicesPage() {
                   </p>
                 </div>
 
-                {/* Controle de ativação */}
+                {/* Controle de ativação global do CTA */}
                 <div className="flex items-center justify-between p-4 bg-[var(--color-background-body)] rounded-lg border border-[var(--color-border)] mb-6">
                   <div className="flex items-center gap-3">
                     {servicesData.cta.enabled ? (
@@ -938,6 +968,24 @@ export default function ServicesPage() {
                   </button>
                 </div>
 
+                {/* Toggle Formulário/Link */}
+                <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between mb-6">
+                  <div>
+                    <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                      <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                      Abrir Formulário no Clique
+                    </h4>
+                    <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                      Ative para abrir um formulário popup em vez de redirecionar para um link.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={servicesData.cta.use_form || false}
+                    onCheckedChange={(checked: boolean) => updateNested('cta.use_form', checked)}
+                    disabled={!servicesData.cta.enabled}
+                  />
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-[var(--color-secondary)]">
@@ -952,18 +1000,40 @@ export default function ServicesPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                      Link do CTA
-                    </label>
-                    <Input
-                      value={servicesData.cta.link}
-                      onChange={(e) => updateNested('cta.link', e.target.value)}
-                      placeholder="Ex: /contato"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      disabled={!servicesData.cta.enabled}
-                    />
-                  </div>
+                  {servicesData.cta.use_form ? (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                      </label>
+                      <select
+                        value={servicesData.cta.form_id || ""}
+                        onChange={(e) => updateNested('cta.form_id', e.target.value)}
+                        className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                        disabled={!servicesData.cta.enabled}
+                      >
+                        <option value="">-- Selecione o formulário --</option>
+                        {availableForms.map(form => (
+                          <option key={form.id} value={form.id}>{form.name}</option>
+                        ))}
+                      </select>
+                      {availableForms.length === 0 && (
+                        <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                        <Link2 className="w-4 h-4" /> Link do CTA
+                      </label>
+                      <Input
+                        value={servicesData.cta.link}
+                        onChange={(e) => updateNested('cta.link', e.target.value)}
+                        placeholder="Ex: /contato"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        disabled={!servicesData.cta.enabled}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

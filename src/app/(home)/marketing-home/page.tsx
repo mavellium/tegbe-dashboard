@@ -1,24 +1,26 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
+import { Switch } from "@/components/Switch";
 import IconSelector from "@/components/IconSelector";
 import { 
   Layout, 
-  AlertCircle,
   CheckCircle2,
-  XCircle,
   TrendingUp,
   Palette,
   Megaphone,
   Users,
   Brush,
-  BarChart3
+  BarChart3,
+  LayoutTemplate,
+  Link2,
+  XCircle
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -54,6 +56,8 @@ interface MainTowerCard {
   cta: string;
   href: string;
   icon: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface StackCard {
@@ -103,7 +107,9 @@ const defaultMarketingSectionData: MarketingSectionData = {
         tags: [""],
         cta: "",
         href: "",
-        icon: "solar:graph-new-up-bold"
+        icon: "solar:graph-new-up-bold",
+        use_form: false,
+        form_id: ""
       },
       creative_stack: {
         id: "",
@@ -130,7 +136,15 @@ const mergeWithDefaults = (apiData: any, defaultData: MarketingSectionData): Mar
     marketing_section: {
       theme: apiData.marketing_section?.theme || defaultData.marketing_section.theme,
       header: apiData.marketing_section?.header || defaultData.marketing_section.header,
-      cards: apiData.marketing_section?.cards || defaultData.marketing_section.cards,
+      cards: {
+        main_tower: {
+          ...(apiData.marketing_section?.cards?.main_tower || defaultData.marketing_section.cards.main_tower),
+          use_form: apiData.marketing_section?.cards?.main_tower?.use_form ?? defaultData.marketing_section.cards.main_tower.use_form,
+          form_id: apiData.marketing_section?.cards?.main_tower?.form_id || defaultData.marketing_section.cards.main_tower.form_id
+        },
+        creative_stack: apiData.marketing_section?.cards?.creative_stack || defaultData.marketing_section.cards.creative_stack,
+        crm_stack: apiData.marketing_section?.cards?.crm_stack || defaultData.marketing_section.cards.crm_stack,
+      }
     },
   };
 };
@@ -164,6 +178,24 @@ export default function MarketingSectionPage() {
 
   const [tagInput, setTagInput] = useState("");
 
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -173,7 +205,6 @@ export default function MarketingSectionPage() {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    
     try {
       await save();
     } catch (err) {
@@ -233,9 +264,16 @@ export default function MarketingSectionPage() {
     if (mainTower.subtitle.trim()) completed++;
     if (mainTower.description.trim()) completed++;
     if (mainTower.cta.trim()) completed++;
-    if (mainTower.href.trim()) completed++;
     if (mainTower.icon.trim()) completed++;
     if (mainTower.id.trim()) completed++;
+    
+    // Condição Form vs Link
+    if (mainTower.use_form) {
+      if (mainTower.form_id?.trim()) completed++;
+    } else {
+      if (mainTower.href?.trim()) completed++;
+    }
+
     mainTower.tags.forEach(tag => {
       if (tag.trim()) completed++;
     });
@@ -292,7 +330,7 @@ export default function MarketingSectionPage() {
             <Card className="p-6 bg-[var(--color-background)]">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <ThemePropertyInput
-                  property="bg_section"
+                  property="bg"
                   label="Fundo da Seção"
                   description=""
                   currentHex={pageData.marketing_section.theme.bg_section}
@@ -301,7 +339,7 @@ export default function MarketingSectionPage() {
                 />
                 
                 <ThemePropertyInput
-                  property="card_dark_bg"
+                  property="bg"
                   label="Fundo Card Escuro"
                   description=""
                   currentHex={pageData.marketing_section.theme.card_dark_bg}
@@ -310,7 +348,7 @@ export default function MarketingSectionPage() {
                 />
                 
                 <ThemePropertyInput
-                  property="card_dark_text"
+                  property="text"
                   label="Texto Card Escuro"
                   description=""
                   currentHex={pageData.marketing_section.theme.card_dark_text}
@@ -319,7 +357,7 @@ export default function MarketingSectionPage() {
                 />
                 
                 <ThemePropertyInput
-                  property="card_light_bg"
+                  property="bg"
                   label="Fundo Card Claro"
                   description=""
                   currentHex={pageData.marketing_section.theme.card_light_bg}
@@ -328,7 +366,7 @@ export default function MarketingSectionPage() {
                 />
                 
                 <ThemePropertyInput
-                  property="card_light_text"
+                  property="text"
                   label="Texto Card Claro"
                   description=""
                   currentHex={pageData.marketing_section.theme.card_light_text}
@@ -337,7 +375,7 @@ export default function MarketingSectionPage() {
                 />
                 
                 <ThemePropertyInput
-                  property="accent_pink"
+                  property="bg"
                   label="Rosa de Destaque"
                   description=""
                   currentHex={pageData.marketing_section.theme.accent_pink}
@@ -505,17 +543,52 @@ export default function MarketingSectionPage() {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-[var(--color-secondary)]">
-                        Link (href)
-                      </label>
-                      <Input
-                        value={pageData.marketing_section.cards.main_tower.href}
-                        onChange={(e) => updateNested('marketing_section.cards.main_tower.href', e.target.value)}
-                        placeholder="Ex: /marketing"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                    {/* Toggle Formulário/Link */}
+                    <div className="p-3 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                          Formulário
+                        </h4>
+                      </div>
+                      <Switch
+                        checked={pageData.marketing_section.cards.main_tower.use_form || false}
+                        onCheckedChange={(checked: boolean) => updateNested('marketing_section.cards.main_tower.use_form', checked)}
                       />
                     </div>
+
+                    {pageData.marketing_section.cards.main_tower.use_form ? (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                        </label>
+                        <select
+                          value={pageData.marketing_section.cards.main_tower.form_id || ""}
+                          onChange={(e) => updateNested('marketing_section.cards.main_tower.form_id', e.target.value)}
+                          className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                        >
+                          <option value="">-- Selecione o formulário --</option>
+                          {availableForms.map(form => (
+                            <option key={form.id} value={form.id}>{form.name}</option>
+                          ))}
+                        </select>
+                        {availableForms.length === 0 && (
+                          <p className="text-xs text-red-500 mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-[var(--color-secondary)] flex items-center gap-2">
+                          <Link2 className="w-4 h-4" /> Link (href)
+                        </label>
+                        <Input
+                          value={pageData.marketing_section.cards.main_tower.href}
+                          onChange={(e) => updateNested('marketing_section.cards.main_tower.href', e.target.value)}
+                          placeholder="Ex: /marketing"
+                          className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

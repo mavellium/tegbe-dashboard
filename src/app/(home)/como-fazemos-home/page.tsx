@@ -303,7 +303,7 @@ export default function MethodologyPage() {
     return <Loading layout={Layout} exists={!!exists} />;
   }
 
-  // --- CORREÇÃO DA FUNÇÃO DO SWITCH ---
+  // --- FUNÇÃO DO SWITCH ---
   const handleSwitchChange = (checked: boolean) => {
     updateNested('methodology.cta.use_form', checked);
   };
@@ -510,7 +510,6 @@ export default function MethodologyPage() {
                     Ative para abrir um popup de captura ao invés de redirecionar para uma página.
                   </p>
                 </div>
-                {/* CORREÇÃO DO SWITCH AQUI */}
                 <Switch
                   checked={pageData.methodology.cta.use_form || false}
                   onCheckedChange={handleSwitchChange}

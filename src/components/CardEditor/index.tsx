@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch";
 import { 
   Trash2, 
   Phone, 
@@ -12,7 +13,8 @@ import {
   ChevronUp, 
   ChevronDown, 
   ShoppingBag,
-  Mail
+  Mail,
+  LayoutTemplate
 } from "lucide-react";
 import IconSelector from "@/components/IconSelector";
 import { ColorPropertyInput } from "../ColorPropertyInput";
@@ -29,6 +31,8 @@ interface CTA {
   text: string;
   action: "whatsapp" | "link" | "email" | "phone";
   value: string;
+  use_form?: boolean; // ADICIONADO
+  form_id?: string;   // ADICIONADO
 }
 
 interface PhoneImageSize {
@@ -72,6 +76,23 @@ export const CardEditor: React.FC<CardEditorProps> = ({
   onChange,
   onRemove
 }) => {
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
   
   // Helpers para renderização do ícone de ação
   const getActionIcon = (action: string) => {
@@ -324,8 +345,22 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                   <Target className="w-5 h-5" />
                   Call to Action (CTA)
                 </h4>
+
+                {/* Toggle Formulário/Link */}
+                <div className="p-4 border border-blue-500/30 bg-blue-500/5 rounded-xl flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                      <LayoutTemplate className="w-4 h-4 text-blue-400" />
+                      Abrir Formulário no Clique
+                    </h4>
+                  </div>
+                  <Switch
+                    checked={card.cta.use_form || false}
+                    onCheckedChange={(checked: boolean) => onChange("cta", { ...card.cta, use_form: checked })}
+                  />
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-zinc-300 mb-2">
                       Texto do Botão
@@ -338,38 +373,70 @@ export const CardEditor: React.FC<CardEditorProps> = ({
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-300 mb-2">
-                      Ação
-                    </label>
-                    <select
-                      value={card.cta.action}
-                      onChange={(e) => onChange("cta", { ...card.cta, action: e.target.value as CTA["action"] })}
-                      className="w-full px-3 py-2 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-zinc-800 text-zinc-100"
-                    >
-                      <option value="whatsapp">WhatsApp</option>
-                      <option value="link">Link</option>
-                      <option value="email">Email</option>
-                      <option value="phone">Telefone</option>
-                    </select>
-                  </div>
+                  {card.cta.use_form ? (
+                    <div>
+                      <label className="block text-sm font-medium text-zinc-300 mb-2 flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4" /> Formulário Vinculado
+                      </label>
+                      <select
+                        value={card.cta.form_id || ""}
+                        onChange={(e) => onChange("cta", { ...card.cta, form_id: e.target.value })}
+                        className="w-full px-3 py-2 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-zinc-800 text-zinc-100"
+                      >
+                        <option value="">-- Selecione o formulário --</option>
+                        {availableForms.map(form => (
+                          <option key={form.id} value={form.id}>{form.name}</option>
+                        ))}
+                      </select>
+                      {availableForms.length === 0 && (
+                        <p className="text-xs text-red-500 mt-1">Nenhum formulário encontrado.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                          Ação
+                        </label>
+                        <select
+                          value={card.cta.action}
+                          onChange={(e) => onChange("cta", { ...card.cta, action: e.target.value as CTA["action"] })}
+                          className="w-full px-3 py-2 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-zinc-800 text-zinc-100"
+                        >
+                          <option value="whatsapp">WhatsApp</option>
+                          <option value="link">Link</option>
+                          <option value="email">Email</option>
+                          <option value="phone">Telefone</option>
+                        </select>
+                      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-zinc-300 mb-2">
-                      Valor / Link
-                    </label>
-                    <Input
-                      type="text"
-                      value={card.cta.value}
-                      onChange={(e) => onChange("cta", { ...card.cta, value: e.target.value })}
-                      placeholder={card.cta.action === "whatsapp" ? "https://wa.me/..." : "/pagina"}
-                    />
-                  </div>
+                      <div>
+                        <label className="block text-sm font-medium text-zinc-300 mb-2">
+                          Valor / Link
+                        </label>
+                        <Input
+                          type="text"
+                          value={card.cta.value}
+                          onChange={(e) => onChange("cta", { ...card.cta, value: e.target.value })}
+                          placeholder={card.cta.action === "whatsapp" ? "https://wa.me/..." : "/pagina"}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3 text-sm text-zinc-400 bg-zinc-800 p-2 rounded-md w-fit">
-                  {getActionIcon(card.cta.action)}
-                  <span>Ação: {getActionLabel(card.cta.action)}</span>
+                  {card.cta.use_form ? (
+                    <>
+                      <LayoutTemplate className="w-4 h-4" />
+                      <span>Ação: Abrir Formulário</span>
+                    </>
+                  ) : (
+                    <>
+                      {getActionIcon(card.cta.action)}
+                      <span>Ação: {getActionLabel(card.cta.action)}</span>
+                    </>
+                  )}
                 </div>
               </div>
             </Card>

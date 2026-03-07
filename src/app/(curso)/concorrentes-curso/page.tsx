@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useId } from "react";
+import { useState, useMemo, useId, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -12,6 +12,7 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
+import { Switch } from "@/components/Switch";
 import IconSelector from "@/components/IconSelector";
 import { 
   GripVertical, 
@@ -27,7 +28,9 @@ import {
   ArrowRight,
   Check,
   X as XIcon,
-  Columns
+  Columns,
+  LayoutTemplate,
+  Link2
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -60,6 +63,8 @@ interface ComparisonData {
     variant: "gradient" | "primary" | "secondary" | "danger";
     icon: string;
     target: "_self" | "_blank";
+    use_form?: boolean; // ADICIONADO
+    form_id?: string;   // ADICIONADO
   };
 }
 
@@ -98,7 +103,9 @@ const defaultData: ComparisonData = {
     url: "/checkout",
     variant: "gradient",
     icon: "ph:arrow-right-bold",
-    target: "_self"
+    target: "_self",
+    use_form: false,
+    form_id: ""
   }
 };
 
@@ -127,7 +134,9 @@ const mergeWithDefaults = (apiData: any, defaultData: ComparisonData): Compariso
       url: apiData.cta?.url || defaultData.cta.url,
       variant: apiData.cta?.variant || defaultData.cta.variant,
       icon: apiData.cta?.icon || defaultData.cta.icon,
-      target: apiData.cta?.target || defaultData.cta.target
+      target: apiData.cta?.target || defaultData.cta.target,
+      use_form: apiData.cta?.use_form ?? defaultData.cta.use_form,
+      form_id: apiData.cta?.form_id || defaultData.cta.form_id
     }
   };
 };
@@ -328,6 +337,24 @@ export default function ComparisonPage() {
   const currentData = componentData || defaultData;
   const features = currentData.features;
 
+  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const data = await res.json();
+        if (data.success) {
+          setAvailableForms(data.components);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar formulários:", error);
+      }
+    };
+    fetchForms();
+  }, []);
+
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
@@ -426,10 +453,16 @@ export default function ComparisonPage() {
     // CTA
     total += 5;
     if (currentData.cta.text.trim()) completed++;
-    if (currentData.cta.url.trim()) completed++;
     if (currentData.cta.variant.trim()) completed++;
     if (currentData.cta.icon.trim()) completed++;
     if (currentData.cta.target.trim()) completed++;
+    
+    // Condição: Link ou Form
+    if (currentData.cta.use_form) {
+      if (currentData.cta.form_id?.trim()) completed++;
+    } else {
+      if (currentData.cta.url.trim()) completed++;
+    }
 
     return { completed, total };
   };
@@ -702,8 +735,25 @@ export default function ComparisonPage() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Toggle de Ação */}
+              <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
                 <div>
+                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
+                    Abrir Formulário no Clique
+                  </h4>
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Ative para abrir um formulário ao invés de redirecionar para um link.
+                  </p>
+                </div>
+                <Switch
+                  checked={currentData.cta.use_form || false}
+                  onCheckedChange={(checked: boolean) => handleChange('cta.use_form', checked)}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <Input
                     label="Texto do Botão"
                     value={currentData.cta.text}
@@ -711,70 +761,87 @@ export default function ComparisonPage() {
                     placeholder="Ex: Começar Agora"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Texto que aparecerá no botão
-                  </p>
+
+                  {/* Destino Dinâmico (Formulário ou Link) */}
+                  {currentData.cta.use_form ? (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                        <LayoutTemplate className="w-4 h-4" />
+                        Formulário Vinculado
+                      </label>
+                      <select
+                        value={currentData.cta.form_id || ""}
+                        onChange={(e) => handleChange('cta.form_id', e.target.value)}
+                        className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+                      >
+                        <option value="">-- Selecione o formulário --</option>
+                        {availableForms.map(form => (
+                          <option key={form.id} value={form.id}>{form.name}</option>
+                        ))}
+                      </select>
+                      {availableForms.length === 0 && (
+                        <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
+                        <Link2 className="w-4 h-4" />
+                        URL do Botão
+                      </label>
+                      <Input
+                        value={currentData.cta.url}
+                        onChange={(e) => handleChange('cta.url', e.target.value)}
+                        placeholder="Ex: /checkout"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                        Para onde o botão levará (use / para páginas internas)
+                      </p>
+                    </div>
+                  )}
                 </div>
 
-                <div>
-                  <Input
-                    label="URL do Botão"
-                    value={currentData.cta.url}
-                    onChange={(e) => handleChange('cta.url', e.target.value)}
-                    placeholder="Ex: /checkout"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Para onde o botão levará (use / para páginas internas)
-                  </p>
-                </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                      Variante do Botão
+                    </label>
+                    <select
+                      value={currentData.cta.variant}
+                      onChange={(e) => handleChange('cta.variant', e.target.value)}
+                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                    >
+                      <option value="gradient">Gradiente</option>
+                      <option value="primary">Primário</option>
+                      <option value="secondary">Secundário</option>
+                      <option value="danger">Perigo</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    Variante do Botão
-                  </label>
-                  <select
-                    value={currentData.cta.variant}
-                    onChange={(e) => handleChange('cta.variant', e.target.value)}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-                  >
-                    <option value="gradient">Gradiente</option>
-                    <option value="primary">Primário</option>
-                    <option value="secondary">Secundário</option>
-                    <option value="danger">Perigo</option>
-                  </select>
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Estilo visual do botão
-                  </p>
-                </div>
-
-                <div>
                   <IconSelector
                     value={currentData.cta.icon}
                     onChange={(value) => handleChange('cta.icon', value)}
                     label="Ícone do Botão"
                     placeholder="ph:arrow-right-bold"
                   />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Ícone que aparecerá no botão (opcional)
-                  </p>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                    Alvo do Link
-                  </label>
-                  <select
-                    value={currentData.cta.target}
-                    onChange={(e) => handleChange('cta.target', e.target.value)}
-                    className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-                  >
-                    <option value="_self">Mesma aba</option>
-                    <option value="_blank">Nova aba</option>
-                  </select>
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Onde o link será aberto
-                  </p>
+                  {/* Mostra "Alvo do Link" apenas se for modo URL */}
+                  {!currentData.cta.use_form && (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
+                        Alvo do Link
+                      </label>
+                      <select
+                        value={currentData.cta.target}
+                        onChange={(e) => handleChange('cta.target', e.target.value)}
+                        className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
+                      >
+                        <option value="_self">Mesma aba</option>
+                        <option value="_blank">Nova aba</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
