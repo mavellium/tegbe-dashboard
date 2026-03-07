@@ -159,7 +159,7 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
     >
       <div className="space-y-6 pb-24">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-background)] p-4 md:p-6 rounded-xl border border-[var(--color-border)] shadow-[0_2px_10px_var(--color-shadow)]">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[var(--color-background)] p-4 md:p-6 rounded-xl border border-[var(--color-border)]">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-secondary)] opacity-50" />
             <input 
