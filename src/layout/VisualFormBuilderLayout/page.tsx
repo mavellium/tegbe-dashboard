@@ -220,53 +220,71 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       <input type="hidden" name="componentName" value="${finalFormName}" />
     `;
 
-    let successAction = `alert('Enviado com sucesso!'); form.reset();`;
-    
-    if (conf.content.actionType === 'whatsapp') {
-      const templateBase = (conf.content.whatsappMessage || "Olá! Seguem meus dados:\\n\\n{dados_formulario}").replace(/`/g, '\\`');
-      
-      successAction = `
-        const formDataObj = new FormData(form);
-        let finalMessage = \`${templateBase}\`;
-        let formValuesText = '';
-        
-        for (let [key, value] of formDataObj.entries()) {
-          if (key !== 'componentId' && key !== 'componentName' && value.trim() !== '') {
-            // Substituição de variáveis especificas (ex: {nome})
-            const regex = new RegExp('\\\\{' + key + '\\\\}', 'g');
-            if(finalMessage.match(regex)) {
-              finalMessage = finalMessage.replace(regex, value);
-            } else {
-              // Se não estiver especificado no texto, adiciona no {dados_formulario}
-              formValuesText += key + ': ' + value + '\\n';
-            }
-          }
-        }
-        
-        // Substitui a tag geral pelo restante dos campos
-        finalMessage = finalMessage.replace('{dados_formulario}', formValuesText);
-        
-        let encodedMessage = encodeURIComponent(finalMessage);
-        window.open('https://api.whatsapp.com/send?phone=${conf.content.whatsappNumber}&text=' + encodedMessage, '_blank');
-        form.reset();
-      `;
-    }
+    // Processa a mensagem base de whatsapp para ser injetada em JS
+    const templateBase = (conf.content.whatsappMessage || "Olá! Seguem meus dados:\\n\\n{dados_formulario}")
+      .replace(/\\/g, '\\\\') // escapes de backslash
+      .replace(/\n/g, '\\n')  // quebras de linha
+      .replace(/"/g, '\\"');  // aspas duplas
 
-    const onSubmitJs = `
-      event.preventDefault(); 
-      var form=this; 
-      var btn=form.querySelector('button[type=submit]'); 
-      if(btn){
-        var orig=btn.innerHTML; 
-        btn.innerHTML='Enviando...'; 
-        btn.disabled=true;
-      } 
-      fetch('${baseUrl}/api/components/submit', {method:'POST', body: new FormData(form)})
-        .finally(() => { 
-          if(btn){btn.innerHTML=orig; btn.disabled=false;} 
-          ${successAction} 
+    const scriptTemplate = `
+<script>
+  (function() {
+    var form = document.getElementById('${formId}');
+    if (form) {
+      form.addEventListener('submit', function(event) {
+        event.preventDefault(); 
+        var btn = form.querySelector('button[type=submit]'); 
+        var orig = '';
+        if(btn){
+          orig = btn.innerHTML; 
+          btn.innerHTML = 'Enviando...'; 
+          btn.disabled = true;
+        } 
+        
+        fetch('${baseUrl}/api/components/submit', {
+          method: 'POST', 
+          body: new FormData(form)
+        })
+        .finally(function() { 
+          if(btn){
+            btn.innerHTML = orig; 
+            btn.disabled = false;
+          } 
+          ${conf.content.actionType === 'whatsapp' ? `
+            var formDataObj = new FormData(form);
+            var finalMessage = "${templateBase}";
+            var formValuesText = '';
+            
+            for (var pair of formDataObj.entries()) {
+              var key = pair[0];
+              var value = pair[1];
+              if (key !== 'componentId' && key !== 'componentName' && value.trim() !== '') {
+                // Tenta substituir no formato {chave}
+                var regex = new RegExp('\\\\{' + key + '\\\\}', 'g');
+                if(finalMessage.match(regex)) {
+                  finalMessage = finalMessage.replace(regex, value);
+                } else {
+                  // Se não encontrou, junta tudo para colocar no {dados_formulario}
+                  formValuesText += key + ': ' + value + '\\n';
+                }
+              }
+            }
+            
+            // Substitui o coringa geral
+            finalMessage = finalMessage.replace('{dados_formulario}', formValuesText);
+            
+            var encodedMessage = encodeURIComponent(finalMessage);
+            window.open('https://api.whatsapp.com/send?phone=${conf.content.whatsappNumber}&text=' + encodedMessage, '_blank');
+            form.reset();
+          ` : `
+            alert('Enviado com sucesso!'); 
+            form.reset();
+          `}
         });
-    `;
+      });
+    }
+  })();
+</script>`;
 
     return `
       <style>
@@ -285,12 +303,13 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
         @media (max-width: 640px) { .${scopedClass} .field-col { width: 100% !important; flex: 0 0 100% !important; } }
       </style>
       <div class="${scopedClass}">
-        <form id="${formId}" onsubmit="${onSubmitJs}">
+        <form id="${formId}">
           ${hiddenInputs}
           <div class="form-row">${fieldsHtml}</div>
         </form>
       </div>
-    `.replace(/\s+/g, ' ').trim(); 
+      ${scriptTemplate}
+    `.trim(); 
   };
 
   const handleSave = async () => {
@@ -435,20 +454,35 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
     <div className="p-4 md:p-6 space-y-6">
       <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
         <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Destino de Envio</h4>
-        <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={config.content.actionType === 'whatsapp'} onChange={(e) => updateContent('actionType', e.target.checked ? 'whatsapp' : 'database')} className="w-4 h-4 text-blue-600 rounded cursor-pointer" /><span className="text-sm font-medium text-gray-800">Direcionar para WhatsApp</span></label>
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input 
+            type="checkbox" 
+            checked={config.content.actionType === 'whatsapp'} 
+            onChange={(e) => updateContent('actionType', e.target.checked ? 'whatsapp' : 'database')} 
+            className="w-4 h-4 text-blue-600 rounded cursor-pointer" 
+          />
+          <span className="text-sm font-medium text-gray-800">Direcionar para WhatsApp</span>
+        </label>
         
         {config.content.actionType === 'whatsapp' ? (
           <div className="pt-2 space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Número Destino</label>
-              <input type="text" value={config.content.whatsappNumber} onChange={(e) => updateContent('whatsappNumber', e.target.value)} placeholder="Ex: 5511999999999" className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500" />
+              <input 
+                type="text" 
+                value={config.content.whatsappNumber} 
+                onChange={(e) => updateContent('whatsappNumber', e.target.value)} 
+                placeholder="Ex: 5511999999999" 
+                className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500" 
+              />
             </div>
+            
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Mensagem de Redirecionamento</label>
               <textarea 
                 value={config.content.whatsappMessage} 
                 onChange={(e) => updateContent('whatsappMessage', e.target.value)} 
-                placeholder="Ex: Olá! Seguem meus dados:\n\n{dados_formulario}" 
+                placeholder="Ex: Olá! Seguem meus dados: \n\n{dados_formulario}" 
                 rows={4}
                 className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 resize-y" 
               />
@@ -465,7 +499,9 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
             Os dados serão capturados e salvos no Banco de Dados.
           </div>
         )}
-        <p className="text-[11px] text-gray-500 border-t border-gray-200 pt-2 mt-2">Independente da escolha acima, todos os formulários são salvos no painel do sistema para registro (leads).</p>
+        <p className="text-[11px] text-gray-500 border-t border-gray-200 pt-2 mt-2">
+          Independente da escolha acima, todos os formulários são salvos no painel do sistema para registro (leads).
+        </p>
       </div>
     </div>
   );
