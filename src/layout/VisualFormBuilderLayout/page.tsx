@@ -220,71 +220,62 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       <input type="hidden" name="componentName" value="${finalFormName}" />
     `;
 
-    // Processa a mensagem base de whatsapp para ser injetada em JS
-    const templateBase = (conf.content.whatsappMessage || "Olá! Seguem meus dados:\\n\\n{dados_formulario}")
-      .replace(/\\/g, '\\\\') // escapes de backslash
-      .replace(/\n/g, '\\n')  // quebras de linha
-      .replace(/"/g, '\\"');  // aspas duplas
+    // 1. Usar encodeURIComponent no texto do usuário para evitar quebra de HTML/JS com aspas ou newlines
+    const safeMessageBase = encodeURIComponent(conf.content.whatsappMessage || "Olá! Seguem meus dados:\\n\\n{dados_formulario}");
 
-    const scriptTemplate = `
-<script>
-  (function() {
-    var form = document.getElementById('${formId}');
-    if (form) {
-      form.addEventListener('submit', function(event) {
-        event.preventDefault(); 
-        var btn = form.querySelector('button[type=submit]'); 
-        var orig = '';
-        if(btn){
-          orig = btn.innerHTML; 
-          btn.innerHTML = 'Enviando...'; 
-          btn.disabled = true;
-        } 
-        
-        fetch('${baseUrl}/api/components/submit', {
-          method: 'POST', 
-          body: new FormData(form)
-        })
-        .finally(function() { 
-          if(btn){
-            btn.innerHTML = orig; 
-            btn.disabled = false;
-          } 
-          ${conf.content.actionType === 'whatsapp' ? `
-            var formDataObj = new FormData(form);
-            var finalMessage = "${templateBase}";
-            var formValuesText = '';
-            
-            for (var pair of formDataObj.entries()) {
-              var key = pair[0];
-              var value = pair[1];
-              if (key !== 'componentId' && key !== 'componentName' && value.trim() !== '') {
-                // Tenta substituir no formato {chave}
-                var regex = new RegExp('\\\\{' + key + '\\\\}', 'g');
-                if(finalMessage.match(regex)) {
-                  finalMessage = finalMessage.replace(regex, value);
-                } else {
-                  // Se não encontrou, junta tudo para colocar no {dados_formulario}
-                  formValuesText += key + ': ' + value + '\\n';
-                }
+    // 2. Montar o script cru - Substituimos as variáveis do JS em tempo real.
+    const rawJs = `
+      event.preventDefault();
+      var form = this;
+      var btn = form.querySelector('button[type=submit]');
+      var orig = '';
+      if(btn) {
+        orig = btn.innerHTML;
+        btn.innerHTML = 'Enviando...';
+        btn.disabled = true;
+      }
+      fetch('${baseUrl}/api/components/submit', {
+        method: 'POST',
+        body: new FormData(form)
+      }).finally(function() {
+        if(btn) {
+          btn.innerHTML = orig;
+          btn.disabled = false;
+        }
+        ${conf.content.actionType === 'whatsapp' ? `
+          var formDataObj = new FormData(form);
+          var templateBase = decodeURIComponent('${safeMessageBase}');
+          var finalMessage = templateBase;
+          var formValuesText = '';
+          
+          for (var pair of formDataObj.entries()) {
+            var key = pair[0];
+            var value = pair[1];
+            if (key !== 'componentId' && key !== 'componentName' && value.trim() !== '') {
+              // Regex para substituir a tag tipo {chave} ex: {nome_cliente}
+              var regex = new RegExp('\\\\{' + key + '\\\\}', 'g');
+              if(finalMessage.match(regex)) {
+                finalMessage = finalMessage.replace(regex, value);
+              } else {
+                // Se a variável não estava na mensagem, acumula para o fallback {dados_formulario}
+                formValuesText += key + ': ' + value + '\\n';
               }
             }
-            
-            // Substitui o coringa geral
-            finalMessage = finalMessage.replace('{dados_formulario}', formValuesText);
-            
-            var encodedMessage = encodeURIComponent(finalMessage);
-            window.open('https://api.whatsapp.com/send?phone=${conf.content.whatsappNumber}&text=' + encodedMessage, '_blank');
-            form.reset();
-          ` : `
-            alert('Enviado com sucesso!'); 
-            form.reset();
-          `}
-        });
+          }
+          
+          finalMessage = finalMessage.replace('{dados_formulario}', formValuesText);
+          var encodedMessage = encodeURIComponent(finalMessage);
+          window.open('https://api.whatsapp.com/send?phone=${conf.content.whatsappNumber}&text=' + encodedMessage, '_blank');
+          form.reset();
+        ` : `
+          alert('Enviado com sucesso!');
+          form.reset();
+        `}
       });
-    }
-  })();
-</script>`;
+    `;
+
+    // 3. Remover quebras de linha e escapar aspas duplas para o atributo "onsubmit" não quebrar o HTML
+    const onSubmitAttr = rawJs.replace(/\n/g, ' ').replace(/"/g, '&quot;');
 
     return `
       <style>
@@ -303,12 +294,11 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
         @media (max-width: 640px) { .${scopedClass} .field-col { width: 100% !important; flex: 0 0 100% !important; } }
       </style>
       <div class="${scopedClass}">
-        <form id="${formId}">
+        <form id="${formId}" onsubmit="${onSubmitAttr}">
           ${hiddenInputs}
           <div class="form-row">${fieldsHtml}</div>
         </form>
       </div>
-      ${scriptTemplate}
     `.trim(); 
   };
 
@@ -482,7 +472,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
               <textarea 
                 value={config.content.whatsappMessage} 
                 onChange={(e) => updateContent('whatsappMessage', e.target.value)} 
-                placeholder="Ex: Olá! Seguem meus dados: \n\n{dados_formulario}" 
+                placeholder="Ex: Olá! Seguem meus dados:\n\n{dados_formulario}" 
                 rows={4}
                 className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 resize-y" 
               />
