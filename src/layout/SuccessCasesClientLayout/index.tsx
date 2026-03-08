@@ -1,13 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ManageLayout } from "@/components/Manage/ManageLayout";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { Switch } from "@/components/Switch";
 import { 
   Users, 
   ShoppingBag, 
@@ -25,17 +24,14 @@ import {
   LucideIcon,
   BriefcaseBusiness,
   CheckCircle2,
-  AlertCircle,
-  Target,
-  LayoutTemplate,
-  Link2
+  AlertCircle
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
 import { DeleteConfirmationModal } from "@/components/Manage/DeleteConfirmationModal";
 import { SectionHeader } from "@/components/SectionHeader";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
-import Loading from "@/components/Loading";
+import Loading from "@/components/Loading"; // ADICIONADO
 import Image from "next/image";
 
 interface Testimonial {
@@ -48,14 +44,6 @@ interface Testimonial {
   tags: string[];
 }
 
-interface CTAData {
-  text: string;
-  link: string;
-  description?: string; // ADICIONADO: Descrição extra do CTA
-  use_form?: boolean;
-  form_id?: string;
-}
-
 interface SectionData {
   badge: {
     text: string;
@@ -65,7 +53,6 @@ interface SectionData {
     part1: string;
     part2: string;
   };
-  cta: CTAData;
   testimonials: Testimonial[];
 }
 
@@ -80,57 +67,15 @@ interface SectionFiles {
   };
 }
 
-const defaultCTA: CTAData = {
-  text: "Ver todos os cases",
-  link: "/cases",
-  description: "",
-  use_form: false,
-  form_id: ""
-};
-
-// ATUALIZADO: Estrutura inicial conforme seu JSON
 const defaultSuccessCasesData: SuccessCasesData = {
   ecommerce: {
-    badge: {
-      text: "Casos de sucesso",
-      icon: "mdi:store-check"
-    },
-    title: {
-      part1: "Resultados que",
-      part2: "transformam negócios"
-    },
-    testimonials: [
-      {
-        id: 1,
-        logo: "/images/logos/loja1.png",
-        name: "Loja Exemplo",
-        description: "E-commerce de moda",
-        result: "+230% de vendas em 3 meses",
-        metric: "ROAS 8.5x",
-        tags: ["Google Ads", "Facebook Ads"]
-      },
-      {
-        id: 2,
-        logo: "/images/logos/loja2.png",
-        name: "TechStore",
-        description: "Eletrônicos",
-        result: "R$ 1,2M em faturamento",
-        metric: "+45% conversão",
-        tags: ["TikTok Ads", "CRM"]
-      }
-    ],
-    cta: {
-      text: "Quero resultados assim",
-      link: "https://wa.me/5514991779502",
-      description: "Agende um diagnóstico gratuito",
-      use_form: true,
-      form_id: ""
-    }
+    badge: { text: "", icon: "" },
+    title: { part1: "", part2: "" },
+    testimonials: []
   },
   marketing: {
     badge: { text: "", icon: "" },
     title: { part1: "", part2: "" },
-    cta: { ...defaultCTA },
     testimonials: []
   }
 };
@@ -144,15 +89,14 @@ const availableIcons = [
   { value: "lucide:building", label: "Edifício", icon: Building },
   { value: "lucide:briefcase", label: "Maleta", icon: BriefcaseBusiness },
   { value: "lucide:users", label: "Usuários", icon: Users },
-  { value: "lucide:shopping-bag", label: "Sacola", icon: ShoppingBag },
-  { value: "mdi:store-check", label: "Loja Verificada", icon: ShoppingBag } // Adicionado para suportar seu ícone
+  { value: "lucide:shopping-bag", label: "Sacola", icon: ShoppingBag }
 ];
 
 const defaultTags = [
   "E-commerce", "Gestão", "Automação", "Processos", "Social Media",
   "Branding", "Tráfego Local", "Google", "Leads", "Vendas", "CRM",
   "Fidelização", "Google Ads", "CRM Kommo", "Meta Ads", "Inbound",
-  "Hubspot", "Tráfego", "Copywriting", "BI", "Dashboards", "Facebook Ads", "TikTok Ads"
+  "Hubspot", "Tráfego", "Copywriting", "BI", "Dashboards"
 ];
 
 // Componente de preview de logo
@@ -293,39 +237,7 @@ const TagInput = ({ tags, onTagsChange, availableTags = defaultTags }: TagInputP
   );
 };
 
-// Merge das informações recebidas pela API
-const mergeWithDefaults = (apiData: any, defaultData: SuccessCasesData): SuccessCasesData => {
-  if (!apiData) return defaultData;
-  
-  const mergeSection = (apiSection: any, defaultSection: SectionData): SectionData => {
-    if (!apiSection) return defaultSection;
-    return {
-      badge: {
-        text: apiSection.badge?.text || defaultSection.badge.text,
-        icon: apiSection.badge?.icon || defaultSection.badge.icon
-      },
-      title: {
-        part1: apiSection.title?.part1 || defaultSection.title.part1,
-        part2: apiSection.title?.part2 || defaultSection.title.part2
-      },
-      cta: {
-        text: apiSection.cta?.text || defaultSection.cta.text,
-        // Suporta receber 'url' como no JSON original ou 'link' 
-        link: apiSection.cta?.link || apiSection.cta?.url || defaultSection.cta.link,
-        description: apiSection.cta?.description || defaultSection.cta.description,
-        use_form: apiSection.cta?.use_form ?? defaultSection.cta.use_form,
-        form_id: apiSection.cta?.form_id || defaultSection.cta.form_id,
-      },
-      testimonials: apiSection.testimonials?.length ? apiSection.testimonials : defaultSection.testimonials
-    };
-  };
-
-  return {
-    ecommerce: mergeSection(apiData.ecommerce, defaultData.ecommerce),
-    marketing: mergeSection(apiData.marketing, defaultData.marketing)
-  };
-};
-
+// Interface para receber as propriedades passadas pelo Server Component
 interface SuccessCasesClientLayoutProps {
   initialData: any;
   initialTheme?: "ecommerce" | "marketing";
@@ -333,6 +245,7 @@ interface SuccessCasesClientLayoutProps {
 
 export default function SuccessCasesClientLayout({ initialData, initialTheme = "ecommerce" }: SuccessCasesClientLayoutProps) {
   
+  // Opcional: Você pode manter um único painel aberto baseado no initialTheme
   const [expandedSections, setExpandedSections] = useState({
     ecommerce: initialTheme === "ecommerce",
     marketing: initialTheme === "marketing"
@@ -361,27 +274,8 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
     setFileState,
   } = useJsonManagement<SuccessCasesData>({
     apiPath: "/api/tegbe-institucional/json/company",
-    defaultData: initialData ? mergeWithDefaults(initialData, defaultSuccessCasesData) : defaultSuccessCasesData,
-    mergeFunction: mergeWithDefaults,
+    defaultData: initialData || defaultSuccessCasesData, // Usa o dado do servidor se existir
   });
-
-  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
-  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
-  
-  useEffect(() => {
-    const fetchForms = async () => {
-      try {
-        const res = await fetch("/api/components");
-        const data = await res.json();
-        if (data.success) {
-          setAvailableForms(data.components);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar formulários:", error);
-      }
-    };
-    fetchForms();
-  }, []);
 
   const calculateCompleteCount = useCallback(() => {
     let count = 0;
@@ -401,16 +295,6 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
       if (sectionData.title.part1.trim() !== "") count++;
       if (sectionData.title.part2.trim() !== "") count++;
       total += 2;
-
-      // CTA
-      if (sectionData.cta.text.trim() !== "") count++;
-      if (sectionData.cta.description?.trim() !== "") count++;
-      if (sectionData.cta.use_form) {
-        if (sectionData.cta.form_id?.trim() !== "") count++;
-      } else {
-        if (sectionData.cta.link.trim() !== "") count++;
-      }
-      total += 3;
       
       // Testimonials
       sectionData.testimonials.forEach(testimonial => {
@@ -651,7 +535,7 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         handleTestimonialChange(section, index, "description", e.target.value)
                       }
-                      placeholder="Ex: E-commerce de moda"
+                      placeholder="Ex: Loja de Decorações • Garça/SP"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
@@ -666,25 +550,27 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
                       onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         handleTestimonialChange(section, index, "result", e.target.value)
                       }
-                      placeholder="Ex: +230% de vendas em 3 meses"
+                      placeholder="Ex: Aumento de 30% nas Vendas"
                       className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
-                      Métrica Adicional (opcional)
-                    </label>
-                    <Input
-                      type="text"
-                      value={testimonial.metric || ""}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        handleTestimonialChange(section, index, "metric", e.target.value)
-                      }
-                      placeholder="Ex: ROAS 8.5x"
-                      className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                    />
-                  </div>
+                  {section === "marketing" && (
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-1">
+                        Métrica Adicional (opcional)
+                      </label>
+                      <Input
+                        type="text"
+                        value={testimonial.metric || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          handleTestimonialChange(section, index, "metric", e.target.value)
+                        }
+                        placeholder="Ex: Em 3 meses de campanha"
+                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                      />
+                    </div>
+                  )}
 
                   <TagInput
                     tags={testimonial.tags || []}
@@ -719,7 +605,7 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 handleSectionChange(section, "badge.text", e.target.value)
               }
-              placeholder="Ex: Casos de sucesso"
+              placeholder="Ex: Track Record"
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
           </div>
@@ -733,7 +619,7 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                 handleSectionChange(section, "badge.icon", e.target.value)
               }
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
             >
               <option value="">Selecione um ícone...</option>
               {availableIcons.map((icon) => (
@@ -757,7 +643,7 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 handleSectionChange(section, "title.part1", e.target.value)
               }
-              placeholder="Ex: Resultados que"
+              placeholder="Ex: Empresas que estão"
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
           </div>
@@ -772,102 +658,14 @@ export default function SuccessCasesClientLayout({ initialData, initialTheme = "
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 handleSectionChange(section, "title.part2", e.target.value)
               }
-              placeholder="Ex: transformam negócios"
+              placeholder="Ex: vendendo conosco."
               className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
             />
           </div>
         </div>
 
-        {/* --- CALL TO ACTION --- */}
-        <div className="space-y-4 pt-6 border-t border-[var(--color-border)]">
-          <h4 className="text-lg font-semibold text-[var(--color-secondary)] flex items-center gap-2">
-            <Target className="w-5 h-5" />
-            Call to Action (CTA) da Seção
-          </h4>
-          
-          <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
-                <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
-                Abrir Formulário no Clique
-              </h4>
-              <p className="text-xs text-[var(--color-secondary)] opacity-70 mt-1">
-                Ative para abrir um formulário popup em vez de direcionar para um link.
-              </p>
-            </div>
-            <Switch
-              checked={sectionData.cta.use_form || false}
-              onCheckedChange={(checked: boolean) => handleSectionChange(section, "cta.use_form", checked)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Texto do Botão
-                </label>
-                <Input
-                  type="text"
-                  value={sectionData.cta.text}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSectionChange(section, "cta.text", e.target.value)}
-                  placeholder="Ex: Quero resultados assim"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                  Descrição Adicional
-                </label>
-                <Input
-                  type="text"
-                  value={sectionData.cta.description || ""}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSectionChange(section, "cta.description", e.target.value)}
-                  placeholder="Ex: Agende um diagnóstico gratuito"
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-            </div>
-
-            {sectionData.cta.use_form ? (
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                  <LayoutTemplate className="w-4 h-4 text-[var(--color-secondary)]" /> Formulário Vinculado
-                </label>
-                <select
-                  value={sectionData.cta.form_id || ""}
-                  onChange={(e) => handleSectionChange(section, "cta.form_id", e.target.value)}
-                  className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
-                >
-                  <option value="">-- Selecione o formulário --</option>
-                  {availableForms.map(form => (
-                    <option key={form.id} value={form.id}>{form.name}</option>
-                  ))}
-                </select>
-                {availableForms.length === 0 && (
-                  <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
-                )}
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                  <Link2 className="w-4 h-4 text-[var(--color-secondary)]" /> Link (URL)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Ex: https://wa.me/55..."
-                  value={sectionData.cta.link}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSectionChange(section, "cta.link", e.target.value)}
-                  className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Lista de Testimonials */}
-        <div className="space-y-4 pt-6 border-t border-[var(--color-border)]">
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h4 className="text-lg font-semibold text-[var(--color-secondary)]">
