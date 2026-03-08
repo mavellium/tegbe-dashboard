@@ -7,7 +7,7 @@ import {
   Type, Palette, List, Settings, GripVertical, Trash2, 
   LayoutTemplate, Phone, Mail, AlignLeft, ChevronDown, 
   X, PanelLeftClose, PanelLeftOpen, AlignCenter, AlignRight, 
-  Save, Loader2, MousePointerSquareDashed, Layers, Heading, ArrowLeft
+  Save, Loader2, MousePointerSquareDashed, Layers, Heading, ArrowLeft, Eye
 } from "lucide-react";
 
 type FieldType = "header" | "text" | "email" | "tel" | "textarea" | "select" | "button";
@@ -98,11 +98,9 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
     if (initialId) setComponentId(initialId);
     if (initialConfig) {
       const loadedConfig = { ...initialConfig };
-      
       if (!loadedConfig.content.whatsappMessage) {
         loadedConfig.content.whatsappMessage = defaultConfig.content.whatsappMessage;
       }
-
       const newFields = [...(loadedConfig.fields || [])];
       if (!newFields.some((f: FormField) => f.type === 'header')) newFields.unshift({ id: 'header-migrated', type: 'header', label: "Formulário", placeholder: "", required: false, width: '100%' });
       if (!newFields.some((f: FormField) => f.type === 'button')) newFields.push({ id: 'btn-migrated', type: 'button', label: "Enviar", placeholder: "", required: false, width: "100%", buttonAction: "submit" });
@@ -132,8 +130,16 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
   const updateDesign = (key: keyof FormDesign, value: string) => setConfig(prev => ({ ...prev, design: { ...prev.design, [key]: value } }));
   const updateContent = (key: keyof FormContent, value: any) => setConfig(prev => ({ ...prev, content: { ...prev.content, [key]: value } }));
   
-  // Helper para padronizar o nome das variáveis e input names
   const getFieldName = (f: FormField) => f.nameAttr?.trim() || f.label.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() || f.id;
+
+  const formatPhoneMask = (value: string) => {
+    const v = value.replace(/\D/g, ''); 
+    if (v.length === 0) return '';
+    if (v.length <= 2) return `+${v}`; 
+    if (v.length <= 4) return `+${v.slice(0,2)} (${v.slice(2)})`; 
+    if (v.length <= 9) return `+${v.slice(0,2)} (${v.slice(2,4)}) ${v.slice(4)}`; 
+    return `+${v.slice(0,2)} (${v.slice(2,4)}) ${v.slice(4,9)}-${v.slice(9,13)}`; 
+  };
 
   const addField = (type: FieldType) => {
     const baseName = type === 'email' ? 'email' : type === 'tel' ? 'telefone' : type === 'button' ? 'botao' : type === 'header' ? 'titulo' : 'campo';
@@ -172,9 +178,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
 
   const generateHTML = (conf: VisualFormConfig, finalFormName: string) => {
     const scopedClass = `form-{{COMPONENT_ID}}`;
-    const formId = `fid-{{COMPONENT_ID}}`;
     const formMaxWidth = conf.design.formWidthType === 'full' ? '100%' : `${conf.design.formWidthPx}px`;
-
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 
     const fieldsHtml = conf.fields.map(f => {
@@ -190,7 +194,6 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       }
       
       const styleStr = inlineStyle.length > 0 ? `style="${inlineStyle.join('; ')}${isButton && f.buttonAction === 'reset' ? '; border-width: 1px; border-style: solid;' : ''}"` : '';
-      
       const inputName = getFieldName(f);
       const widthStyle = f.width === 'auto' ? 'width: auto; flex: 0 0 auto;' : `width: ${f.width || '100%'}; flex: 0 0 ${f.width || '100%'};`;
 
@@ -220,62 +223,50 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       <input type="hidden" name="componentName" value="${finalFormName}" />
     `;
 
-    // 1. Usar encodeURIComponent no texto do usuário para evitar quebra de HTML/JS com aspas ou newlines
-    const safeMessageBase = encodeURIComponent(conf.content.whatsappMessage || "Olá! Seguem meus dados:\\n\\n{dados_formulario}");
+    const cleanNumber = conf.content.whatsappNumber.replace(/\D/g, '');
+    
+    // Transforma e garante segurança da string codificando com URL (Impede quebra de JS)
+    const safeMessageBase = encodeURIComponent(conf.content.whatsappMessage || "Olá! Seguem meus dados:\n\n{dados_formulario}")
+      .replace(/'/g, "%27")
+      .replace(/"/g, "%22");
 
-    // 2. Montar o script cru - Substituimos as variáveis do JS em tempo real.
+    // Logica Crua em JS rodando no submit
     const rawJs = `
-      event.preventDefault();
-      var form = this;
-      var btn = form.querySelector('button[type=submit]');
-      var orig = '';
-      if(btn) {
-        orig = btn.innerHTML;
-        btn.innerHTML = 'Enviando...';
-        btn.disabled = true;
-      }
-      fetch('${baseUrl}/api/components/submit', {
-        method: 'POST',
-        body: new FormData(form)
-      }).finally(function() {
-        if(btn) {
-          btn.innerHTML = orig;
-          btn.disabled = false;
-        }
-        ${conf.content.actionType === 'whatsapp' ? `
-          var formDataObj = new FormData(form);
-          var templateBase = decodeURIComponent('${safeMessageBase}');
-          var finalMessage = templateBase;
-          var formValuesText = '';
-          
-          for (var pair of formDataObj.entries()) {
-            var key = pair[0];
-            var value = pair[1];
-            if (key !== 'componentId' && key !== 'componentName' && value.trim() !== '') {
-              // Regex para substituir a tag tipo {chave} ex: {nome_cliente}
-              var regex = new RegExp('\\\\{' + key + '\\\\}', 'g');
-              if(finalMessage.match(regex)) {
-                finalMessage = finalMessage.replace(regex, value);
-              } else {
-                // Se a variável não estava na mensagem, acumula para o fallback {dados_formulario}
-                formValuesText += key + ': ' + value + '\\n';
-              }
-            }
+      event.preventDefault(); 
+      var form = this; 
+      var btn = form.querySelector('button[type=submit]'); 
+      if(btn){ btn.dataset.o = btn.innerHTML; btn.innerHTML = 'Enviando...'; btn.disabled = true; } 
+      
+      var fd = new FormData(form);
+      var template = decodeURIComponent('${safeMessageBase}');
+      var txt = '';
+      
+      for (var pair of fd.entries()) {
+        var k = pair[0], v = pair[1];
+        if (k !== 'componentId' && k !== 'componentName' && v.trim() !== '') {
+          var regex = new RegExp('\\\\{' + k + '\\\\}', 'g');
+          if (template.match(regex)) {
+            template = template.replace(regex, v);
+          } else {
+            txt += k + ': ' + v + '\\n';
           }
-          
-          finalMessage = finalMessage.replace('{dados_formulario}', formValuesText);
-          var encodedMessage = encodeURIComponent(finalMessage);
-          window.open('https://api.whatsapp.com/send?phone=${conf.content.whatsappNumber}&text=' + encodedMessage, '_blank');
-          form.reset();
-        ` : `
-          alert('Enviado com sucesso!');
-          form.reset();
-        `}
-      });
+        }
+      }
+      
+      template = template.replace('{dados_formulario}', txt);
+      var finalUrl = 'https://api.whatsapp.com/send?phone=${cleanNumber}&text=' + encodeURIComponent(template);
+
+      fetch('${baseUrl}/api/components/submit', { method: 'POST', body: fd })
+        .finally(function() { 
+          if(btn) { btn.innerHTML = btn.dataset.o; btn.disabled = false; } 
+          ${conf.content.actionType === 'whatsapp' ? `window.open(finalUrl, '_blank');` : `alert('Enviado com sucesso!');`}
+          form.reset(); 
+        });
+      return false;
     `;
 
-    // 3. Remover quebras de linha e escapar aspas duplas para o atributo "onsubmit" não quebrar o HTML
-    const onSubmitAttr = rawJs.replace(/\n/g, ' ').replace(/"/g, '&quot;');
+    // Escapando aspas duplas para o atributo HTML
+    const safeOnSubmitStr = rawJs.replace(/"/g, '&quot;').replace(/\n/g, ' ');
 
     return `
       <style>
@@ -294,7 +285,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
         @media (max-width: 640px) { .${scopedClass} .field-col { width: 100% !important; flex: 0 0 100% !important; } }
       </style>
       <div class="${scopedClass}">
-        <form id="${formId}" onsubmit="${onSubmitAttr}">
+        <form onsubmit="${safeOnSubmitStr}">
           ${hiddenInputs}
           <div class="form-row">${fieldsHtml}</div>
         </form>
@@ -348,7 +339,13 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
         <div className="space-y-1.5">
           {config.fields.map((f, i) => (
             <div key={f.id} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} onClick={() => setActiveFieldIndex(i)} className={`p-2 flex justify-between items-center border rounded text-xs cursor-grab active:cursor-grabbing transition-colors ${activeFieldIndex === i ? 'bg-blue-50 border-blue-400 text-blue-800' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
-              <div className="flex items-center gap-2 truncate"><GripVertical className="w-3.5 h-3.5 text-gray-400 shrink-0" /><span className="truncate font-medium">{f.label || (f.type === 'header' ? 'Cabeçalho' : f.type === 'button' ? 'Botão' : 'Sem Nome')} <span className="text-[10px] text-gray-400 font-normal ml-1">({f.type})</span></span></div>
+              <div className="flex items-center gap-2 truncate">
+                <GripVertical className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                <span className="truncate font-medium">
+                  {f.label || f.nameAttr || f.type} 
+                  <span className="text-[10px] text-gray-400 font-normal ml-1">({f.type})</span>
+                </span>
+              </div>
               <button onClick={(e) => removeField(i, e)} className="text-gray-400 hover:text-red-500 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
@@ -383,7 +380,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
               ) : (
                 <>
                   <div>
-                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Variavel para uso)</label>
+                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Variável para uso)</label>
                     <input type="text" value={config.fields[activeFieldIndex].nameAttr || ""} onChange={(e) => updateField(activeFieldIndex, { nameAttr: e.target.value })} placeholder="Ex: nome_cliente" className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none font-mono" />
                   </div>
                   <div><label className="text-xs text-gray-600 font-medium">Label (Rótulo)</label><input type="text" value={config.fields[activeFieldIndex].label} onChange={(e) => updateField(activeFieldIndex, { label: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>
@@ -460,9 +457,9 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
               <label className="block text-xs font-semibold text-gray-700 mb-1">Número Destino</label>
               <input 
                 type="text" 
-                value={config.content.whatsappNumber} 
-                onChange={(e) => updateContent('whatsappNumber', e.target.value)} 
-                placeholder="Ex: 5511999999999" 
+                value={formatPhoneMask(config.content.whatsappNumber)} 
+                onChange={(e) => updateContent('whatsappNumber', e.target.value.replace(/\D/g, ''))} 
+                placeholder="+55 (11) 99999-9999" 
                 className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500" 
               />
             </div>
@@ -476,10 +473,11 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
                 rows={4}
                 className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 resize-y" 
               />
-              <p className="text-[11px] text-gray-500 mt-1">
-                Variáveis disponíveis: <strong className="text-blue-600">{`{dados_formulario}`}</strong> (para todos os dados), 
+              <p className="text-[11px] text-gray-500 mt-2 leading-relaxed">
+                Variáveis disponíveis para uso na mensagem:<br/>
+                <strong className="text-blue-600">{`{dados_formulario}`}</strong> (mostra todos os campos)<br/>
                 {config.fields.filter(f => !['header', 'button'].includes(f.type)).map(f => (
-                  <span key={f.id} className="text-blue-600 font-mono ml-1">{`{${getFieldName(f)}}`}</span>
+                  <span key={f.id} className="text-blue-600 font-mono mr-2">{`{${getFieldName(f)}}`}</span>
                 ))}
               </p>
             </div>
@@ -509,6 +507,16 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
           <div className="flex items-center justify-between">
             <Link href="/formularios-acoes" className="text-gray-300 hover:text-white text-xs font-medium transition-colors flex items-center gap-1"><ArrowLeft className="w-3.5 h-3.5" /> Voltar</Link>
             <div className="flex items-center gap-2">
+              {/* NOVO: Botão de Preview */}
+              <a 
+                href={`/formularios-acoes/${componentId}/preview`} 
+                target="_blank"
+                rel="noreferrer"
+                className={`bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition-colors ${!componentId ? 'opacity-50 pointer-events-none' : ''}`}
+                title={!componentId ? "Salve o formulário antes de pré-visualizar" : "Ver em nova aba"}
+              >
+                <Eye className="w-3 h-3" /> Preview
+              </a>
               <button onClick={handleSave} disabled={isSaving} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition-colors disabled:opacity-50">
                 {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Salvar
               </button>

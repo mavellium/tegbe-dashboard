@@ -10,13 +10,14 @@ import { Button } from "@/components/Button";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { 
   Plus, Edit3, Trash2, LayoutTemplate, Loader2, 
-  Check, X, Search, Calendar, FileText
+  Check, X, Search, Calendar, FileText, Eye // Adicionado o Eye
 } from "lucide-react";
 
 interface FormItem {
   id: string;
   name: string;
   updatedAt: string;
+  isDatabaseAction: boolean; // Nova propriedade adicionada
 }
 
 interface FormsDashboardLayoutProps {
@@ -100,6 +101,7 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
   };
 
   const handleEdit = (id: string) => router.push(`formularios-acoes/${id}`);
+  const handleViewLeads = (id: string) => router.push(`formularios-acoes/${id}/leads`);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este formulário? Essa ação é permanente.")) return;
@@ -242,21 +244,37 @@ export default function FormsDashboardLayout({ initialForms }: FormsDashboardLay
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3 mt-6 pt-5 border-t border-[var(--color-border)]">
+                <div className="flex items-center justify-between gap-2 mt-6 pt-5 border-t border-[var(--color-border)]">
                   <Button 
                     variant="secondary" 
                     onClick={() => handleEdit(form.id)} 
-                    className="flex-1 bg-[var(--color-background-body)] border-transparent hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-[var(--color-secondary)]"
+                    className="flex-1 bg-[var(--color-background-body)] border-transparent hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] text-[var(--color-secondary)] text-xs sm:text-sm px-3 py-2"
                   >
                     Editor Visual
                   </Button>
-                  <button 
-                    onClick={() => handleDelete(form.id)} 
-                    className="p-2 text-[var(--color-secondary)] opacity-40 hover:opacity-100 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                    aria-label="Excluir formulário"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {/* Botão de visualizar leads aparece se não for envio direto para Whatsapp */}
+                    {form.isDatabaseAction && (
+                      <button 
+                        onClick={() => handleViewLeads(form.id)} 
+                        className="flex items-center gap-1.5 px-3 py-2 text-[var(--color-secondary)] opacity-80 hover:opacity-100 hover:text-green-600 hover:bg-green-500/10 rounded-lg transition-all border border-transparent hover:border-green-500/20"
+                        title="Visualizar Respostas/Leads"
+                      >
+                        <Eye className="w-4 h-4" />
+                        <span className="text-xs font-semibold hidden xl:block">Ver Leads</span>
+                      </button>
+                    )}
+
+                    <button 
+                      onClick={() => handleDelete(form.id)} 
+                      className="p-2 text-[var(--color-secondary)] opacity-40 hover:opacity-100 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                      aria-label="Excluir formulário"
+                      title="Excluir Formulário"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}
