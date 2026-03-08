@@ -17,7 +17,16 @@ interface TextStyle { color?: string; fontSize?: string; textAlign?: "left" | "c
 interface FieldStyle { bgColor?: string; textColor?: string; borderColor?: string; borderRadius?: string; }
 
 interface FormField {
-  id: string; type: FieldType; label: string; placeholder: string; required: boolean; options?: string; style?: FieldStyle; width?: FieldWidth; buttonAction?: "submit" | "reset" | "button"; 
+  id: string; 
+  type: FieldType; 
+  label: string; 
+  nameAttr?: string; 
+  placeholder: string; 
+  required: boolean; 
+  options?: string; 
+  style?: FieldStyle; 
+  width?: FieldWidth; 
+  buttonAction?: "submit" | "reset" | "button"; 
 }
 
 interface FormDesign {
@@ -25,14 +34,24 @@ interface FormDesign {
 }
 
 interface FormContent {
-  titleStyle?: TextStyle; subtitleStyle?: TextStyle; actionType: "whatsapp" | "database"; whatsappNumber: string; 
+  titleStyle?: TextStyle; 
+  subtitleStyle?: TextStyle; 
+  actionType: "whatsapp" | "database"; 
+  whatsappNumber: string; 
+  whatsappMessage: string; 
 }
 
 interface VisualFormConfig { design: FormDesign; content: FormContent; fields: FormField[]; }
 
 const defaultConfig: VisualFormConfig = {
   design: { primaryColor: "#3B82F6", bgColor: "#ffffff", textColor: "#1f2937", fontFamily: "font-sans", buttonRadius: "0.5rem", inputBgColor: "#ffffff", inputBorderColor: "#d1d5db", formWidthType: "manual", formWidthPx: "600", formPadding: "32" },
-  content: { titleStyle: { fontSize: "30px", textAlign: "center", color: "#111827" }, subtitleStyle: { fontSize: "14px", textAlign: "center", color: "#6b7280" }, actionType: "database", whatsappNumber: "5511999999999" },
+  content: { 
+    titleStyle: { fontSize: "30px", textAlign: "center", color: "#111827" }, 
+    subtitleStyle: { fontSize: "14px", textAlign: "center", color: "#6b7280" }, 
+    actionType: "database", 
+    whatsappNumber: "5511999999999",
+    whatsappMessage: "Olá! Gostaria de mais informações.\n\n{dados_formulario}"
+  },
   fields: [
     { id: "header-1", type: "header", label: "Novo Formulário", placeholder: "Edite os campos como quiser.", required: false, width: "100%" },
     { id: "btn1", type: "button", label: "Enviar", placeholder: "", required: false, width: "100%", buttonAction: "submit" }
@@ -50,6 +69,11 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
   const [config, setConfig] = useState<VisualFormConfig>(() => {
     if (!initialConfig) return defaultConfig;
     const loadedConfig = { ...initialConfig };
+    
+    if (!loadedConfig.content.whatsappMessage) {
+      loadedConfig.content.whatsappMessage = defaultConfig.content.whatsappMessage;
+    }
+
     const newFields = [...(loadedConfig.fields || [])];
     if (!newFields.some((f: FormField) => f.type === 'header')) newFields.unshift({ id: 'header-migrated', type: 'header', label: "Formulário", placeholder: "", required: false, width: '100%' });
     if (!newFields.some((f: FormField) => f.type === 'button')) newFields.push({ id: 'btn-migrated', type: 'button', label: "Enviar", placeholder: "", required: false, width: "100%", buttonAction: "submit" });
@@ -74,6 +98,11 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
     if (initialId) setComponentId(initialId);
     if (initialConfig) {
       const loadedConfig = { ...initialConfig };
+      
+      if (!loadedConfig.content.whatsappMessage) {
+        loadedConfig.content.whatsappMessage = defaultConfig.content.whatsappMessage;
+      }
+
       const newFields = [...(loadedConfig.fields || [])];
       if (!newFields.some((f: FormField) => f.type === 'header')) newFields.unshift({ id: 'header-migrated', type: 'header', label: "Formulário", placeholder: "", required: false, width: '100%' });
       if (!newFields.some((f: FormField) => f.type === 'button')) newFields.push({ id: 'btn-migrated', type: 'button', label: "Enviar", placeholder: "", required: false, width: "100%", buttonAction: "submit" });
@@ -102,11 +131,22 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
 
   const updateDesign = (key: keyof FormDesign, value: string) => setConfig(prev => ({ ...prev, design: { ...prev.design, [key]: value } }));
   const updateContent = (key: keyof FormContent, value: any) => setConfig(prev => ({ ...prev, content: { ...prev.content, [key]: value } }));
-  const updateTitleStyle = (key: keyof TextStyle, value: string) => updateContent("titleStyle", { ...(config.content.titleStyle || {}), [key]: value });
-  const updateSubtitleStyle = (key: keyof TextStyle, value: string) => updateContent("subtitleStyle", { ...(config.content.subtitleStyle || {}), [key]: value });
+  
+  // Helper para padronizar o nome das variáveis e input names
+  const getFieldName = (f: FormField) => f.nameAttr?.trim() || f.label.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() || f.id;
 
   const addField = (type: FieldType) => {
-    const newField: FormField = { id: `field-${Date.now()}`, type, label: type === 'email' ? 'E-mail' : type === 'tel' ? 'Telefone' : type === 'button' ? 'Novo Botão' : type === 'header' ? 'Novo Título' : 'Novo Campo', placeholder: type === 'header' ? 'Digite uma descrição breve.' : '', required: false, width: "100%", buttonAction: type === 'button' ? 'submit' : undefined };
+    const baseName = type === 'email' ? 'email' : type === 'tel' ? 'telefone' : type === 'button' ? 'botao' : type === 'header' ? 'titulo' : 'campo';
+    const newField: FormField = { 
+      id: `field-${Date.now()}`, 
+      type, 
+      label: type === 'email' ? 'E-mail' : type === 'tel' ? 'Telefone' : type === 'button' ? 'Botão' : type === 'header' ? 'Título' : 'Novo Campo', 
+      nameAttr: `${baseName}_${Date.now().toString().slice(-4)}`, 
+      placeholder: type === 'header' ? 'Digite uma descrição breve.' : '', 
+      required: false, 
+      width: "100%", 
+      buttonAction: type === 'button' ? 'submit' : undefined 
+    };
     setConfig(prev => ({ ...prev, fields: [...prev.fields, newField] }));
     setActiveFieldIndex(config.fields.length);
     if (!isSidebarOpen && window.innerWidth < 768) setIsSidebarOpen(true);
@@ -150,7 +190,8 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       }
       
       const styleStr = inlineStyle.length > 0 ? `style="${inlineStyle.join('; ')}${isButton && f.buttonAction === 'reset' ? '; border-width: 1px; border-style: solid;' : ''}"` : '';
-      const inputName = f.label.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() || f.id;
+      
+      const inputName = getFieldName(f);
       const widthStyle = f.width === 'auto' ? 'width: auto; flex: 0 0 auto;' : `width: ${f.width || '100%'}; flex: 0 0 ${f.width || '100%'};`;
 
       let contentHtml = "";
@@ -159,7 +200,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
         const subtitleStyleStr = `color: ${conf.content.subtitleStyle?.color || conf.design.textColor}; font-size: ${conf.content.subtitleStyle?.fontSize || '14px'}; text-align: ${conf.content.subtitleStyle?.textAlign || 'center'}; margin: 0 0 1.5rem 0; line-height: 1.4;`;
         contentHtml = `<div style="width: 100%; padding-bottom: 1rem;"><h2 style="${titleStyleStr}">${f.label}</h2>${f.placeholder ? `<p style="${subtitleStyleStr}">${f.placeholder}</p>` : ''}</div>`;
       } else if (isButton) {
-        contentHtml = `<button type="${f.buttonAction || 'submit'}" class="form-btn" ${styleStr}>${f.label}</button>`;
+        contentHtml = `<button type="${f.buttonAction || 'submit'}" class="form-btn" ${styleStr} name="${inputName}">${f.label}</button>`;
       } else {
         const labelHtml = `<label for="${inputName}">${f.label} ${f.required ? '<span class="req">*</span>' : ''}</label>`;
         let inputHtml = "";
@@ -179,11 +220,53 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       <input type="hidden" name="componentName" value="${finalFormName}" />
     `;
 
-    const successAction = conf.content.actionType === 'whatsapp' 
-      ? `window.open('https://api.whatsapp.com/send?phone=${conf.content.whatsappNumber}&text=Olá! Preenchi o formulário: ${finalFormName}.', '_blank');` 
-      : `alert('Enviado com sucesso!'); form.reset();`;
+    let successAction = `alert('Enviado com sucesso!'); form.reset();`;
+    
+    if (conf.content.actionType === 'whatsapp') {
+      const templateBase = (conf.content.whatsappMessage || "Olá! Seguem meus dados:\\n\\n{dados_formulario}").replace(/`/g, '\\`');
+      
+      successAction = `
+        const formDataObj = new FormData(form);
+        let finalMessage = \`${templateBase}\`;
+        let formValuesText = '';
+        
+        for (let [key, value] of formDataObj.entries()) {
+          if (key !== 'componentId' && key !== 'componentName' && value.trim() !== '') {
+            // Substituição de variáveis especificas (ex: {nome})
+            const regex = new RegExp('\\\\{' + key + '\\\\}', 'g');
+            if(finalMessage.match(regex)) {
+              finalMessage = finalMessage.replace(regex, value);
+            } else {
+              // Se não estiver especificado no texto, adiciona no {dados_formulario}
+              formValuesText += key + ': ' + value + '\\n';
+            }
+          }
+        }
+        
+        // Substitui a tag geral pelo restante dos campos
+        finalMessage = finalMessage.replace('{dados_formulario}', formValuesText);
+        
+        let encodedMessage = encodeURIComponent(finalMessage);
+        window.open('https://api.whatsapp.com/send?phone=${conf.content.whatsappNumber}&text=' + encodedMessage, '_blank');
+        form.reset();
+      `;
+    }
 
-    const onSubmitJs = `event.preventDefault(); var form=this; var btn=form.querySelector('button[type=submit]'); if(btn){var orig=btn.innerHTML; btn.innerHTML='Enviando...'; btn.disabled=true;} fetch('${baseUrl}/api/components/submit', {method:'POST', body: new FormData(form)}).finally(() => { if(btn){btn.innerHTML=orig; btn.disabled=false;} ${successAction} });`;
+    const onSubmitJs = `
+      event.preventDefault(); 
+      var form=this; 
+      var btn=form.querySelector('button[type=submit]'); 
+      if(btn){
+        var orig=btn.innerHTML; 
+        btn.innerHTML='Enviando...'; 
+        btn.disabled=true;
+      } 
+      fetch('${baseUrl}/api/components/submit', {method:'POST', body: new FormData(form)})
+        .finally(() => { 
+          if(btn){btn.innerHTML=orig; btn.disabled=false;} 
+          ${successAction} 
+        });
+    `;
 
     return `
       <style>
@@ -256,7 +339,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
         <div className="space-y-1.5">
           {config.fields.map((f, i) => (
             <div key={f.id} draggable onDragStart={(e) => handleDragStart(e, i)} onDragOver={(e) => handleDragOver(e, i)} onDragEnd={handleDragEnd} onClick={() => setActiveFieldIndex(i)} className={`p-2 flex justify-between items-center border rounded text-xs cursor-grab active:cursor-grabbing transition-colors ${activeFieldIndex === i ? 'bg-blue-50 border-blue-400 text-blue-800' : 'bg-white border-gray-200 hover:border-blue-300'}`}>
-              <div className="flex items-center gap-2 truncate"><GripVertical className="w-3.5 h-3.5 text-gray-400 shrink-0" /><span className="truncate font-medium">{f.type === 'header' ? 'Cabeçalho' : f.type === 'button' ? 'Botão' : f.label || 'Sem Nome'} <span className="text-[10px] text-gray-400 font-normal ml-1">({f.type})</span></span></div>
+              <div className="flex items-center gap-2 truncate"><GripVertical className="w-3.5 h-3.5 text-gray-400 shrink-0" /><span className="truncate font-medium">{f.label || (f.type === 'header' ? 'Cabeçalho' : f.type === 'button' ? 'Botão' : 'Sem Nome')} <span className="text-[10px] text-gray-400 font-normal ml-1">({f.type})</span></span></div>
               <button onClick={(e) => removeField(i, e)} className="text-gray-400 hover:text-red-500 shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
@@ -276,6 +359,10 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
 
               {config.fields[activeFieldIndex].type === 'button' ? (
                 <>
+                  <div>
+                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Name)</label>
+                    <input type="text" value={config.fields[activeFieldIndex].nameAttr || ""} onChange={(e) => updateField(activeFieldIndex, { nameAttr: e.target.value })} placeholder="Ex: botao_enviar" className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none font-mono" />
+                  </div>
                   <div><label className="text-xs text-gray-600 font-medium">Texto do Botão</label><input type="text" value={config.fields[activeFieldIndex].label} onChange={(e) => updateField(activeFieldIndex, { label: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>
                   <div><label className="text-xs text-gray-600 font-medium">Ação</label><select value={config.fields[activeFieldIndex].buttonAction || "submit"} onChange={(e) => updateField(activeFieldIndex, { buttonAction: e.target.value as any })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none"><option value="submit">Enviar Formulário (Salvar)</option><option value="reset">Limpar Formulário (Reset)</option><option value="button">Apenas Visual / Decorativo</option></select></div>
                 </>
@@ -286,6 +373,10 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
                 </>
               ) : (
                 <>
+                  <div>
+                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Variavel para uso)</label>
+                    <input type="text" value={config.fields[activeFieldIndex].nameAttr || ""} onChange={(e) => updateField(activeFieldIndex, { nameAttr: e.target.value })} placeholder="Ex: nome_cliente" className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none font-mono" />
+                  </div>
                   <div><label className="text-xs text-gray-600 font-medium">Label (Rótulo)</label><input type="text" value={config.fields[activeFieldIndex].label} onChange={(e) => updateField(activeFieldIndex, { label: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>
                   <div><label className="text-xs text-gray-600 font-medium">Placeholder</label><input type="text" value={config.fields[activeFieldIndex].placeholder} onChange={(e) => updateField(activeFieldIndex, { placeholder: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>
                   {config.fields[activeFieldIndex].type === 'select' && (<div><label className="text-xs text-gray-600 font-medium">Opções (separadas por vírgula)</label><input type="text" value={config.fields[activeFieldIndex].options || ""} onChange={(e) => updateField(activeFieldIndex, { options: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>)}
@@ -335,7 +426,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       <div className="space-y-2 pt-2">
         <h4 className="text-xs font-semibold text-gray-900 uppercase tracking-wider border-b pb-2">Forma Global</h4>
         <label className="block text-sm text-gray-700 mb-1">Arredondamento Padrão de Botões</label>
-        <select value={config.design.buttonRadius} onChange={(e) => updateDesign('buttonRadius', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm outline-none"><option value="0px">Quadrado (0px)</option><option value="0.375rem">Suave (6px)</option><option value="9999px">Pílula</option></select>
+        <select value={config.design.buttonRadius} onChange={(e) => updateDesign('buttonRadius', e.target.value)} className="w-full p-2 border border-gray-300 rounded text-sm outline-none"><option value="0px">Quadrado (0px)</option><option value="0.375rem">Suave (6px)</option><option value="1rem">Largo</option><option value="9999px">Pílula</option></select>
       </div>
     </div>
   );
@@ -345,7 +436,35 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-4">
         <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">Destino de Envio</h4>
         <label className="flex items-center gap-3 cursor-pointer"><input type="checkbox" checked={config.content.actionType === 'whatsapp'} onChange={(e) => updateContent('actionType', e.target.checked ? 'whatsapp' : 'database')} className="w-4 h-4 text-blue-600 rounded cursor-pointer" /><span className="text-sm font-medium text-gray-800">Direcionar para WhatsApp</span></label>
-        {config.content.actionType === 'whatsapp' ? (<div className="pt-2"><label className="block text-xs font-semibold text-gray-700 mb-1">Número Destino</label><input type="text" value={config.content.whatsappNumber} onChange={(e) => updateContent('whatsappNumber', e.target.value)} placeholder="Ex: 5511999999999" className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500" /></div>) : (<div className="pt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">Os dados serão capturados e salvos no Banco de Dados.</div>)}
+        
+        {config.content.actionType === 'whatsapp' ? (
+          <div className="pt-2 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Número Destino</label>
+              <input type="text" value={config.content.whatsappNumber} onChange={(e) => updateContent('whatsappNumber', e.target.value)} placeholder="Ex: 5511999999999" className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Mensagem de Redirecionamento</label>
+              <textarea 
+                value={config.content.whatsappMessage} 
+                onChange={(e) => updateContent('whatsappMessage', e.target.value)} 
+                placeholder="Ex: Olá! Seguem meus dados:\n\n{dados_formulario}" 
+                rows={4}
+                className="w-full p-2 border border-gray-300 rounded text-sm outline-none focus:border-blue-500 resize-y" 
+              />
+              <p className="text-[11px] text-gray-500 mt-1">
+                Variáveis disponíveis: <strong className="text-blue-600">{`{dados_formulario}`}</strong> (para todos os dados), 
+                {config.fields.filter(f => !['header', 'button'].includes(f.type)).map(f => (
+                  <span key={f.id} className="text-blue-600 font-mono ml-1">{`{${getFieldName(f)}}`}</span>
+                ))}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="pt-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+            Os dados serão capturados e salvos no Banco de Dados.
+          </div>
+        )}
         <p className="text-[11px] text-gray-500 border-t border-gray-200 pt-2 mt-2">Independente da escolha acima, todos os formulários são salvos no painel do sistema para registro (leads).</p>
       </div>
     </div>
