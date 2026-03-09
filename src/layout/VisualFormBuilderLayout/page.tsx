@@ -7,7 +7,7 @@ import {
   Type, Palette, List, Settings, GripVertical, Trash2, 
   LayoutTemplate, Phone, Mail, AlignLeft, ChevronDown, 
   X, PanelLeftClose, PanelLeftOpen, AlignCenter, AlignRight, 
-  Save, Loader2, MousePointerSquareDashed, Layers, Heading, ArrowLeft, Eye
+  Save, Loader2, MousePointerSquareDashed, Layers, Heading, ArrowLeft, Eye, Link as LinkIcon, Eraser
 } from "lucide-react";
 
 type FieldType = "header" | "text" | "email" | "tel" | "textarea" | "select" | "button";
@@ -64,21 +64,21 @@ const defaultConfig: VisualFormConfig = {
 const RichTextEditor = ({ value, onChange, label, placeholder }: any) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
+  const isInternalChange = useRef(false);
 
-  // Sincroniza o valor inicial e alterações externas sem resetar se estiver sendo editado
   useEffect(() => {
     if (editorRef.current && editorRef.current.innerHTML !== value) {
+      isInternalChange.current = true;
       editorRef.current.innerHTML = value || '';
+      isInternalChange.current = false;
     }
   }, [value]);
 
-  // Monitora a seleção do usuário ativamente
   useEffect(() => {
     const handleSelectionChange = () => {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0) {
         const range = sel.getRangeAt(0);
-        // Só salva se a seleção estiver dentro deste editor específico
         if (editorRef.current && editorRef.current.contains(range.commonAncestorContainer)) {
           savedRange.current = range.cloneRange();
         }
@@ -97,84 +97,76 @@ const RichTextEditor = ({ value, onChange, label, placeholder }: any) => {
     }
   };
 
-  const handleCommand = (e: React.MouseEvent, command: string) => {
-    e.preventDefault(); // Impede que o botão roube o foco
+  const executeCommand = (command: string, arg?: string) => {
     restoreSelection();
     document.execCommand("styleWithCSS", false, "true");
-    document.execCommand(command, false, undefined);
+    document.execCommand(command, false, arg);
     
-    // Após a formatação, o DOM muda. Precisamos salvar a nova seleção para as próximas interações
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
       savedRange.current = sel.getRangeAt(0).cloneRange();
     }
     
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
+    if (editorRef.current) {
+      isInternalChange.current = true;
+      onChange(editorRef.current.innerHTML);
+      isInternalChange.current = false;
+    }
+  };
+
+  const handleCommand = (e: React.MouseEvent, command: string) => {
+    e.preventDefault(); 
+    executeCommand(command);
   };
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    executeCommand('foreColor', e.target.value);
+  };
+
+  const handleCreateLink = (e: React.MouseEvent) => {
+    e.preventDefault();
     restoreSelection();
-    document.execCommand("styleWithCSS", false, "true");
-    document.execCommand('foreColor', false, e.target.value);
-    
-    // Atualiza a seleção pós-mudança (crucial para quando se arrasta a cor pelo painel)
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      savedRange.current = sel.getRangeAt(0).cloneRange();
+    const url = prompt("Digite a URL do link:", "https://");
+    if (url) {
+      executeCommand("createLink", url);
+      if (savedRange.current && editorRef.current) {
+        const links = editorRef.current.querySelectorAll('a');
+        links.forEach(a => {
+          if (!a.getAttribute('target')) a.setAttribute('target', '_blank');
+          if (!a.getAttribute('rel')) a.setAttribute('rel', 'noopener noreferrer');
+          a.style.color = '#3B82F6';
+          a.style.textDecoration = 'underline';
+        });
+        isInternalChange.current = true;
+        onChange(editorRef.current.innerHTML);
+        isInternalChange.current = false;
+      }
     }
-    
-    if (editorRef.current) onChange(editorRef.current.innerHTML);
   };
 
   return (
     <div className="w-full">
       <label className="text-xs text-gray-600 font-medium">{label}</label>
-      <div className="flex items-center gap-1 mt-1 p-1 bg-gray-50 border border-gray-300 rounded-t-md border-b-0">
-        <button 
-          type="button" 
-          onMouseDown={(e) => handleCommand(e, 'bold')} 
-          className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700" 
-          title="Negrito"
-        >
-          B
-        </button>
-        <button 
-          type="button" 
-          onMouseDown={(e) => handleCommand(e, 'italic')} 
-          className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm italic font-serif text-gray-700" 
-          title="Itálico"
-        >
-          I
-        </button>
-        <button 
-          type="button" 
-          onMouseDown={(e) => handleCommand(e, 'underline')} 
-          className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-200 text-sm underline text-gray-700" 
-          title="Sublinhado"
-        >
-          U
-        </button>
-        <div className="w-[1px] h-4 bg-gray-300 mx-1"></div>
-        
-        <div className="relative w-6 h-6 flex flex-col items-center justify-center rounded hover:bg-gray-200 cursor-pointer" title="Cor do Texto">
-          <span className="text-[12px] font-bold leading-none text-gray-700 pointer-events-none">A</span>
+      <div className="flex flex-wrap items-center gap-1 mt-1 p-1 bg-gray-50 border border-gray-300 rounded-t-md border-b-0">
+        <button type="button" onMouseDown={(e) => handleCommand(e, 'bold')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm font-bold text-gray-700 transition-colors" title="Negrito">B</button>
+        <button type="button" onMouseDown={(e) => handleCommand(e, 'italic')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm italic font-serif text-gray-700 transition-colors" title="Itálico">I</button>
+        <button type="button" onMouseDown={(e) => handleCommand(e, 'underline')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-sm underline text-gray-700 transition-colors" title="Sublinhado">U</button>
+        <div className="w-[1px] h-5 bg-gray-300 mx-1"></div>
+        <div className="relative w-7 h-7 flex flex-col items-center justify-center rounded hover:bg-gray-200 cursor-pointer transition-colors" title="Cor do Texto">
+          <span className="text-[13px] font-bold leading-none text-gray-700 pointer-events-none">A</span>
           <div className="w-3 h-1 bg-gradient-to-r from-red-500 via-green-500 to-blue-500 mt-[1px] rounded-full pointer-events-none"></div>
-          {/* O input engloba o bloco. O onInput responde em tempo real. */}
-          <input 
-            type="color" 
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-            onInput={handleColorChange} 
-            onChange={handleColorChange}
-          />
+          <input type="color" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onInput={handleColorChange} onChange={handleColorChange} />
         </div>
+        <div className="w-[1px] h-5 bg-gray-300 mx-1"></div>
+        <button type="button" onMouseDown={handleCreateLink} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 transition-colors" title="Inserir Link"><LinkIcon className="w-3.5 h-3.5" /></button>
+        <button type="button" onMouseDown={(e) => handleCommand(e, 'removeFormat')} className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-200 text-gray-700 transition-colors ml-auto" title="Remover Formatação"><Eraser className="w-3.5 h-3.5" /></button>
       </div>
-      
       <div 
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
-        onBlur={(e) => onChange(e.currentTarget.innerHTML)}
-        onInput={(e) => onChange(e.currentTarget.innerHTML)}
+        onBlur={(e) => { if (!isInternalChange.current) onChange(e.currentTarget.innerHTML); }}
+        onInput={(e) => { if (!isInternalChange.current) onChange(e.currentTarget.innerHTML); }}
         className="w-full p-2 text-sm border border-gray-300 rounded-b-md outline-none focus:border-blue-500 min-h-[80px] bg-white overflow-y-auto cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
         data-placeholder={placeholder || "Digite aqui..."}
       />
@@ -182,6 +174,9 @@ const RichTextEditor = ({ value, onChange, label, placeholder }: any) => {
   );
 };
 
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 interface VisualFormBuilderLayoutProps {
   initialId?: string | null;
   initialConfig?: any;
@@ -193,11 +188,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
   const [config, setConfig] = useState<VisualFormConfig>(() => {
     if (!initialConfig) return defaultConfig;
     const loadedConfig = { ...initialConfig };
-    
-    if (!loadedConfig.content.whatsappMessage) {
-      loadedConfig.content.whatsappMessage = defaultConfig.content.whatsappMessage;
-    }
-
+    if (!loadedConfig.content.whatsappMessage) loadedConfig.content.whatsappMessage = defaultConfig.content.whatsappMessage;
     const newFields = [...(loadedConfig.fields || [])];
     if (!newFields.some((f: FormField) => f.type === 'header')) newFields.unshift({ id: 'header-migrated', type: 'header', label: "Formulário", placeholder: "", required: false, width: '100%' });
     if (!newFields.some((f: FormField) => f.type === 'button')) newFields.push({ id: 'btn-migrated', type: 'button', label: "Enviar", placeholder: "", required: false, width: "100%", buttonAction: "submit" });
@@ -207,13 +198,11 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
 
   const [componentId, setComponentId] = useState<string | null>(initialId || null); 
   const [formName, setFormName] = useState<string>(initialName || "Novo Formulário");
-
   const [activeTab, setActiveTab] = useState<"fields" | "design" | "settings">("fields");
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [activeFieldIndex, setActiveFieldIndex] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-
   const [isResizing, setIsResizing] = useState(false);
   const resizeData = useRef({ startX: 0, startWidth: 0, direction: 1 });
 
@@ -222,9 +211,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
     if (initialId) setComponentId(initialId);
     if (initialConfig) {
       const loadedConfig = { ...initialConfig };
-      if (!loadedConfig.content.whatsappMessage) {
-        loadedConfig.content.whatsappMessage = defaultConfig.content.whatsappMessage;
-      }
+      if (!loadedConfig.content.whatsappMessage) loadedConfig.content.whatsappMessage = defaultConfig.content.whatsappMessage;
       const newFields = [...(loadedConfig.fields || [])];
       if (!newFields.some((f: FormField) => f.type === 'header')) newFields.unshift({ id: 'header-migrated', type: 'header', label: "Formulário", placeholder: "", required: false, width: '100%' });
       if (!newFields.some((f: FormField) => f.type === 'button')) newFields.push({ id: 'btn-migrated', type: 'button', label: "Enviar", placeholder: "", required: false, width: "100%", buttonAction: "submit" });
@@ -253,7 +240,6 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
 
   const updateDesign = (key: keyof FormDesign, value: string) => setConfig(prev => ({ ...prev, design: { ...prev.design, [key]: value } }));
   const updateContent = (key: keyof FormContent, value: any) => setConfig(prev => ({ ...prev, content: { ...prev.content, [key]: value } }));
-  
   const getFieldName = (f: FormField) => f.nameAttr?.trim() || f.label.replace(/<[^>]*>?/gm, '').replace(/[^a-zA-Z0-9]/g, '_').toLowerCase() || f.id;
 
   const formatPhoneMask = (value: string) => {
@@ -268,13 +254,9 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
   const addField = (type: FieldType) => {
     const baseName = type === 'email' ? 'email' : type === 'tel' ? 'telefone' : type === 'button' ? 'botao' : type === 'header' ? 'titulo' : 'campo';
     const newField: FormField = { 
-      id: `field-${Date.now()}`, 
-      type, 
+      id: `field-${Date.now()}`, type, 
       label: type === 'email' ? 'E-mail' : type === 'tel' ? 'Telefone' : type === 'button' ? 'Botão' : type === 'header' ? 'Título' : 'Novo Campo', 
-      nameAttr: `${baseName}_${Date.now().toString().slice(-4)}`, 
-      placeholder: type === 'header' ? 'Digite uma descrição breve.' : '', 
-      required: false, 
-      width: "100%", 
+      nameAttr: `${baseName}_${Date.now().toString().slice(-4)}`, placeholder: type === 'header' ? 'Digite uma descrição breve.' : '', required: false, width: "100%", 
       buttonAction: type === 'button' ? 'submit' : undefined 
     };
     setConfig(prev => ({ ...prev, fields: [...prev.fields, newField] }));
@@ -348,10 +330,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
     `;
 
     const cleanNumber = conf.content.whatsappNumber.replace(/\D/g, '');
-    
-    const safeMessageBase = encodeURIComponent(conf.content.whatsappMessage || "Olá! Seguem meus dados:\n\n{dados_formulario}")
-      .replace(/'/g, "%27")
-      .replace(/"/g, "%22");
+    const safeMessageBase = encodeURIComponent(conf.content.whatsappMessage || "Olá! Seguem meus dados:\n\n{dados_formulario}").replace(/'/g, "%27").replace(/"/g, "%22");
 
     const rawJs = `
       event.preventDefault(); 
@@ -432,6 +411,9 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
     finally { setIsSaving(false); }
   };
 
+  // =====================================
+  // RENDERIZADORES DAS ABAS ESQUERDAS
+  // =====================================
   const renderSidebarTabs = () => (
     <div className="flex border-b border-gray-200 shrink-0">
       <button onClick={() => setActiveTab("fields")} className={`flex-1 py-3 text-xs md:text-sm font-medium flex items-center justify-center gap-1 md:gap-2 ${activeTab === "fields" ? "border-b-2 border-blue-500 text-blue-600 bg-blue-50/50" : "text-gray-500 hover:bg-gray-50"}`}><LayoutTemplate className="w-4 h-4" /> Estrutura</button>
@@ -471,85 +453,6 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
             </div>
           ))}
         </div>
-      </div>
-
-      <div className="border-t border-gray-200 pt-5">
-        <h4 className="text-xs font-semibold text-gray-900 mb-3 uppercase tracking-wider">Editor de Propriedades</h4>
-        {activeFieldIndex !== null && config.fields[activeFieldIndex] ? (
-          <div className="p-4 bg-blue-50/30 rounded-lg border border-blue-200 space-y-4 relative">
-            <h5 className="font-medium text-sm text-gray-900 flex items-center justify-between">{config.fields[activeFieldIndex].type === 'button' ? 'Botão' : config.fields[activeFieldIndex].type === 'header' ? 'Cabeçalho' : 'Campo'} <button onClick={() => setActiveFieldIndex(null)} className="text-xs text-blue-600 hover:underline">Fechar</button></h5>
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-gray-600 font-medium">Largura (Lado a Lado)</label>
-                <select value={config.fields[activeFieldIndex].width || "100%"} onChange={(e) => updateField(activeFieldIndex, { width: e.target.value as FieldWidth })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none focus:border-blue-500"><option value="100%">Linha Inteira (100%)</option><option value="75%">Grande (75%)</option><option value="50%">Metade (50%)</option><option value="33.33%">Terço (33%)</option><option value="25%">Quarto (25%)</option><option value="auto">Automático (Tamanho do Conteúdo)</option></select>
-              </div>
-
-              {config.fields[activeFieldIndex].type === 'button' ? (
-                <>
-                  <div>
-                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Name)</label>
-                    <input type="text" value={config.fields[activeFieldIndex].nameAttr || ""} onChange={(e) => updateField(activeFieldIndex, { nameAttr: e.target.value })} placeholder="Ex: botao_enviar" className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none font-mono" />
-                  </div>
-                  
-                  {/* Força o remount do editor ao mudar de campo para resetar a edição interna */}
-                  <RichTextEditor 
-                    key={`btn-${activeFieldIndex}`}
-                    label="Texto do Botão" 
-                    value={config.fields[activeFieldIndex].label} 
-                    onChange={(val: string) => updateField(activeFieldIndex, { label: val })} 
-                  />
-
-                  <div><label className="text-xs text-gray-600 font-medium">Ação</label><select value={config.fields[activeFieldIndex].buttonAction || "submit"} onChange={(e) => updateField(activeFieldIndex, { buttonAction: e.target.value as any })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none"><option value="submit">Enviar Formulário (Salvar)</option><option value="reset">Limpar Formulário (Reset)</option><option value="button">Apenas Visual / Decorativo</option></select></div>
-                </>
-              ) : config.fields[activeFieldIndex].type === 'header' ? (
-                <>
-                  <RichTextEditor 
-                    key={`head-title-${activeFieldIndex}`}
-                    label="Título Principal" 
-                    value={config.fields[activeFieldIndex].label} 
-                    onChange={(val: string) => updateField(activeFieldIndex, { label: val })} 
-                  />
-                  <RichTextEditor 
-                    key={`head-sub-${activeFieldIndex}`}
-                    label="Subtítulo (Opcional)" 
-                    value={config.fields[activeFieldIndex].placeholder} 
-                    onChange={(val: string) => updateField(activeFieldIndex, { placeholder: val })} 
-                  />
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Variável para uso)</label>
-                    <input type="text" value={config.fields[activeFieldIndex].nameAttr || ""} onChange={(e) => updateField(activeFieldIndex, { nameAttr: e.target.value })} placeholder="Ex: nome_cliente" className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none font-mono" />
-                  </div>
-
-                  <RichTextEditor 
-                    key={`input-label-${activeFieldIndex}`}
-                    label="Label (Rótulo)" 
-                    value={config.fields[activeFieldIndex].label} 
-                    onChange={(val: string) => updateField(activeFieldIndex, { label: val })} 
-                  />
-
-                  <div><label className="text-xs text-gray-600 font-medium">Placeholder</label><input type="text" value={config.fields[activeFieldIndex].placeholder} onChange={(e) => updateField(activeFieldIndex, { placeholder: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>
-                  {config.fields[activeFieldIndex].type === 'select' && (<div><label className="text-xs text-gray-600 font-medium">Opções (separadas por vírgula)</label><input type="text" value={config.fields[activeFieldIndex].options || ""} onChange={(e) => updateField(activeFieldIndex, { options: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>)}
-                  <div className="flex items-center gap-2 pt-1 pb-2"><input type="checkbox" id="req" checked={config.fields[activeFieldIndex].required} onChange={(e) => updateField(activeFieldIndex, { required: e.target.checked })} className="rounded text-blue-500 cursor-pointer" /><label htmlFor="req" className="text-sm text-gray-700 cursor-pointer">Obrigatório</label></div>
-                </>
-              )}
-
-              {config.fields[activeFieldIndex].type !== 'header' && (
-                <div className="pt-3 border-t border-gray-200 space-y-3">
-                  <h6 className="text-xs font-semibold text-gray-900 uppercase">Estilo Exclusivo</h6>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="text-xs text-gray-600">Fundo <input type="color" value={config.fields[activeFieldIndex].style?.bgColor || (config.fields[activeFieldIndex].type === 'button' ? (config.fields[activeFieldIndex].buttonAction === 'reset' ? '#ffffff' : config.design.primaryColor) : config.design.inputBgColor)} onChange={(e) => updateFieldStyle(activeFieldIndex, 'bgColor', e.target.value)} className="w-full h-8 mt-1 p-0 border-0 rounded cursor-pointer" /></label>
-                    <label className="text-xs text-gray-600">Borda <input type="color" value={config.fields[activeFieldIndex].style?.borderColor || (config.fields[activeFieldIndex].type === 'button' ? (config.fields[activeFieldIndex].buttonAction === 'reset' ? config.design.primaryColor : 'transparent') : config.design.inputBorderColor)} onChange={(e) => updateFieldStyle(activeFieldIndex, 'borderColor', e.target.value)} className="w-full h-8 mt-1 p-0 border-0 rounded cursor-pointer" /></label>
-                    <label className="text-xs text-gray-600">Texto <input type="color" value={config.fields[activeFieldIndex].style?.textColor || (config.fields[activeFieldIndex].type === 'button' ? (config.fields[activeFieldIndex].buttonAction === 'reset' ? config.design.primaryColor : '#ffffff') : config.design.textColor)} onChange={(e) => updateFieldStyle(activeFieldIndex, 'textColor', e.target.value)} className="w-full h-8 mt-1 p-0 border-0 rounded cursor-pointer" /></label>
-                    <label className="text-xs text-gray-600">Raio <select value={config.fields[activeFieldIndex].style?.borderRadius || (config.fields[activeFieldIndex].type==='button' ? config.design.buttonRadius : "0.375rem")} onChange={(e) => updateFieldStyle(activeFieldIndex, 'borderRadius', e.target.value)} className="w-full mt-1 p-1.5 border border-gray-300 rounded text-xs outline-none"><option value="0px">Quadrado</option><option value="0.375rem">Suave</option><option value="1rem">Largo</option><option value="9999px">Pílula</option></select></label>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : (<div className="text-center p-6 border-2 border-dashed border-gray-200 rounded-lg text-gray-400 text-xs md:text-sm">Selecione um item na estrutura ou no preview.</div>)}
       </div>
     </div>
   );
@@ -647,6 +550,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
       <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className={`absolute top-4 z-40 p-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-md hover:bg-gray-50 transition-all duration-300 ${isSidebarOpen ? 'left-[396px] hidden md:flex' : 'left-4 flex'}`}><PanelLeftOpen className="w-5 h-5" /></button>
       {!isSidebarOpen && <button onClick={() => setIsSidebarOpen(true)} className="md:hidden fixed bottom-6 right-6 z-50 p-4 bg-blue-600 text-white rounded-full shadow-xl"><Settings className="w-6 h-6" /></button>}
 
+      {/* BARRA ESQUERDA - ESTRUTURA, ESTILO E AÇÕES */}
       <aside className={`fixed md:relative top-0 left-0 z-50 h-full w-[85%] sm:w-[380px] md:w-[380px] bg-white border-r border-gray-200 shadow-2xl md:shadow-xl flex flex-col shrink-0 transition-all duration-300 ease-in-out ${isSidebarOpen ? "translate-x-0 md:ml-0" : "-translate-x-full md:translate-x-0 md:-ml-[380px]"}`}>
         
         <div className="p-4 border-b border-gray-200 bg-gray-900 text-white shrink-0 space-y-3">
@@ -684,6 +588,7 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
 
       {isSidebarOpen && <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsSidebarOpen(false)} />}
 
+      {/* ÁREA CENTRAL - PREVIEW */}
       <main className="flex-1 h-full overflow-y-auto p-4 md:p-12 flex flex-col items-center justify-center relative custom-canvas-bg">
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
         
@@ -753,6 +658,99 @@ export default function VisualFormBuilderLayout({ initialId, initialConfig, init
           </div>
         </div>
       </main>
+
+      {/* BARRA DIREITA - EDITOR DE PROPRIEDADES ESPECÍFICO */}
+      {activeFieldIndex !== null && config.fields[activeFieldIndex] && (
+        <>
+          <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setActiveFieldIndex(null)} />
+          
+          <aside className="fixed md:relative top-0 right-0 z-50 h-full w-[85%] sm:w-[350px] md:w-[350px] bg-white border-l border-gray-200 shadow-2xl md:shadow-none flex flex-col shrink-0 animate-in fade-in slide-in-from-right-8 duration-200">
+            <div className="p-4 border-b border-gray-200 bg-gray-900 text-white shrink-0 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider">
+                  Propriedades: {config.fields[activeFieldIndex].type === 'button' ? 'Botão' : config.fields[activeFieldIndex].type === 'header' ? 'Cabeçalho' : 'Campo'}
+                </span>
+              </div>
+              <button onClick={() => setActiveFieldIndex(null)} className="p-1 hover:bg-white/20 rounded transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-5 custom-scrollbar bg-white">
+              
+              <div>
+                <label className="text-xs text-gray-600 font-medium">Largura (Lado a Lado)</label>
+                <select value={config.fields[activeFieldIndex].width || "100%"} onChange={(e) => updateField(activeFieldIndex, { width: e.target.value as FieldWidth })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none focus:border-blue-500"><option value="100%">Linha Inteira (100%)</option><option value="75%">Grande (75%)</option><option value="50%">Metade (50%)</option><option value="33.33%">Terço (33%)</option><option value="25%">Quarto (25%)</option><option value="auto">Automático (Tamanho do Conteúdo)</option></select>
+              </div>
+
+              {config.fields[activeFieldIndex].type === 'button' ? (
+                <>
+                  <div>
+                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Name)</label>
+                    <input type="text" value={config.fields[activeFieldIndex].nameAttr || ""} onChange={(e) => updateField(activeFieldIndex, { nameAttr: e.target.value })} placeholder="Ex: botao_enviar" className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none font-mono" />
+                  </div>
+                  
+                  <RichTextEditor 
+                    key={`btn-${activeFieldIndex}`}
+                    label="Texto do Botão" 
+                    value={config.fields[activeFieldIndex].label} 
+                    onChange={(val: string) => updateField(activeFieldIndex, { label: val })} 
+                  />
+
+                  <div><label className="text-xs text-gray-600 font-medium">Ação</label><select value={config.fields[activeFieldIndex].buttonAction || "submit"} onChange={(e) => updateField(activeFieldIndex, { buttonAction: e.target.value as any })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none"><option value="submit">Enviar Formulário (Salvar)</option><option value="reset">Limpar Formulário (Reset)</option><option value="button">Apenas Visual / Decorativo</option></select></div>
+                </>
+              ) : config.fields[activeFieldIndex].type === 'header' ? (
+                <>
+                  <RichTextEditor 
+                    key={`head-title-${activeFieldIndex}`}
+                    label="Título Principal" 
+                    value={config.fields[activeFieldIndex].label} 
+                    onChange={(val: string) => updateField(activeFieldIndex, { label: val })} 
+                  />
+                  <RichTextEditor 
+                    key={`head-sub-${activeFieldIndex}`}
+                    label="Subtítulo (Opcional)" 
+                    value={config.fields[activeFieldIndex].placeholder} 
+                    onChange={(val: string) => updateField(activeFieldIndex, { placeholder: val })} 
+                  />
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs text-gray-600 font-medium">Nome de Identificação (Variável para uso)</label>
+                    <input type="text" value={config.fields[activeFieldIndex].nameAttr || ""} onChange={(e) => updateField(activeFieldIndex, { nameAttr: e.target.value })} placeholder="Ex: nome_cliente" className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none font-mono" />
+                  </div>
+
+                  <RichTextEditor 
+                    key={`input-label-${activeFieldIndex}`}
+                    label="Label (Rótulo)" 
+                    value={config.fields[activeFieldIndex].label} 
+                    onChange={(val: string) => updateField(activeFieldIndex, { label: val })} 
+                  />
+
+                  <div><label className="text-xs text-gray-600 font-medium">Placeholder</label><input type="text" value={config.fields[activeFieldIndex].placeholder} onChange={(e) => updateField(activeFieldIndex, { placeholder: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>
+                  {config.fields[activeFieldIndex].type === 'select' && (<div><label className="text-xs text-gray-600 font-medium">Opções (separadas por vírgula)</label><input type="text" value={config.fields[activeFieldIndex].options || ""} onChange={(e) => updateField(activeFieldIndex, { options: e.target.value })} className="w-full mt-1 p-2 text-sm border border-gray-300 rounded outline-none" /></div>)}
+                  <div className="flex items-center gap-2 pt-1 pb-2"><input type="checkbox" id="req" checked={config.fields[activeFieldIndex].required} onChange={(e) => updateField(activeFieldIndex, { required: e.target.checked })} className="rounded text-blue-500 cursor-pointer" /><label htmlFor="req" className="text-sm text-gray-700 cursor-pointer">Obrigatório</label></div>
+                </>
+              )}
+
+              {config.fields[activeFieldIndex].type !== 'header' && (
+                <div className="pt-3 border-t border-gray-200 space-y-3">
+                  <h6 className="text-xs font-semibold text-gray-900 uppercase">Estilo Exclusivo</h6>
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className="text-xs text-gray-600">Fundo <input type="color" value={config.fields[activeFieldIndex].style?.bgColor || (config.fields[activeFieldIndex].type === 'button' ? (config.fields[activeFieldIndex].buttonAction === 'reset' ? '#ffffff' : config.design.primaryColor) : config.design.inputBgColor)} onChange={(e) => updateFieldStyle(activeFieldIndex, 'bgColor', e.target.value)} className="w-full h-8 mt-1 p-0 border-0 rounded cursor-pointer" /></label>
+                    <label className="text-xs text-gray-600">Borda <input type="color" value={config.fields[activeFieldIndex].style?.borderColor || (config.fields[activeFieldIndex].type === 'button' ? (config.fields[activeFieldIndex].buttonAction === 'reset' ? config.design.primaryColor : 'transparent') : config.design.inputBorderColor)} onChange={(e) => updateFieldStyle(activeFieldIndex, 'borderColor', e.target.value)} className="w-full h-8 mt-1 p-0 border-0 rounded cursor-pointer" /></label>
+                    <label className="text-xs text-gray-600">Texto <input type="color" value={config.fields[activeFieldIndex].style?.textColor || (config.fields[activeFieldIndex].type === 'button' ? (config.fields[activeFieldIndex].buttonAction === 'reset' ? config.design.primaryColor : '#ffffff') : config.design.textColor)} onChange={(e) => updateFieldStyle(activeFieldIndex, 'textColor', e.target.value)} className="w-full h-8 mt-1 p-0 border-0 rounded cursor-pointer" /></label>
+                    <label className="text-xs text-gray-600">Raio <select value={config.fields[activeFieldIndex].style?.borderRadius || (config.fields[activeFieldIndex].type==='button' ? config.design.buttonRadius : "0.375rem")} onChange={(e) => updateFieldStyle(activeFieldIndex, 'borderRadius', e.target.value)} className="w-full mt-1 p-1.5 border border-gray-300 rounded text-xs outline-none"><option value="0px">Quadrado</option><option value="0.375rem">Suave</option><option value="1rem">Largo</option><option value="9999px">Pílula</option></select></label>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          </aside>
+        </>
+      )}
 
       <style dangerouslySetInnerHTML={{__html: `.custom-scrollbar::-webkit-scrollbar { width: 5px; } .custom-scrollbar::-webkit-scrollbar-track { background: transparent; } .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; } .custom-canvas-bg { background-color: #f1f5f9; }`}} />
     </div>
