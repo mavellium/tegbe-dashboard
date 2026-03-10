@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo, useId, useEffect } from "react";
+import { useState, useMemo, useId } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -12,8 +12,6 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { TextArea } from "@/components/TextArea";
 import { Button } from "@/components/Button";
-import { Switch } from "@/components/Switch";
-import IconSelector from "@/components/IconSelector";
 import { 
   GripVertical, 
   ArrowUpDown, 
@@ -21,16 +19,12 @@ import {
   Trash2,
   Search,
   Target,
-  BarChart3,
   Zap,
   Layers,
   Scale,
-  ArrowRight,
   Check,
   X as XIcon,
-  Columns,
-  LayoutTemplate,
-  Link2
+  Columns
 } from "lucide-react";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
 import { FixedActionBar } from "@/components/Manage/FixedActionBar";
@@ -44,9 +38,14 @@ interface Feature {
   label: string;
   competitor: string;
   us: string;
+  order?: number;
 }
 
 interface ComparisonData {
+  id: string;
+  type: string;
+  subtype: string;
+  subtitle: string;
   header: {
     badge: string;
     title: string;
@@ -57,56 +56,23 @@ interface ComparisonData {
     us: string;
   };
   features: Feature[];
-  cta: {
-    text: string;
-    url: string;
-    variant: "gradient" | "primary" | "secondary" | "danger";
-    icon: string;
-    target: "_self" | "_blank";
-    use_form?: boolean; // ADICIONADO
-    form_id?: string;   // ADICIONADO
-  };
 }
 
 const defaultData: ComparisonData = {
+  id: "benchmark-comparison",
+  type: "e",
+  subtype: "",
+  subtitle: "",
   header: {
-    badge: "Comparação Justa",
-    title: "Por que a TegPro é superior",
-    subtitle: "Veja a diferença entre nossa solução e a concorrência"
+    badge: "",
+    title: "",
+    subtitle: ""
   },
   columns: {
-    competitor: "Concorrência",
-    us: "TegPro"
+    competitor: "",
+    us: ""
   },
-  features: [
-    {
-      id: "feature-1",
-      label: "Suporte Personalizado",
-      competitor: "Email apenas",
-      us: "WhatsApp + Videochamadas"
-    },
-    {
-      id: "feature-2",
-      label: "Atualizações",
-      competitor: "Semestral",
-      us: "Mensal"
-    },
-    {
-      id: "feature-3",
-      label: "Preço",
-      competitor: "R$ 497/mês",
-      us: "R$ 297/mês"
-    }
-  ],
-  cta: {
-    text: "Começar Agora",
-    url: "/checkout",
-    variant: "gradient",
-    icon: "ph:arrow-right-bold",
-    target: "_self",
-    use_form: false,
-    form_id: ""
-  }
+  features: []
 };
 
 // Função para mesclar com dados padrão
@@ -114,30 +80,26 @@ const mergeWithDefaults = (apiData: any, defaultData: ComparisonData): Compariso
   if (!apiData) return defaultData;
   
   return {
+    id: apiData.id || defaultData.id,
+    type: apiData.type || defaultData.type,
+    subtype: apiData.subtype || defaultData.subtype,
+    subtitle: apiData.subtitle || defaultData.subtitle,
     header: {
-      badge: apiData.header?.badge || defaultData.header.badge,
-      title: apiData.header?.title || defaultData.header.title,
-      subtitle: apiData.header?.subtitle || defaultData.header.subtitle
+      badge: apiData.header?.badge || "",
+      title: apiData.header?.title || "",
+      subtitle: apiData.header?.subtitle || ""
     },
     columns: {
-      competitor: apiData.columns?.competitor || defaultData.columns.competitor,
-      us: apiData.columns?.us || defaultData.columns.us
+      competitor: apiData.columns?.competitor || "",
+      us: apiData.columns?.us || ""
     },
     features: apiData.features?.map((feature: any, index: number) => ({
-      id: feature.id || `feature-${Date.now()}-${index}`,
+      id: feature.id || `item-${Date.now()}-${index}`,
       label: feature.label || "",
       competitor: feature.competitor || "",
-      us: feature.us || ""
-    })) || defaultData.features,
-    cta: {
-      text: apiData.cta?.text || defaultData.cta.text,
-      url: apiData.cta?.url || defaultData.cta.url,
-      variant: apiData.cta?.variant || defaultData.cta.variant,
-      icon: apiData.cta?.icon || defaultData.cta.icon,
-      target: apiData.cta?.target || defaultData.cta.target,
-      use_form: apiData.cta?.use_form ?? defaultData.cta.use_form,
-      form_id: apiData.cta?.form_id || defaultData.cta.form_id
-    }
+      us: feature.us || "",
+      order: feature.order ?? index
+    })) || []
   };
 };
 
@@ -146,16 +108,14 @@ function SortableFeatureItem({
   item,
   index,
   showValidation,
-  itemList,
   handleChange,
-  openDeleteSingleModal,
+  handleRemoveFeature,
 }: {
   item: Feature;
   index: number;
   showValidation: boolean;
-  itemList: Feature[];
   handleChange: (index: number, field: keyof Feature, value: any) => void;
-  openDeleteSingleModal: (index: number, title: string) => void;
+  handleRemoveFeature: (index: number) => void;
 }) {
   const stableId = useId();
   const sortableId = item.id || `feature-${index}-${stableId}`;
@@ -175,9 +135,9 @@ function SortableFeatureItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const hasLabel = item.label.trim() !== "";
-  const hasCompetitor = item.competitor.trim() !== "";
-  const hasUs = item.us.trim() !== "";
+  const hasLabel = item.label?.trim() !== "";
+  const hasCompetitor = item.competitor?.trim() !== "";
+  const hasUs = item.us?.trim() !== "";
 
   return (
     <div
@@ -231,10 +191,9 @@ function SortableFeatureItem({
             
             <Button
               type="button"
-              onClick={() => openDeleteSingleModal(index, item.label || "Recurso sem título")}
+              onClick={() => handleRemoveFeature(index)}
               variant="danger"
               className="whitespace-nowrap bg-[var(--color-danger)] hover:bg-[var(--color-danger)]/90 border-none flex items-center gap-2"
-              disabled={itemList.length <= 1}
             >
               <Trash2 className="w-4 h-4" />
               Remover
@@ -252,7 +211,7 @@ function SortableFeatureItem({
                   type="text"
                   value={item.label}
                   onChange={(e: any) => handleChange(index, "label", e.target.value)}
-                  placeholder="Ex: Suporte Personalizado"
+                  placeholder="Ex: Ambiente de Aprendizado"
                   className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                 />
                 <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
@@ -272,11 +231,11 @@ function SortableFeatureItem({
                     type="text"
                     value={item.competitor}
                     onChange={(e: any) => handleChange(index, "competitor", e.target.value)}
-                    placeholder="Ex: Email apenas"
+                    placeholder="Ex: Distrações em casa e falta de foco."
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                    O que a concorrência oferece (pode usar R$ para preços)
+                    O que a concorrência oferece
                   </p>
                 </div>
 
@@ -289,11 +248,11 @@ function SortableFeatureItem({
                     type="text"
                     value={item.us}
                     onChange={(e: any) => handleChange(index, "us", e.target.value)}
-                    placeholder="Ex: WhatsApp + Videochamadas"
+                    placeholder="Ex: Conteúdo com foco no que interessa"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <p className="mt-1 text-xs text-[var(--color-secondary)]/50">
-                    O que a TegPro oferece (destacar vantagem)
+                    O que oferecemos (destacar vantagem)
                   </p>
                 </div>
               </div>
@@ -310,7 +269,6 @@ export default function ComparisonPage() {
     header: true,
     columns: false,
     features: true,
-    cta: false
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -335,25 +293,7 @@ export default function ComparisonPage() {
   });
 
   const currentData = componentData || defaultData;
-  const features = currentData.features;
-
-  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
-  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
-  
-  useEffect(() => {
-    const fetchForms = async () => {
-      try {
-        const res = await fetch("/api/components");
-        const data = await res.json();
-        if (data.success) {
-          setAvailableForms(data.components);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar formulários:", error);
-      }
-    };
-    fetchForms();
-  }, []);
+  const features = currentData.features || [];
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -375,6 +315,11 @@ export default function ComparisonPage() {
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setShowValidation(true);
+    
+    // Atualiza o order antes de salvar
+    const featuresWithOrder = features.map((f, i) => ({ ...f, order: i }));
+    updateNested('features', featuresWithOrder);
+    
     await save();
   };
 
@@ -404,26 +349,27 @@ export default function ComparisonPage() {
 
   const handleAddFeature = () => {
     const newFeature: Feature = {
-      id: `feature-${Date.now()}-${features.length}`,
+      id: `item-${Date.now()}-${features.length}`,
       label: '',
       competitor: '',
-      us: ''
+      us: '',
+      order: features.length
     };
     updateNested(`features`, [...features, newFeature]);
   };
 
-  const openDeleteSingleModal = (index: number, title: string) => {
-    // Implementação da abertura do modal de deleção individual
-    console.log("Abrir modal para deletar feature:", index, title);
+  const handleRemoveFeature = (index: number) => {
+    const newFeatures = features.filter((_, i) => i !== index);
+    updateNested(`features`, newFeatures);
   };
 
   const filteredFeatures = useMemo(() => {
     if (!searchTerm) return features;
     const term = searchTerm.toLowerCase();
     return features.filter(item => 
-      item.label.toLowerCase().includes(term) ||
-      item.competitor.toLowerCase().includes(term) ||
-      item.us.toLowerCase().includes(term)
+      item.label?.toLowerCase().includes(term) ||
+      item.competitor?.toLowerCase().includes(term) ||
+      item.us?.toLowerCase().includes(term)
     );
   }, [features, searchTerm]);
 
@@ -433,43 +379,29 @@ export default function ComparisonPage() {
 
     // Header
     total += 3;
-    if (currentData.header.badge.trim()) completed++;
-    if (currentData.header.title.trim()) completed++;
-    if (currentData.header.subtitle.trim()) completed++;
+    if (currentData.header.badge?.trim()) completed++;
+    if (currentData.header.title?.trim()) completed++;
+    if (currentData.header.subtitle?.trim()) completed++;
 
     // Columns
     total += 2;
-    if (currentData.columns.competitor.trim()) completed++;
-    if (currentData.columns.us.trim()) completed++;
+    if (currentData.columns.competitor?.trim()) completed++;
+    if (currentData.columns.us?.trim()) completed++;
 
     // Features
     total += features.length * 3; // label, competitor, us para cada feature
     features.forEach(feature => {
-      if (feature.label.trim()) completed++;
-      if (feature.competitor.trim()) completed++;
-      if (feature.us.trim()) completed++;
+      if (feature.label?.trim()) completed++;
+      if (feature.competitor?.trim()) completed++;
+      if (feature.us?.trim()) completed++;
     });
-
-    // CTA
-    total += 5;
-    if (currentData.cta.text.trim()) completed++;
-    if (currentData.cta.variant.trim()) completed++;
-    if (currentData.cta.icon.trim()) completed++;
-    if (currentData.cta.target.trim()) completed++;
-    
-    // Condição: Link ou Form
-    if (currentData.cta.use_form) {
-      if (currentData.cta.form_id?.trim()) completed++;
-    } else {
-      if (currentData.cta.url.trim()) completed++;
-    }
 
     return { completed, total };
   };
 
   const completion = calculateCompletion();
   const featuresCompletas = features.filter(f => 
-    f.label.trim() && f.competitor.trim() && f.us.trim()
+    f.label?.trim() && f.competitor?.trim() && f.us?.trim()
   ).length;
 
   if (loading && !exists) {
@@ -480,7 +412,7 @@ export default function ComparisonPage() {
     <ManageLayout
       headerIcon={Scale}
       title="Página de Comparação"
-      description="Configure a tabela comparativa entre TegPro e concorrência"
+      description="Configure a tabela comparativa entre sua solução e a concorrência"
       exists={!!exists}
       itemName="Comparação"
     >
@@ -516,7 +448,7 @@ export default function ComparisonPage() {
                     label="Badge"
                     value={currentData.header.badge}
                     onChange={(e) => handleChange('header.badge', e.target.value)}
-                    placeholder="Ex: Comparação Justa"
+                    placeholder="Ex: Método TegPRO"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
@@ -529,7 +461,7 @@ export default function ComparisonPage() {
                     label="Título Principal"
                     value={currentData.header.title}
                     onChange={(e) => handleChange('header.title', e.target.value)}
-                    placeholder="Ex: Por que a TegPro é superior"
+                    placeholder="Ex: O presencial faz a diferença!"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
@@ -542,7 +474,7 @@ export default function ComparisonPage() {
                     label="Subtítulo"
                     value={currentData.header.subtitle}
                     onChange={(e) => handleChange('header.subtitle', e.target.value)}
-                    placeholder="Ex: Veja a diferença entre nossa solução e a concorrência"
+                    placeholder="Ex: Compare a profundidade da entrega..."
                     rows={2}
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
@@ -583,27 +515,27 @@ export default function ComparisonPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <Input
-                    label="Nome da Concorrência"
-                    value={currentData.columns.competitor}
-                    onChange={(e) => handleChange('columns.competitor', e.target.value)}
-                    placeholder="Ex: Concorrência"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Nome da coluna da concorrência
-                  </p>
-                </div>
-
-                <div>
-                  <Input
                     label="Nosso Nome"
                     value={currentData.columns.us}
                     onChange={(e) => handleChange('columns.us', e.target.value)}
-                    placeholder="Ex: TegPro"
+                    placeholder="Ex: Formação TegPro"
                     className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
                   />
                   <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
                     Nome da nossa coluna (sua marca)
+                  </p>
+                </div>
+                
+                <div>
+                  <Input
+                    label="Nome da Concorrência"
+                    value={currentData.columns.competitor}
+                    onChange={(e) => handleChange('columns.competitor', e.target.value)}
+                    placeholder="Ex: Cursos Tradicionais"
+                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
+                  />
+                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
+                    Nome da coluna da concorrência
                   </p>
                 </div>
               </div>
@@ -696,153 +628,14 @@ export default function ComparisonPage() {
                             item={item}
                             index={index}
                             showValidation={showValidation}
-                            itemList={features}
                             handleChange={handleFeatureChange}
-                            openDeleteSingleModal={openDeleteSingleModal}
+                            handleRemoveFeature={handleRemoveFeature}
                           />
                         ))}
                       </SortableContext>
                     </DndContext>
                   )}
                 </AnimatePresence>
-              </div>
-            </Card>
-          </motion.div>
-        </div>
-
-        {/* Seção Call to Action */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Call to Action"
-            section="cta"
-            icon={ArrowRight}
-            isExpanded={expandedSections.cta}
-            onToggle={() => toggleSection("cta")}
-          />
-
-          <motion.div
-            initial={false}
-            animate={{ height: expandedSections.cta ? "auto" : 0 }}
-            className="overflow-hidden"
-          >
-            <Card className="p-6 bg-[var(--color-background)] space-y-6">
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-[var(--color-secondary)] mb-2">
-                  Configurações do Botão de Ação
-                </h4>
-                <p className="text-sm text-[var(--color-secondary)]/70">
-                  Configure o botão que aparecerá abaixo da tabela comparativa
-                </p>
-              </div>
-
-              {/* Toggle de Ação */}
-              <div className="p-4 border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/5 rounded-xl flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-bold text-[var(--color-secondary)] flex items-center gap-2">
-                    <LayoutTemplate className="w-4 h-4 text-[var(--color-primary)]" />
-                    Abrir Formulário no Clique
-                  </h4>
-                  <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                    Ative para abrir um formulário ao invés de redirecionar para um link.
-                  </p>
-                </div>
-                <Switch
-                  checked={currentData.cta.use_form || false}
-                  onCheckedChange={(checked: boolean) => handleChange('cta.use_form', checked)}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <Input
-                    label="Texto do Botão"
-                    value={currentData.cta.text}
-                    onChange={(e) => handleChange('cta.text', e.target.value)}
-                    placeholder="Ex: Começar Agora"
-                    className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                  />
-
-                  {/* Destino Dinâmico (Formulário ou Link) */}
-                  {currentData.cta.use_form ? (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                        <LayoutTemplate className="w-4 h-4" />
-                        Formulário Vinculado
-                      </label>
-                      <select
-                        value={currentData.cta.form_id || ""}
-                        onChange={(e) => handleChange('cta.form_id', e.target.value)}
-                        className="w-full px-3 py-2.5 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)] outline-none"
-                      >
-                        <option value="">-- Selecione o formulário --</option>
-                        {availableForms.map(form => (
-                          <option key={form.id} value={form.id}>{form.name}</option>
-                        ))}
-                      </select>
-                      {availableForms.length === 0 && (
-                        <p className="text-xs text-[var(--color-danger)] mt-1">Nenhum formulário encontrado. Crie um no menu Formulários.</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2 flex items-center gap-2">
-                        <Link2 className="w-4 h-4" />
-                        URL do Botão
-                      </label>
-                      <Input
-                        value={currentData.cta.url}
-                        onChange={(e) => handleChange('cta.url', e.target.value)}
-                        placeholder="Ex: /checkout"
-                        className="bg-[var(--color-background-body)] border-[var(--color-border)] text-[var(--color-secondary)]"
-                      />
-                      <p className="text-xs text-[var(--color-secondary)]/70 mt-1">
-                        Para onde o botão levará (use / para páginas internas)
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                      Variante do Botão
-                    </label>
-                    <select
-                      value={currentData.cta.variant}
-                      onChange={(e) => handleChange('cta.variant', e.target.value)}
-                      className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-                    >
-                      <option value="gradient">Gradiente</option>
-                      <option value="primary">Primário</option>
-                      <option value="secondary">Secundário</option>
-                      <option value="danger">Perigo</option>
-                    </select>
-                  </div>
-
-                  <IconSelector
-                    value={currentData.cta.icon}
-                    onChange={(value) => handleChange('cta.icon', value)}
-                    label="Ícone do Botão"
-                    placeholder="ph:arrow-right-bold"
-                  />
-
-                  {/* Mostra "Alvo do Link" apenas se for modo URL */}
-                  {!currentData.cta.use_form && (
-                    <div>
-                      <label className="block text-sm font-medium text-[var(--color-secondary)] mb-2">
-                        Alvo do Link
-                      </label>
-                      <select
-                        value={currentData.cta.target}
-                        onChange={(e) => handleChange('cta.target', e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--color-border)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent bg-[var(--color-background-body)] text-[var(--color-secondary)]"
-                      >
-                        <option value="_self">Mesma aba</option>
-                        <option value="_blank">Nova aba</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
               </div>
             </Card>
           </motion.div>

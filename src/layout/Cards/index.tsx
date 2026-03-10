@@ -57,8 +57,8 @@ interface CTASection {
   description: string;
   primary?: CTAButton;
   secondary?: CTAButton;
-  use_form?: boolean; // ADICIONADO: controle do toggle
-  form_id?: string;   // ADICIONADO: id do form vinculado
+  use_form?: boolean;
+  form_id?: string;
 }
 
 interface FlywheelRing {
@@ -193,14 +193,15 @@ const defaultComoFazemosData: ComoFazemosData = {
 };
 
 const visualTypeOptions = [
-  { value: 'bar-chart', label: 'gráfico de barras' },
-  { value: 'trend-line', label: 'linha de tendência' },
-  { value: 'traffic', label: 'gráfico de tráfego (barras com crescimento)' },
-  { value: 'crm', label: 'gráfico de rosca (donut)' },
-  { value: 'social', label: 'barras com ícones de redes sociais' },
-  { value: 'seo', label: 'gráfico de posições (ranking)' },
-  { value: 'trophy', label: 'troféu (destaque)' },
-  { value: 'default-line', label: 'linha genérica (fallback)' }
+  { value: 'traffic', label: 'Tráfego' },
+  { value: 'crm', label: 'CRM' },
+  { value: 'social', label: 'Redes Sociais' },
+  { value: 'seo', label: 'SEO' },
+  { value: 'trend-line', label: 'Linha de Tendência' },
+  { value: 'bar-chart', label: 'Gráfico de Barras' },
+  { value: 'training', label: 'Treinamento' },
+  { value: 'ads', label: 'Anúncios (Ads)' },
+  { value: 'ads-creation', label: 'Criação de Anúncios' }
 ];
 
 const mergeWithDefaults = (apiData: unknown, defaultData: ComoFazemosData): ComoFazemosData => {
@@ -238,7 +239,6 @@ const mergeWithDefaults = (apiData: unknown, defaultData: ComoFazemosData): Como
         };
       });
       
-      // Preservando os novos campos do form ao realizar o merge
       const cta = { 
         ...defaultData[section].cta, 
         ...sectionData.cta,
@@ -303,7 +303,6 @@ export default function ComoFazemosComponent({ initialActiveSection = 'marketing
     sobre: initialActiveSection === 'sobre',
   });
 
-  // --- BUSCA OS FORMULÁRIOS DISPONÍVEIS ---
   const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
   
   useEffect(() => {
@@ -949,7 +948,7 @@ export default function ComoFazemosComponent({ initialActiveSection = 'marketing
                                     <option value="">Selecione...</option>
                                     {visualTypeOptions.map((opt) => (
                                       <option key={opt.value} value={opt.value}>
-                                        &apos;{opt.value}&apos; - {opt.label}
+                                        {opt.label}
                                       </option>
                                     ))}
                                   </select>
