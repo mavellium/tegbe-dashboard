@@ -4,13 +4,13 @@ import { useSite } from "@/contexts/SiteContext";
 import { useEffect } from "react";
 
 const defaultTheme = {
-  mainColor: "#e61a4a",
-  secondColor: "#fff",
-  boxShadowColor: "#fff",
-  asideColor: "#111",
-  borderColor: "#e61a4a",
-  backgroundColor: "#111",
-  backgroundBody: "#000"
+  mainColor: "#ffffff",      
+  secondColor: "#ffffff",   
+  boxShadowColor: "#ffffff1a",
+  asideColor: "#000000",      
+  borderColor: "#f1f1f1",   
+  backgroundColor: "#111111",
+  backgroundBody: "#000000"   
 };
 
 export default function ThemeProvider() {
