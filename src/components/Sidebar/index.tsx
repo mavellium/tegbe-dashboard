@@ -26,7 +26,6 @@ export default function Sidebar() {
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [showSiteSwitcher, setShowSiteSwitcher] = useState(false);
   
-  // Estado para grupos que o usuário fechou/abriu manualmente
   const [manualGroups, setManualGroups] = useState<Record<string, boolean>>({});
   
   const pathname = usePathname();
@@ -37,13 +36,13 @@ export default function Sidebar() {
   const toggleButtonRef = useRef<HTMLButtonElement>(null);
   const siteSwitcherRef = useRef<HTMLDivElement>(null);
 
-  // 1. Definição estável do Menu
+  // 1. Definição do Menu
   const menuItems = useMemo(() => {
     if (!user) return [];
     
     if (user.role === "ADMIN") {
       return [
-        { type: "item", name: "Visão Geral", href: "/", icon: "LayoutDashboard" },
+        { type: "item", name: "Visão Geral", href: "/", icon: "LayoutDashboard", exact: true },
         { 
           type: "group", 
           title: "Gestão do Sistema", 
@@ -59,19 +58,32 @@ export default function Sidebar() {
     }
     
     const baseMenu = currentSite?.menuItems || [];
+    
+    // ADICIONADO: exact: true para o Dashboard não sobrepor as páginas filhas
     const analyticsLink = currentSite ? {
-      type: "item", name: "Dashboard", href: `/dashboard/${currentSite.id}`, icon: "LayoutDashboard"
+      type: "item", name: "Dashboard", href: `/dashboard/${currentSite.id}`, icon: "LayoutDashboard", exact: true
     } : null;
 
     const filteredBase = baseMenu.filter((item: any) => item.name !== "Dashboard");
     return analyticsLink ? [analyticsLink, ...filteredBase] : filteredBase;
   }, [user?.role, currentSite?.id, currentSite?.menuItems]);
 
-  // 2. Utilitário de Link Ativo
-  const isActiveLink = useCallback((href: string) => {
+  // 2. Utilitário de Link Ativo (CORRIGIDO PARA RECONHECER EXACT)
+  const isActiveLink = useCallback((href: string, exact: boolean = false) => {
     if (!href) return false;
     if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    
+    // Remove a barra do final para comparar de forma limpa
+    const normalizedPath = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+    const normalizedHref = href.endsWith('/') && href !== '/' ? href.slice(0, -1) : href;
+    
+    // Se for exigido exatidão (como no Dashboard)
+    if (exact) {
+      return normalizedPath === normalizedHref;
+    }
+    
+    // Se não, verifica se é igual ou se é um subdiretório válido (ex: /admin/usuarios e /admin/usuarios/novo)
+    return normalizedPath === normalizedHref || normalizedPath.startsWith(normalizedHref + '/');
   }, [pathname]);
 
   const closeSidebar = useCallback(() => { if (isMobile) setIsOpen(false); }, [isMobile]);
@@ -101,8 +113,6 @@ export default function Sidebar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMobile, isOpen, showSiteSwitcher]);
 
-  // CORREÇÃO DA TRAVA: Só bloqueia se não houver usuário E ainda estiver carregando.
-  // Se o usuário já existe (seu log provou isso), deixamos renderizar para quebrar o loop.
   if (authLoading && !user) {
     return (
       <aside className={`h-screen z-40 fixed border-r border-[var(--color-border)] bg-[var(--color-aside)] w-64 flex items-center justify-center`}>
@@ -111,7 +121,6 @@ export default function Sidebar() {
     );
   }
 
-  // Se realmente não houver usuário, não renderiza a sidebar
   if (!user) return null;
 
   const sidebarWidth = isMobile ? (isOpen ? "w-80" : "w-0") : "w-64";
@@ -226,7 +235,10 @@ export default function Sidebar() {
               {menuItems.map((item: any) => {
                 if (item.type === "item") {
                   const Icon = iconMap[item.icon] || FileText;
-                  const isActive = isActiveLink(item.href);
+                  
+                  // ADICIONADO: Puxa o 'item.exact' da configuração do menu
+                  const isActive = isActiveLink(item.href, item.exact);
+                  
                   return (
                     <motion.div key={item.name} whileHover={{ x: 4 }}>
                       <Link
@@ -242,8 +254,9 @@ export default function Sidebar() {
                 }
 
                 const GroupIcon = item.icon ? iconMap[item.icon] : null;
-                // LOGICA DE GRUPO: Aberto se o usuário clicou OU se algum filho está ativo
-                const isGroupActive = item.children?.some((child: any) => isActiveLink(child.href));
+                
+                // ADICIONADO: Puxa o 'child.exact' para testar se os filhos de um grupo estão ativos
+                const isGroupActive = item.children?.some((child: any) => isActiveLink(child.href, child.exact));
                 const isGroupOpen = manualGroups[item.title] ?? isGroupActive;
 
                 return (
@@ -263,7 +276,7 @@ export default function Sidebar() {
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="ml-6 space-y-1 overflow-hidden">
                           {item.children.map((child: any) => {
                             const ChildIcon = iconMap[child.icon] || FileText;
-                            const isActive = isActiveLink(child.href);
+                            const isActive = isActiveLink(child.href, child.exact);
                             return (
                               <Link key={child.name} href={child.href} onClick={closeSidebar} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isActive ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-secondary)]/70 hover:bg-black/5 dark:hover:bg-white/5"}`}>
                                 <ChildIcon size={16} className="flex-shrink-0" />
