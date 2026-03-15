@@ -6,12 +6,10 @@ export const dynamic = "force-dynamic";
 export default async function HeroImagesPage() {
   let initialData = null;
   try {
-    const dbData = await prisma.formData.findUnique({
+    const dbData = await prisma.formData.findFirst({
       where: {
-        type_subtype: {
-          type: "tegbe-institucional",
-          subtype: "hero-images"
-        }
+        type: "tegbe-institucional",
+        subtype: "meta-alunos" 
       }
     });
 

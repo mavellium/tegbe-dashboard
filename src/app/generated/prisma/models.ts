@@ -8,8 +8,11 @@
  *
  * 🟢 You can import this file directly.
  */
+export type * from './models/Company'
+export type * from './models/SubCompany'
+export type * from './models/Page'
+export type * from './models/User'
 export type * from './models/FormData'
 export type * from './models/Component'
 export type * from './models/ComponentData'
-export type * from './models/User'
 export type * from './commonInputTypes'

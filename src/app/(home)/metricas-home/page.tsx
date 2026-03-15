@@ -27,7 +27,7 @@ import { SectionHeader } from "@/components/SectionHeader";
 import Loading from "@/components/Loading";
 import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { Button } from "@/components/Button";
-import { useSite } from "@/context/site-context";
+import { useSite } from "@/contexts/SiteContext";
 
 interface StatBento {
   id: string;

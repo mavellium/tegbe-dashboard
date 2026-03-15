@@ -38,7 +38,7 @@ import { useJsonManagement } from "@/hooks/useJsonManagement";
 import { Button } from "@/components/Button";
 import { ThemePropertyInput } from "@/components/ThemePropertyInput";
 import { hexToTailwindBgClass } from "@/lib/colors";
-import { useSite } from "@/context/site-context";
+import { useSite } from "@/contexts/SiteContext";
 
 interface Track {
   id: string;

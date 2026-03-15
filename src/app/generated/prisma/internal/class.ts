@@ -20,7 +20,7 @@ const config: runtime.GetPrismaClientConfig = {
   "clientVersion": "7.0.0",
   "engineVersion": "0c19ccc313cf9911a90d99d2ac2eb0280c76c513",
   "activeProvider": "postgresql",
-  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nmodel FormData {\n  id        String   @id @default(cuid())\n  values    Json\n  type      String\n  subtype   String\n  createdAt DateTime @default(now())\n\n  components Component[]\n\n  @@unique([type, subtype])\n}\n\nmodel Component {\n  id     String @id @default(cuid())\n  name   String\n  html   String @db.Text\n  config Json\n\n  formDataId String?\n  formData   FormData? @relation(fields: [formDataId], references: [id], onDelete: SetNull)\n\n  collectedData ComponentData[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"components\")\n}\n\nmodel ComponentData {\n  id          String     @id @default(cuid())\n  componentId String?\n  component   Component? @relation(fields: [componentId], references: [id], onDelete: Cascade)\n\n  data      Json\n  createdAt DateTime @default(now())\n\n  @@map(\"component_data\")\n}\n\nmodel User {\n  id        String    @id @default(cuid())\n  name      String\n  email     String    @unique\n  password  String\n  isActive  Boolean   @default(true)\n  lastLogin DateTime?\n  createdAt DateTime  @default(now())\n  updatedAt DateTime  @updatedAt\n\n  @@map(\"users\")\n}\n",
+  "inlineSchema": "generator client {\n  provider = \"prisma-client\"\n  output   = \"../src/app/generated/prisma\"\n}\n\ndatasource db {\n  provider = \"postgresql\"\n}\n\nenum Role {\n  ADMIN\n  USER\n}\n\nmodel Company {\n  id   String @id @default(cuid())\n  name String\n\n  users        User[]\n  subCompanies SubCompany[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"companies\")\n}\n\nmodel SubCompany {\n  id   String @id @default(cuid())\n  name String\n\n  companyId String\n  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)\n\n  logo_img    String?\n  description String?\n  ga_id       String?\n\n  theme     Json?\n  menuItems Json?\n\n  formData   FormData[]\n  components Component[]\n  pages      Page[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"sub_companies\")\n}\n\nmodel Page {\n  id       String  @id @default(cuid())\n  title    String\n  subtitle String?\n  icon     String  @default(\"FileText\")\n  endpoint String\n  formData Json?\n\n  subCompanyId String\n  subCompany   SubCompany @relation(fields: [subCompanyId], references: [id], onDelete: Cascade)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"pages\")\n}\n\nmodel User {\n  id       String @id @default(cuid())\n  name     String\n  email    String @unique\n  password String\n\n  role      Role      @default(USER)\n  isActive  Boolean   @default(true)\n  lastLogin DateTime?\n\n  companyId String?\n  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"users\")\n}\n\nmodel FormData {\n  id        String   @id @default(cuid())\n  values    Json\n  type      String\n  subtype   String\n  createdAt DateTime @default(now())\n\n  subCompanyId String?\n  subCompany   SubCompany? @relation(fields: [subCompanyId], references: [id], onDelete: SetNull)\n\n  components Component[]\n\n  @@unique([type, subtype, subCompanyId])\n}\n\nmodel Component {\n  id     String @id @default(cuid())\n  name   String\n  html   String @db.Text\n  config Json\n\n  formDataId String?\n  formData   FormData? @relation(fields: [formDataId], references: [id], onDelete: SetNull)\n\n  subCompanyId String?\n  subCompany   SubCompany? @relation(fields: [subCompanyId], references: [id], onDelete: SetNull)\n\n  collectedData ComponentData[]\n\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  @@map(\"components\")\n}\n\nmodel ComponentData {\n  id          String     @id @default(cuid())\n  componentId String?\n  component   Component? @relation(fields: [componentId], references: [id], onDelete: Cascade)\n\n  data      Json\n  createdAt DateTime @default(now())\n\n  @@map(\"component_data\")\n}\n",
   "runtimeDataModel": {
     "models": {},
     "enums": {},
@@ -28,7 +28,7 @@ const config: runtime.GetPrismaClientConfig = {
   }
 }
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"FormData\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"values\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subtype\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"components\",\"kind\":\"object\",\"type\":\"Component\",\"relationName\":\"ComponentToFormData\"}],\"dbName\":null},\"Component\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"html\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"config\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"formDataId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"formData\",\"kind\":\"object\",\"type\":\"FormData\",\"relationName\":\"ComponentToFormData\"},{\"name\":\"collectedData\",\"kind\":\"object\",\"type\":\"ComponentData\",\"relationName\":\"ComponentToComponentData\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"components\"},\"ComponentData\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"componentId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"component\",\"kind\":\"object\",\"type\":\"Component\",\"relationName\":\"ComponentToComponentData\"},{\"name\":\"data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"component_data\"},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"isActive\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"lastLogin\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"users\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"Company\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"users\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"CompanyToUser\"},{\"name\":\"subCompanies\",\"kind\":\"object\",\"type\":\"SubCompany\",\"relationName\":\"CompanyToSubCompany\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"companies\"},\"SubCompany\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"companyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"company\",\"kind\":\"object\",\"type\":\"Company\",\"relationName\":\"CompanyToSubCompany\"},{\"name\":\"logo_img\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ga_id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"theme\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"menuItems\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"formData\",\"kind\":\"object\",\"type\":\"FormData\",\"relationName\":\"FormDataToSubCompany\"},{\"name\":\"components\",\"kind\":\"object\",\"type\":\"Component\",\"relationName\":\"ComponentToSubCompany\"},{\"name\":\"pages\",\"kind\":\"object\",\"type\":\"Page\",\"relationName\":\"PageToSubCompany\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"sub_companies\"},\"Page\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subtitle\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"icon\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"endpoint\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"formData\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"subCompanyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subCompany\",\"kind\":\"object\",\"type\":\"SubCompany\",\"relationName\":\"PageToSubCompany\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"pages\"},\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"password\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"enum\",\"type\":\"Role\"},{\"name\":\"isActive\",\"kind\":\"scalar\",\"type\":\"Boolean\"},{\"name\":\"lastLogin\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"companyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"company\",\"kind\":\"object\",\"type\":\"Company\",\"relationName\":\"CompanyToUser\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"users\"},\"FormData\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"values\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subtype\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"subCompanyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subCompany\",\"kind\":\"object\",\"type\":\"SubCompany\",\"relationName\":\"FormDataToSubCompany\"},{\"name\":\"components\",\"kind\":\"object\",\"type\":\"Component\",\"relationName\":\"ComponentToFormData\"}],\"dbName\":null},\"Component\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"html\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"config\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"formDataId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"formData\",\"kind\":\"object\",\"type\":\"FormData\",\"relationName\":\"ComponentToFormData\"},{\"name\":\"subCompanyId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"subCompany\",\"kind\":\"object\",\"type\":\"SubCompany\",\"relationName\":\"ComponentToSubCompany\"},{\"name\":\"collectedData\",\"kind\":\"object\",\"type\":\"ComponentData\",\"relationName\":\"ComponentToComponentData\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"components\"},\"ComponentData\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"componentId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"component\",\"kind\":\"object\",\"type\":\"Component\",\"relationName\":\"ComponentToComponentData\"},{\"name\":\"data\",\"kind\":\"scalar\",\"type\":\"Json\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"}],\"dbName\":\"component_data\"}},\"enums\":{},\"types\":{}}")
 
 async function decodeBase64AsWasm(wasmBase64: string): Promise<WebAssembly.Module> {
   const { Buffer } = await import('node:buffer')
@@ -58,8 +58,8 @@ export interface PrismaClientConstructor {
    * @example
    * ```
    * const prisma = new PrismaClient()
-   * // Fetch zero or more FormData
-   * const formData = await prisma.formData.findMany()
+   * // Fetch zero or more Companies
+   * const companies = await prisma.company.findMany()
    * ```
    * 
    * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
@@ -80,8 +80,8 @@ export interface PrismaClientConstructor {
  * @example
  * ```
  * const prisma = new PrismaClient()
- * // Fetch zero or more FormData
- * const formData = await prisma.formData.findMany()
+ * // Fetch zero or more Companies
+ * const companies = await prisma.company.findMany()
  * ```
  * 
  * Read more in our [docs](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client).
@@ -175,6 +175,46 @@ export interface PrismaClient<
   }>>
 
       /**
+   * `prisma.company`: Exposes CRUD operations for the **Company** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Companies
+    * const companies = await prisma.company.findMany()
+    * ```
+    */
+  get company(): Prisma.CompanyDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.subCompany`: Exposes CRUD operations for the **SubCompany** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more SubCompanies
+    * const subCompanies = await prisma.subCompany.findMany()
+    * ```
+    */
+  get subCompany(): Prisma.SubCompanyDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.page`: Exposes CRUD operations for the **Page** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Pages
+    * const pages = await prisma.page.findMany()
+    * ```
+    */
+  get page(): Prisma.PageDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
+   * `prisma.user`: Exposes CRUD operations for the **User** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Users
+    * const users = await prisma.user.findMany()
+    * ```
+    */
+  get user(): Prisma.UserDelegate<ExtArgs, { omit: OmitOpts }>;
+
+  /**
    * `prisma.formData`: Exposes CRUD operations for the **FormData** model.
     * Example usage:
     * ```ts
@@ -203,16 +243,6 @@ export interface PrismaClient<
     * ```
     */
   get componentData(): Prisma.ComponentDataDelegate<ExtArgs, { omit: OmitOpts }>;
-
-  /**
-   * `prisma.user`: Exposes CRUD operations for the **User** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more Users
-    * const users = await prisma.user.findMany()
-    * ```
-    */
-  get user(): Prisma.UserDelegate<ExtArgs, { omit: OmitOpts }>;
 }
 
 export function getPrismaClientClass(): PrismaClientConstructor {

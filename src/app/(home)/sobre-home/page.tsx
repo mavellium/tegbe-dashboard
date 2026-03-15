@@ -36,7 +36,7 @@ import { ThemePropertyInput } from "@/components/ThemePropertyInput";
 import { hexToTailwindBgClass } from "@/lib/colors";
 import { ImageUpload } from "@/components/ImageUpload";
 import IconSelector from "@/components/IconSelector";
-import { useSite } from "@/context/site-context";
+import { useSite } from "@/contexts/SiteContext";
 
 interface ThemeData {
   bg_section: string;

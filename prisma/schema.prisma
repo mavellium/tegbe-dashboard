@@ -7,55 +7,126 @@ datasource db {
   provider = "postgresql"
 }
 
-model FormData {
-  id         String      @id @default(cuid())
-  values     Json
-  type       String
-  subtype    String
-  createdAt  DateTime    @default(now())
-  
-  components Component[] 
+enum Role {
+  ADMIN
+  USER
+}
 
-  @@unique([type, subtype])
+model Company {
+  id          String       @id @default(cuid())
+  name        String
+  
+  users       User[]   
+  subCompanies SubCompany[]
+  
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("companies")
+}
+
+model SubCompany {
+  id          String       @id @default(cuid())
+  name        String
+  
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  logo_img    String?    
+  description String?     
+  ga_id       String?   
+
+  theme       Json?      
+  menuItems   Json?     
+  
+  formData    FormData[]
+  components  Component[]
+  pages       Page[]
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("sub_companies")
+}
+
+model Page {
+  id           String     @id @default(cuid())
+  title        String
+  subtitle     String?
+  icon         String     @default("FileText") 
+  endpoint     String     
+  formData     Json?    
+  
+  subCompanyId String
+  subCompany   SubCompany @relation(fields: [subCompanyId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("pages")
+}
+
+model User {
+  id          String    @id @default(cuid())
+  name        String
+  email       String    @unique
+  password    String
+  
+  role        Role      @default(USER)
+  isActive    Boolean   @default(true)
+  lastLogin   DateTime?
+
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model FormData {
+  id            String      @id @default(cuid())
+  values        Json
+  type          String
+  subtype       String
+  createdAt     DateTime    @default(now())
+
+  subCompanyId  String?
+  subCompany    SubCompany? @relation(fields: [subCompanyId], references: [id], onDelete: SetNull)
+
+  components    Component[] 
+
+  @@unique([type, subtype, subCompanyId])
 }
 
 model Component {
-  id          String          @id @default(cuid())
-  name        String          
-  html        String          @db.Text 
-  config      Json            
+  id            String      @id @default(cuid())
+  name          String          
+  html          String      @db.Text 
+  config        Json            
   
-  formDataId  String?
-  formData    FormData?       @relation(fields: [formDataId], references: [id], onDelete: SetNull)
+  formDataId    String?
+  formData      FormData?   @relation(fields: [formDataId], references: [id], onDelete: SetNull)
+  
+  subCompanyId  String?
+  subCompany    SubCompany? @relation(fields: [subCompanyId], references: [id], onDelete: SetNull)
   
   collectedData ComponentData[] 
 
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@map("components")
 }
 
 model ComponentData {
-  id          String     @id @default(cuid())
-  componentId String?
-  component   Component? @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  id            String      @id @default(cuid())
+  componentId   String?
+  component     Component?  @relation(fields: [componentId], references: [id], onDelete: Cascade)
   
-  data        Json       
-  createdAt   DateTime   @default(now())
+  data          Json       
+  createdAt     DateTime    @default(now())
 
   @@map("component_data")
-}
-
-model User {
-  id        String    @id @default(cuid())
-  name      String
-  email     String    @unique
-  password  String
-  isActive  Boolean   @default(true)
-  lastLogin DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-
-  @@map("users")
 }

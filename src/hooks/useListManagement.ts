@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useSite } from "@/context/site-context";
+import { useSite } from "@/contexts/SiteContext";
 
 interface UseListManagementProps<T> {
   type: string;

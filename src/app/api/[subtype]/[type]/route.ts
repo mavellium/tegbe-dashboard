@@ -54,17 +54,22 @@ export async function GET(
   try {
     const { subtype, type } = await context.params;
 
-    const formData = await prisma.formData.findUnique({
+    const formData = await prisma.formData.findFirst({
       where: {
-        type_subtype: {
-          type,
-          subtype,
-        },
+        type: type,    // Filtra pelo tipo
+        subtype: subtype, // E pelo subtipo
       },
       select: {
         values: true,
       },
     });
+
+    if (!formData || !formData.values) {
+      return NextResponse.json(
+        null,
+        { status: 404, headers: corsHeaders }
+      );
+    }
 
     if (!formData || !formData.values) {
       return NextResponse.json(

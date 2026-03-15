@@ -37,7 +37,7 @@ import { ThemePropertyInput } from "@/components/ThemePropertyInput";
 import { hexToTailwindBgClass } from "@/lib/colors";
 import { ImageUpload } from "@/components/ImageUpload";
 import IconSelector from "@/components/IconSelector";
-import { useSite } from "@/context/site-context";
+import { useSite } from "@/contexts/SiteContext";
 
 interface ThemeData {
   bg_section: string;
@@ -145,8 +145,7 @@ const mergeWithDefaults = (apiData: any, defaultData: EcommerceSectionData): Eco
 };
 
 export default function EcommerceSectionPage() {
-  const { currentSite } = useSite();
-  const currentPlanType = currentSite.planType;
+  const currentPlanType = 'pro';
   const currentPlanLimit = currentPlanType === 'pro' ? 10 : 6;
 
   const {

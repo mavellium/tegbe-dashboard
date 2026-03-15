@@ -29,6 +29,7 @@ export type FormDataMinAggregateOutputType = {
   type: string | null
   subtype: string | null
   createdAt: Date | null
+  subCompanyId: string | null
 }
 
 export type FormDataMaxAggregateOutputType = {
@@ -36,6 +37,7 @@ export type FormDataMaxAggregateOutputType = {
   type: string | null
   subtype: string | null
   createdAt: Date | null
+  subCompanyId: string | null
 }
 
 export type FormDataCountAggregateOutputType = {
@@ -44,6 +46,7 @@ export type FormDataCountAggregateOutputType = {
   type: number
   subtype: number
   createdAt: number
+  subCompanyId: number
   _all: number
 }
 
@@ -53,6 +56,7 @@ export type FormDataMinAggregateInputType = {
   type?: true
   subtype?: true
   createdAt?: true
+  subCompanyId?: true
 }
 
 export type FormDataMaxAggregateInputType = {
@@ -60,6 +64,7 @@ export type FormDataMaxAggregateInputType = {
   type?: true
   subtype?: true
   createdAt?: true
+  subCompanyId?: true
 }
 
 export type FormDataCountAggregateInputType = {
@@ -68,6 +73,7 @@ export type FormDataCountAggregateInputType = {
   type?: true
   subtype?: true
   createdAt?: true
+  subCompanyId?: true
   _all?: true
 }
 
@@ -149,6 +155,7 @@ export type FormDataGroupByOutputType = {
   type: string
   subtype: string
   createdAt: Date
+  subCompanyId: string | null
   _count: FormDataCountAggregateOutputType | null
   _min: FormDataMinAggregateOutputType | null
   _max: FormDataMaxAggregateOutputType | null
@@ -178,6 +185,8 @@ export type FormDataWhereInput = {
   type?: Prisma.StringFilter<"FormData"> | string
   subtype?: Prisma.StringFilter<"FormData"> | string
   createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
+  subCompanyId?: Prisma.StringNullableFilter<"FormData"> | string | null
+  subCompany?: Prisma.XOR<Prisma.SubCompanyNullableScalarRelationFilter, Prisma.SubCompanyWhereInput> | null
   components?: Prisma.ComponentListRelationFilter
 }
 
@@ -187,12 +196,14 @@ export type FormDataOrderByWithRelationInput = {
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrderInput | Prisma.SortOrder
+  subCompany?: Prisma.SubCompanyOrderByWithRelationInput
   components?: Prisma.ComponentOrderByRelationAggregateInput
 }
 
 export type FormDataWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  type_subtype?: Prisma.FormDataTypeSubtypeCompoundUniqueInput
+  type_subtype_subCompanyId?: Prisma.FormDataTypeSubtypeSubCompanyIdCompoundUniqueInput
   AND?: Prisma.FormDataWhereInput | Prisma.FormDataWhereInput[]
   OR?: Prisma.FormDataWhereInput[]
   NOT?: Prisma.FormDataWhereInput | Prisma.FormDataWhereInput[]
@@ -200,8 +211,10 @@ export type FormDataWhereUniqueInput = Prisma.AtLeast<{
   type?: Prisma.StringFilter<"FormData"> | string
   subtype?: Prisma.StringFilter<"FormData"> | string
   createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
+  subCompanyId?: Prisma.StringNullableFilter<"FormData"> | string | null
+  subCompany?: Prisma.XOR<Prisma.SubCompanyNullableScalarRelationFilter, Prisma.SubCompanyWhereInput> | null
   components?: Prisma.ComponentListRelationFilter
-}, "id" | "type_subtype">
+}, "id" | "type_subtype_subCompanyId">
 
 export type FormDataOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -209,6 +222,7 @@ export type FormDataOrderByWithAggregationInput = {
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.FormDataCountOrderByAggregateInput
   _max?: Prisma.FormDataMaxOrderByAggregateInput
   _min?: Prisma.FormDataMinOrderByAggregateInput
@@ -223,6 +237,7 @@ export type FormDataScalarWhereWithAggregatesInput = {
   type?: Prisma.StringWithAggregatesFilter<"FormData"> | string
   subtype?: Prisma.StringWithAggregatesFilter<"FormData"> | string
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"FormData"> | Date | string
+  subCompanyId?: Prisma.StringNullableWithAggregatesFilter<"FormData"> | string | null
 }
 
 export type FormDataCreateInput = {
@@ -231,6 +246,7 @@ export type FormDataCreateInput = {
   type: string
   subtype: string
   createdAt?: Date | string
+  subCompany?: Prisma.SubCompanyCreateNestedOneWithoutFormDataInput
   components?: Prisma.ComponentCreateNestedManyWithoutFormDataInput
 }
 
@@ -240,6 +256,7 @@ export type FormDataUncheckedCreateInput = {
   type: string
   subtype: string
   createdAt?: Date | string
+  subCompanyId?: string | null
   components?: Prisma.ComponentUncheckedCreateNestedManyWithoutFormDataInput
 }
 
@@ -249,6 +266,7 @@ export type FormDataUpdateInput = {
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subCompany?: Prisma.SubCompanyUpdateOneWithoutFormDataNestedInput
   components?: Prisma.ComponentUpdateManyWithoutFormDataNestedInput
 }
 
@@ -258,6 +276,7 @@ export type FormDataUncheckedUpdateInput = {
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   components?: Prisma.ComponentUncheckedUpdateManyWithoutFormDataNestedInput
 }
 
@@ -267,6 +286,7 @@ export type FormDataCreateManyInput = {
   type: string
   subtype: string
   createdAt?: Date | string
+  subCompanyId?: string | null
 }
 
 export type FormDataUpdateManyMutationInput = {
@@ -283,11 +303,23 @@ export type FormDataUncheckedUpdateManyInput = {
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
-export type FormDataTypeSubtypeCompoundUniqueInput = {
+export type FormDataListRelationFilter = {
+  every?: Prisma.FormDataWhereInput
+  some?: Prisma.FormDataWhereInput
+  none?: Prisma.FormDataWhereInput
+}
+
+export type FormDataOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
+}
+
+export type FormDataTypeSubtypeSubCompanyIdCompoundUniqueInput = {
   type: string
   subtype: string
+  subCompanyId: string
 }
 
 export type FormDataCountOrderByAggregateInput = {
@@ -296,6 +328,7 @@ export type FormDataCountOrderByAggregateInput = {
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrder
 }
 
 export type FormDataMaxOrderByAggregateInput = {
@@ -303,6 +336,7 @@ export type FormDataMaxOrderByAggregateInput = {
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrder
 }
 
 export type FormDataMinOrderByAggregateInput = {
@@ -310,6 +344,7 @@ export type FormDataMinOrderByAggregateInput = {
   type?: Prisma.SortOrder
   subtype?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrder
 }
 
 export type FormDataNullableScalarRelationFilter = {
@@ -317,12 +352,46 @@ export type FormDataNullableScalarRelationFilter = {
   isNot?: Prisma.FormDataWhereInput | null
 }
 
-export type StringFieldUpdateOperationsInput = {
-  set?: string
+export type FormDataCreateNestedManyWithoutSubCompanyInput = {
+  create?: Prisma.XOR<Prisma.FormDataCreateWithoutSubCompanyInput, Prisma.FormDataUncheckedCreateWithoutSubCompanyInput> | Prisma.FormDataCreateWithoutSubCompanyInput[] | Prisma.FormDataUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.FormDataCreateOrConnectWithoutSubCompanyInput | Prisma.FormDataCreateOrConnectWithoutSubCompanyInput[]
+  createMany?: Prisma.FormDataCreateManySubCompanyInputEnvelope
+  connect?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
 }
 
-export type DateTimeFieldUpdateOperationsInput = {
-  set?: Date | string
+export type FormDataUncheckedCreateNestedManyWithoutSubCompanyInput = {
+  create?: Prisma.XOR<Prisma.FormDataCreateWithoutSubCompanyInput, Prisma.FormDataUncheckedCreateWithoutSubCompanyInput> | Prisma.FormDataCreateWithoutSubCompanyInput[] | Prisma.FormDataUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.FormDataCreateOrConnectWithoutSubCompanyInput | Prisma.FormDataCreateOrConnectWithoutSubCompanyInput[]
+  createMany?: Prisma.FormDataCreateManySubCompanyInputEnvelope
+  connect?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+}
+
+export type FormDataUpdateManyWithoutSubCompanyNestedInput = {
+  create?: Prisma.XOR<Prisma.FormDataCreateWithoutSubCompanyInput, Prisma.FormDataUncheckedCreateWithoutSubCompanyInput> | Prisma.FormDataCreateWithoutSubCompanyInput[] | Prisma.FormDataUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.FormDataCreateOrConnectWithoutSubCompanyInput | Prisma.FormDataCreateOrConnectWithoutSubCompanyInput[]
+  upsert?: Prisma.FormDataUpsertWithWhereUniqueWithoutSubCompanyInput | Prisma.FormDataUpsertWithWhereUniqueWithoutSubCompanyInput[]
+  createMany?: Prisma.FormDataCreateManySubCompanyInputEnvelope
+  set?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  disconnect?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  delete?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  connect?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  update?: Prisma.FormDataUpdateWithWhereUniqueWithoutSubCompanyInput | Prisma.FormDataUpdateWithWhereUniqueWithoutSubCompanyInput[]
+  updateMany?: Prisma.FormDataUpdateManyWithWhereWithoutSubCompanyInput | Prisma.FormDataUpdateManyWithWhereWithoutSubCompanyInput[]
+  deleteMany?: Prisma.FormDataScalarWhereInput | Prisma.FormDataScalarWhereInput[]
+}
+
+export type FormDataUncheckedUpdateManyWithoutSubCompanyNestedInput = {
+  create?: Prisma.XOR<Prisma.FormDataCreateWithoutSubCompanyInput, Prisma.FormDataUncheckedCreateWithoutSubCompanyInput> | Prisma.FormDataCreateWithoutSubCompanyInput[] | Prisma.FormDataUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.FormDataCreateOrConnectWithoutSubCompanyInput | Prisma.FormDataCreateOrConnectWithoutSubCompanyInput[]
+  upsert?: Prisma.FormDataUpsertWithWhereUniqueWithoutSubCompanyInput | Prisma.FormDataUpsertWithWhereUniqueWithoutSubCompanyInput[]
+  createMany?: Prisma.FormDataCreateManySubCompanyInputEnvelope
+  set?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  disconnect?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  delete?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  connect?: Prisma.FormDataWhereUniqueInput | Prisma.FormDataWhereUniqueInput[]
+  update?: Prisma.FormDataUpdateWithWhereUniqueWithoutSubCompanyInput | Prisma.FormDataUpdateWithWhereUniqueWithoutSubCompanyInput[]
+  updateMany?: Prisma.FormDataUpdateManyWithWhereWithoutSubCompanyInput | Prisma.FormDataUpdateManyWithWhereWithoutSubCompanyInput[]
+  deleteMany?: Prisma.FormDataScalarWhereInput | Prisma.FormDataScalarWhereInput[]
 }
 
 export type FormDataCreateNestedOneWithoutComponentsInput = {
@@ -341,12 +410,69 @@ export type FormDataUpdateOneWithoutComponentsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.FormDataUpdateToOneWithWhereWithoutComponentsInput, Prisma.FormDataUpdateWithoutComponentsInput>, Prisma.FormDataUncheckedUpdateWithoutComponentsInput>
 }
 
+export type FormDataCreateWithoutSubCompanyInput = {
+  id?: string
+  values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
+  createdAt?: Date | string
+  components?: Prisma.ComponentCreateNestedManyWithoutFormDataInput
+}
+
+export type FormDataUncheckedCreateWithoutSubCompanyInput = {
+  id?: string
+  values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
+  createdAt?: Date | string
+  components?: Prisma.ComponentUncheckedCreateNestedManyWithoutFormDataInput
+}
+
+export type FormDataCreateOrConnectWithoutSubCompanyInput = {
+  where: Prisma.FormDataWhereUniqueInput
+  create: Prisma.XOR<Prisma.FormDataCreateWithoutSubCompanyInput, Prisma.FormDataUncheckedCreateWithoutSubCompanyInput>
+}
+
+export type FormDataCreateManySubCompanyInputEnvelope = {
+  data: Prisma.FormDataCreateManySubCompanyInput | Prisma.FormDataCreateManySubCompanyInput[]
+  skipDuplicates?: boolean
+}
+
+export type FormDataUpsertWithWhereUniqueWithoutSubCompanyInput = {
+  where: Prisma.FormDataWhereUniqueInput
+  update: Prisma.XOR<Prisma.FormDataUpdateWithoutSubCompanyInput, Prisma.FormDataUncheckedUpdateWithoutSubCompanyInput>
+  create: Prisma.XOR<Prisma.FormDataCreateWithoutSubCompanyInput, Prisma.FormDataUncheckedCreateWithoutSubCompanyInput>
+}
+
+export type FormDataUpdateWithWhereUniqueWithoutSubCompanyInput = {
+  where: Prisma.FormDataWhereUniqueInput
+  data: Prisma.XOR<Prisma.FormDataUpdateWithoutSubCompanyInput, Prisma.FormDataUncheckedUpdateWithoutSubCompanyInput>
+}
+
+export type FormDataUpdateManyWithWhereWithoutSubCompanyInput = {
+  where: Prisma.FormDataScalarWhereInput
+  data: Prisma.XOR<Prisma.FormDataUpdateManyMutationInput, Prisma.FormDataUncheckedUpdateManyWithoutSubCompanyInput>
+}
+
+export type FormDataScalarWhereInput = {
+  AND?: Prisma.FormDataScalarWhereInput | Prisma.FormDataScalarWhereInput[]
+  OR?: Prisma.FormDataScalarWhereInput[]
+  NOT?: Prisma.FormDataScalarWhereInput | Prisma.FormDataScalarWhereInput[]
+  id?: Prisma.StringFilter<"FormData"> | string
+  values?: Prisma.JsonFilter<"FormData">
+  type?: Prisma.StringFilter<"FormData"> | string
+  subtype?: Prisma.StringFilter<"FormData"> | string
+  createdAt?: Prisma.DateTimeFilter<"FormData"> | Date | string
+  subCompanyId?: Prisma.StringNullableFilter<"FormData"> | string | null
+}
+
 export type FormDataCreateWithoutComponentsInput = {
   id?: string
   values: Prisma.JsonNullValueInput | runtime.InputJsonValue
   type: string
   subtype: string
   createdAt?: Date | string
+  subCompany?: Prisma.SubCompanyCreateNestedOneWithoutFormDataInput
 }
 
 export type FormDataUncheckedCreateWithoutComponentsInput = {
@@ -355,6 +481,7 @@ export type FormDataUncheckedCreateWithoutComponentsInput = {
   type: string
   subtype: string
   createdAt?: Date | string
+  subCompanyId?: string | null
 }
 
 export type FormDataCreateOrConnectWithoutComponentsInput = {
@@ -379,9 +506,45 @@ export type FormDataUpdateWithoutComponentsInput = {
   type?: Prisma.StringFieldUpdateOperationsInput | string
   subtype?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subCompany?: Prisma.SubCompanyUpdateOneWithoutFormDataNestedInput
 }
 
 export type FormDataUncheckedUpdateWithoutComponentsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type FormDataCreateManySubCompanyInput = {
+  id?: string
+  values: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type: string
+  subtype: string
+  createdAt?: Date | string
+}
+
+export type FormDataUpdateWithoutSubCompanyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  components?: Prisma.ComponentUpdateManyWithoutFormDataNestedInput
+}
+
+export type FormDataUncheckedUpdateWithoutSubCompanyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  subtype?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  components?: Prisma.ComponentUncheckedUpdateManyWithoutFormDataNestedInput
+}
+
+export type FormDataUncheckedUpdateManyWithoutSubCompanyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   values?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   type?: Prisma.StringFieldUpdateOperationsInput | string
@@ -426,6 +589,8 @@ export type FormDataSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   type?: boolean
   subtype?: boolean
   createdAt?: boolean
+  subCompanyId?: boolean
+  subCompany?: boolean | Prisma.FormData$subCompanyArgs<ExtArgs>
   components?: boolean | Prisma.FormData$componentsArgs<ExtArgs>
   _count?: boolean | Prisma.FormDataCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["formData"]>
@@ -436,6 +601,8 @@ export type FormDataSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   type?: boolean
   subtype?: boolean
   createdAt?: boolean
+  subCompanyId?: boolean
+  subCompany?: boolean | Prisma.FormData$subCompanyArgs<ExtArgs>
 }, ExtArgs["result"]["formData"]>
 
 export type FormDataSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -444,6 +611,8 @@ export type FormDataSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   type?: boolean
   subtype?: boolean
   createdAt?: boolean
+  subCompanyId?: boolean
+  subCompany?: boolean | Prisma.FormData$subCompanyArgs<ExtArgs>
 }, ExtArgs["result"]["formData"]>
 
 export type FormDataSelectScalar = {
@@ -452,19 +621,26 @@ export type FormDataSelectScalar = {
   type?: boolean
   subtype?: boolean
   createdAt?: boolean
+  subCompanyId?: boolean
 }
 
-export type FormDataOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "values" | "type" | "subtype" | "createdAt", ExtArgs["result"]["formData"]>
+export type FormDataOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "values" | "type" | "subtype" | "createdAt" | "subCompanyId", ExtArgs["result"]["formData"]>
 export type FormDataInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  subCompany?: boolean | Prisma.FormData$subCompanyArgs<ExtArgs>
   components?: boolean | Prisma.FormData$componentsArgs<ExtArgs>
   _count?: boolean | Prisma.FormDataCountOutputTypeDefaultArgs<ExtArgs>
 }
-export type FormDataIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
-export type FormDataIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type FormDataIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  subCompany?: boolean | Prisma.FormData$subCompanyArgs<ExtArgs>
+}
+export type FormDataIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  subCompany?: boolean | Prisma.FormData$subCompanyArgs<ExtArgs>
+}
 
 export type $FormDataPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "FormData"
   objects: {
+    subCompany: Prisma.$SubCompanyPayload<ExtArgs> | null
     components: Prisma.$ComponentPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -473,6 +649,7 @@ export type $FormDataPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     type: string
     subtype: string
     createdAt: Date
+    subCompanyId: string | null
   }, ExtArgs["result"]["formData"]>
   composites: {}
 }
@@ -867,6 +1044,7 @@ readonly fields: FormDataFieldRefs;
  */
 export interface Prisma__FormDataClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  subCompany<T extends Prisma.FormData$subCompanyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FormData$subCompanyArgs<ExtArgs>>): Prisma.Prisma__SubCompanyClient<runtime.Types.Result.GetResult<Prisma.$SubCompanyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   components<T extends Prisma.FormData$componentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.FormData$componentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ComponentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -902,6 +1080,7 @@ export interface FormDataFieldRefs {
   readonly type: Prisma.FieldRef<"FormData", 'String'>
   readonly subtype: Prisma.FieldRef<"FormData", 'String'>
   readonly createdAt: Prisma.FieldRef<"FormData", 'DateTime'>
+  readonly subCompanyId: Prisma.FieldRef<"FormData", 'String'>
 }
     
 
@@ -1151,6 +1330,10 @@ export type FormDataCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Extens
    */
   data: Prisma.FormDataCreateManyInput | Prisma.FormDataCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1221,6 +1404,10 @@ export type FormDataUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Extens
    * Limit how many FormData to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.FormDataIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1287,6 +1474,25 @@ export type FormDataDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Limit how many FormData to delete.
    */
   limit?: number
+}
+
+/**
+ * FormData.subCompany
+ */
+export type FormData$subCompanyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SubCompany
+   */
+  select?: Prisma.SubCompanySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SubCompany
+   */
+  omit?: Prisma.SubCompanyOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SubCompanyInclude<ExtArgs> | null
+  where?: Prisma.SubCompanyWhereInput
 }
 
 /**

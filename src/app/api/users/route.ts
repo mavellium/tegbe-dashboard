@@ -1,90 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server'
-import {hashPassword } from '@/lib/auth'
-import prisma from '@/lib/prisma'
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { NextRequest, NextResponse } from "next/server";
+import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
+    // Não retornamos a senha por segurança
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        isActive: true,
-        lastLogin: true,
-        createdAt: true,
-        updatedAt: true
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    })
-    
-    return NextResponse.json(users, { status: 200 })
-    
-  } catch (error) {
-    console.error('Erro ao listar usuários:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+      select: { id: true, name: true, email: true, role: true, isActive: true, companyId: true, company: true, lastLogin: true, createdAt: true },
+      orderBy: { createdAt: "desc" }
+    });
+    return NextResponse.json(users);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json()
+    const { name, email, password, role, companyId, isActive } = await req.json();
     
-    if (!body.name || !body.email || !body.password) {
-      return NextResponse.json(
-        { error: 'Nome, email e senha são obrigatórios' },
-        { status: 400 }
-      )
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Nome, e-mail e senha são obrigatórios" }, { status: 400 });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email: body.email }
-    })
-    
-    if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email já cadastrado' },
-        { status: 400 }
-      )
-    }
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) return NextResponse.json({ error: "E-mail já cadastrado" }, { status: 400 });
 
-    const hashedPassword = await hashPassword(body.password)
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await prisma.user.create({
       data: {
-        name: body.name,
-        email: body.email,
+        name,
+        email,
         password: hashedPassword,
-        isActive: body.isActive !== undefined ? body.isActive : true
+        role: role || "USER",
+        companyId: companyId || null,
+        isActive: isActive !== undefined ? isActive : true
       },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        isActive: true,
-        lastLogin: true,
-        createdAt: true,
-        updatedAt: true
-      }
-    })
+      select: { id: true, name: true, email: true, role: true, companyId: true } // Omitir senha no retorno
+    });
 
-    return NextResponse.json(
-      { 
-        message: 'Usuário criado com sucesso',
-        user
-      },
-      { status: 201 }
-    )
-    
-  } catch (error) {
-    console.error('Erro ao criar usuário:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    return NextResponse.json(user, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

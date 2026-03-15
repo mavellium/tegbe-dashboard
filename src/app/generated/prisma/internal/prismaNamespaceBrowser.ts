@@ -51,10 +51,13 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
+  Company: 'Company',
+  SubCompany: 'SubCompany',
+  Page: 'Page',
+  User: 'User',
   FormData: 'FormData',
   Component: 'Component',
-  ComponentData: 'ComponentData',
-  User: 'User'
+  ComponentData: 'ComponentData'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -73,12 +76,70 @@ export const TransactionIsolationLevel = {
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
 
 
+export const CompanyScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type CompanyScalarFieldEnum = (typeof CompanyScalarFieldEnum)[keyof typeof CompanyScalarFieldEnum]
+
+
+export const SubCompanyScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  companyId: 'companyId',
+  logo_img: 'logo_img',
+  description: 'description',
+  ga_id: 'ga_id',
+  theme: 'theme',
+  menuItems: 'menuItems',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type SubCompanyScalarFieldEnum = (typeof SubCompanyScalarFieldEnum)[keyof typeof SubCompanyScalarFieldEnum]
+
+
+export const PageScalarFieldEnum = {
+  id: 'id',
+  title: 'title',
+  subtitle: 'subtitle',
+  icon: 'icon',
+  endpoint: 'endpoint',
+  formData: 'formData',
+  subCompanyId: 'subCompanyId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type PageScalarFieldEnum = (typeof PageScalarFieldEnum)[keyof typeof PageScalarFieldEnum]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  email: 'email',
+  password: 'password',
+  role: 'role',
+  isActive: 'isActive',
+  lastLogin: 'lastLogin',
+  companyId: 'companyId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
 export const FormDataScalarFieldEnum = {
   id: 'id',
   values: 'values',
   type: 'type',
   subtype: 'subtype',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  subCompanyId: 'subCompanyId'
 } as const
 
 export type FormDataScalarFieldEnum = (typeof FormDataScalarFieldEnum)[keyof typeof FormDataScalarFieldEnum]
@@ -90,6 +151,7 @@ export const ComponentScalarFieldEnum = {
   html: 'html',
   config: 'config',
   formDataId: 'formDataId',
+  subCompanyId: 'subCompanyId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 } as const
@@ -107,26 +169,20 @@ export const ComponentDataScalarFieldEnum = {
 export type ComponentDataScalarFieldEnum = (typeof ComponentDataScalarFieldEnum)[keyof typeof ComponentDataScalarFieldEnum]
 
 
-export const UserScalarFieldEnum = {
-  id: 'id',
-  name: 'name',
-  email: 'email',
-  password: 'password',
-  isActive: 'isActive',
-  lastLogin: 'lastLogin',
-  createdAt: 'createdAt',
-  updatedAt: 'updatedAt'
-} as const
-
-export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
-
-
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
 } as const
 
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const NullableJsonNullValueInput = {
+  DbNull: 'DbNull',
+  JsonNull: 'JsonNull'
+} as const
+
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const JsonNullValueInput = {

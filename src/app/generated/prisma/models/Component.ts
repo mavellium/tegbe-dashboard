@@ -29,6 +29,7 @@ export type ComponentMinAggregateOutputType = {
   name: string | null
   html: string | null
   formDataId: string | null
+  subCompanyId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -38,6 +39,7 @@ export type ComponentMaxAggregateOutputType = {
   name: string | null
   html: string | null
   formDataId: string | null
+  subCompanyId: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -48,6 +50,7 @@ export type ComponentCountAggregateOutputType = {
   html: number
   config: number
   formDataId: number
+  subCompanyId: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -59,6 +62,7 @@ export type ComponentMinAggregateInputType = {
   name?: true
   html?: true
   formDataId?: true
+  subCompanyId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -68,6 +72,7 @@ export type ComponentMaxAggregateInputType = {
   name?: true
   html?: true
   formDataId?: true
+  subCompanyId?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -78,6 +83,7 @@ export type ComponentCountAggregateInputType = {
   html?: true
   config?: true
   formDataId?: true
+  subCompanyId?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -161,6 +167,7 @@ export type ComponentGroupByOutputType = {
   html: string
   config: runtime.JsonValue
   formDataId: string | null
+  subCompanyId: string | null
   createdAt: Date
   updatedAt: Date
   _count: ComponentCountAggregateOutputType | null
@@ -192,9 +199,11 @@ export type ComponentWhereInput = {
   html?: Prisma.StringFilter<"Component"> | string
   config?: Prisma.JsonFilter<"Component">
   formDataId?: Prisma.StringNullableFilter<"Component"> | string | null
+  subCompanyId?: Prisma.StringNullableFilter<"Component"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Component"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Component"> | Date | string
   formData?: Prisma.XOR<Prisma.FormDataNullableScalarRelationFilter, Prisma.FormDataWhereInput> | null
+  subCompany?: Prisma.XOR<Prisma.SubCompanyNullableScalarRelationFilter, Prisma.SubCompanyWhereInput> | null
   collectedData?: Prisma.ComponentDataListRelationFilter
 }
 
@@ -204,9 +213,11 @@ export type ComponentOrderByWithRelationInput = {
   html?: Prisma.SortOrder
   config?: Prisma.SortOrder
   formDataId?: Prisma.SortOrderInput | Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   formData?: Prisma.FormDataOrderByWithRelationInput
+  subCompany?: Prisma.SubCompanyOrderByWithRelationInput
   collectedData?: Prisma.ComponentDataOrderByRelationAggregateInput
 }
 
@@ -219,9 +230,11 @@ export type ComponentWhereUniqueInput = Prisma.AtLeast<{
   html?: Prisma.StringFilter<"Component"> | string
   config?: Prisma.JsonFilter<"Component">
   formDataId?: Prisma.StringNullableFilter<"Component"> | string | null
+  subCompanyId?: Prisma.StringNullableFilter<"Component"> | string | null
   createdAt?: Prisma.DateTimeFilter<"Component"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Component"> | Date | string
   formData?: Prisma.XOR<Prisma.FormDataNullableScalarRelationFilter, Prisma.FormDataWhereInput> | null
+  subCompany?: Prisma.XOR<Prisma.SubCompanyNullableScalarRelationFilter, Prisma.SubCompanyWhereInput> | null
   collectedData?: Prisma.ComponentDataListRelationFilter
 }, "id">
 
@@ -231,6 +244,7 @@ export type ComponentOrderByWithAggregationInput = {
   html?: Prisma.SortOrder
   config?: Prisma.SortOrder
   formDataId?: Prisma.SortOrderInput | Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.ComponentCountOrderByAggregateInput
@@ -247,6 +261,7 @@ export type ComponentScalarWhereWithAggregatesInput = {
   html?: Prisma.StringWithAggregatesFilter<"Component"> | string
   config?: Prisma.JsonWithAggregatesFilter<"Component">
   formDataId?: Prisma.StringNullableWithAggregatesFilter<"Component"> | string | null
+  subCompanyId?: Prisma.StringNullableWithAggregatesFilter<"Component"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Component"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"Component"> | Date | string
 }
@@ -259,6 +274,7 @@ export type ComponentCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   formData?: Prisma.FormDataCreateNestedOneWithoutComponentsInput
+  subCompany?: Prisma.SubCompanyCreateNestedOneWithoutComponentsInput
   collectedData?: Prisma.ComponentDataCreateNestedManyWithoutComponentInput
 }
 
@@ -268,6 +284,7 @@ export type ComponentUncheckedCreateInput = {
   html: string
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   formDataId?: string | null
+  subCompanyId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   collectedData?: Prisma.ComponentDataUncheckedCreateNestedManyWithoutComponentInput
@@ -281,6 +298,7 @@ export type ComponentUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   formData?: Prisma.FormDataUpdateOneWithoutComponentsNestedInput
+  subCompany?: Prisma.SubCompanyUpdateOneWithoutComponentsNestedInput
   collectedData?: Prisma.ComponentDataUpdateManyWithoutComponentNestedInput
 }
 
@@ -290,6 +308,7 @@ export type ComponentUncheckedUpdateInput = {
   html?: Prisma.StringFieldUpdateOperationsInput | string
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   formDataId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   collectedData?: Prisma.ComponentDataUncheckedUpdateManyWithoutComponentNestedInput
@@ -301,6 +320,7 @@ export type ComponentCreateManyInput = {
   html: string
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   formDataId?: string | null
+  subCompanyId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -320,6 +340,7 @@ export type ComponentUncheckedUpdateManyInput = {
   html?: Prisma.StringFieldUpdateOperationsInput | string
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   formDataId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -340,6 +361,7 @@ export type ComponentCountOrderByAggregateInput = {
   html?: Prisma.SortOrder
   config?: Prisma.SortOrder
   formDataId?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -349,6 +371,7 @@ export type ComponentMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   html?: Prisma.SortOrder
   formDataId?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -358,6 +381,7 @@ export type ComponentMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   html?: Prisma.SortOrder
   formDataId?: Prisma.SortOrder
+  subCompanyId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -365,6 +389,48 @@ export type ComponentMinOrderByAggregateInput = {
 export type ComponentNullableScalarRelationFilter = {
   is?: Prisma.ComponentWhereInput | null
   isNot?: Prisma.ComponentWhereInput | null
+}
+
+export type ComponentCreateNestedManyWithoutSubCompanyInput = {
+  create?: Prisma.XOR<Prisma.ComponentCreateWithoutSubCompanyInput, Prisma.ComponentUncheckedCreateWithoutSubCompanyInput> | Prisma.ComponentCreateWithoutSubCompanyInput[] | Prisma.ComponentUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.ComponentCreateOrConnectWithoutSubCompanyInput | Prisma.ComponentCreateOrConnectWithoutSubCompanyInput[]
+  createMany?: Prisma.ComponentCreateManySubCompanyInputEnvelope
+  connect?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+}
+
+export type ComponentUncheckedCreateNestedManyWithoutSubCompanyInput = {
+  create?: Prisma.XOR<Prisma.ComponentCreateWithoutSubCompanyInput, Prisma.ComponentUncheckedCreateWithoutSubCompanyInput> | Prisma.ComponentCreateWithoutSubCompanyInput[] | Prisma.ComponentUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.ComponentCreateOrConnectWithoutSubCompanyInput | Prisma.ComponentCreateOrConnectWithoutSubCompanyInput[]
+  createMany?: Prisma.ComponentCreateManySubCompanyInputEnvelope
+  connect?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+}
+
+export type ComponentUpdateManyWithoutSubCompanyNestedInput = {
+  create?: Prisma.XOR<Prisma.ComponentCreateWithoutSubCompanyInput, Prisma.ComponentUncheckedCreateWithoutSubCompanyInput> | Prisma.ComponentCreateWithoutSubCompanyInput[] | Prisma.ComponentUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.ComponentCreateOrConnectWithoutSubCompanyInput | Prisma.ComponentCreateOrConnectWithoutSubCompanyInput[]
+  upsert?: Prisma.ComponentUpsertWithWhereUniqueWithoutSubCompanyInput | Prisma.ComponentUpsertWithWhereUniqueWithoutSubCompanyInput[]
+  createMany?: Prisma.ComponentCreateManySubCompanyInputEnvelope
+  set?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  disconnect?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  delete?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  connect?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  update?: Prisma.ComponentUpdateWithWhereUniqueWithoutSubCompanyInput | Prisma.ComponentUpdateWithWhereUniqueWithoutSubCompanyInput[]
+  updateMany?: Prisma.ComponentUpdateManyWithWhereWithoutSubCompanyInput | Prisma.ComponentUpdateManyWithWhereWithoutSubCompanyInput[]
+  deleteMany?: Prisma.ComponentScalarWhereInput | Prisma.ComponentScalarWhereInput[]
+}
+
+export type ComponentUncheckedUpdateManyWithoutSubCompanyNestedInput = {
+  create?: Prisma.XOR<Prisma.ComponentCreateWithoutSubCompanyInput, Prisma.ComponentUncheckedCreateWithoutSubCompanyInput> | Prisma.ComponentCreateWithoutSubCompanyInput[] | Prisma.ComponentUncheckedCreateWithoutSubCompanyInput[]
+  connectOrCreate?: Prisma.ComponentCreateOrConnectWithoutSubCompanyInput | Prisma.ComponentCreateOrConnectWithoutSubCompanyInput[]
+  upsert?: Prisma.ComponentUpsertWithWhereUniqueWithoutSubCompanyInput | Prisma.ComponentUpsertWithWhereUniqueWithoutSubCompanyInput[]
+  createMany?: Prisma.ComponentCreateManySubCompanyInputEnvelope
+  set?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  disconnect?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  delete?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  connect?: Prisma.ComponentWhereUniqueInput | Prisma.ComponentWhereUniqueInput[]
+  update?: Prisma.ComponentUpdateWithWhereUniqueWithoutSubCompanyInput | Prisma.ComponentUpdateWithWhereUniqueWithoutSubCompanyInput[]
+  updateMany?: Prisma.ComponentUpdateManyWithWhereWithoutSubCompanyInput | Prisma.ComponentUpdateManyWithWhereWithoutSubCompanyInput[]
+  deleteMany?: Prisma.ComponentScalarWhereInput | Prisma.ComponentScalarWhereInput[]
 }
 
 export type ComponentCreateNestedManyWithoutFormDataInput = {
@@ -409,10 +475,6 @@ export type ComponentUncheckedUpdateManyWithoutFormDataNestedInput = {
   deleteMany?: Prisma.ComponentScalarWhereInput | Prisma.ComponentScalarWhereInput[]
 }
 
-export type NullableStringFieldUpdateOperationsInput = {
-  set?: string | null
-}
-
 export type ComponentCreateNestedOneWithoutCollectedDataInput = {
   create?: Prisma.XOR<Prisma.ComponentCreateWithoutCollectedDataInput, Prisma.ComponentUncheckedCreateWithoutCollectedDataInput>
   connectOrCreate?: Prisma.ComponentCreateOrConnectWithoutCollectedDataInput
@@ -429,6 +491,68 @@ export type ComponentUpdateOneWithoutCollectedDataNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.ComponentUpdateToOneWithWhereWithoutCollectedDataInput, Prisma.ComponentUpdateWithoutCollectedDataInput>, Prisma.ComponentUncheckedUpdateWithoutCollectedDataInput>
 }
 
+export type ComponentCreateWithoutSubCompanyInput = {
+  id?: string
+  name: string
+  html: string
+  config: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  formData?: Prisma.FormDataCreateNestedOneWithoutComponentsInput
+  collectedData?: Prisma.ComponentDataCreateNestedManyWithoutComponentInput
+}
+
+export type ComponentUncheckedCreateWithoutSubCompanyInput = {
+  id?: string
+  name: string
+  html: string
+  config: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  formDataId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  collectedData?: Prisma.ComponentDataUncheckedCreateNestedManyWithoutComponentInput
+}
+
+export type ComponentCreateOrConnectWithoutSubCompanyInput = {
+  where: Prisma.ComponentWhereUniqueInput
+  create: Prisma.XOR<Prisma.ComponentCreateWithoutSubCompanyInput, Prisma.ComponentUncheckedCreateWithoutSubCompanyInput>
+}
+
+export type ComponentCreateManySubCompanyInputEnvelope = {
+  data: Prisma.ComponentCreateManySubCompanyInput | Prisma.ComponentCreateManySubCompanyInput[]
+  skipDuplicates?: boolean
+}
+
+export type ComponentUpsertWithWhereUniqueWithoutSubCompanyInput = {
+  where: Prisma.ComponentWhereUniqueInput
+  update: Prisma.XOR<Prisma.ComponentUpdateWithoutSubCompanyInput, Prisma.ComponentUncheckedUpdateWithoutSubCompanyInput>
+  create: Prisma.XOR<Prisma.ComponentCreateWithoutSubCompanyInput, Prisma.ComponentUncheckedCreateWithoutSubCompanyInput>
+}
+
+export type ComponentUpdateWithWhereUniqueWithoutSubCompanyInput = {
+  where: Prisma.ComponentWhereUniqueInput
+  data: Prisma.XOR<Prisma.ComponentUpdateWithoutSubCompanyInput, Prisma.ComponentUncheckedUpdateWithoutSubCompanyInput>
+}
+
+export type ComponentUpdateManyWithWhereWithoutSubCompanyInput = {
+  where: Prisma.ComponentScalarWhereInput
+  data: Prisma.XOR<Prisma.ComponentUpdateManyMutationInput, Prisma.ComponentUncheckedUpdateManyWithoutSubCompanyInput>
+}
+
+export type ComponentScalarWhereInput = {
+  AND?: Prisma.ComponentScalarWhereInput | Prisma.ComponentScalarWhereInput[]
+  OR?: Prisma.ComponentScalarWhereInput[]
+  NOT?: Prisma.ComponentScalarWhereInput | Prisma.ComponentScalarWhereInput[]
+  id?: Prisma.StringFilter<"Component"> | string
+  name?: Prisma.StringFilter<"Component"> | string
+  html?: Prisma.StringFilter<"Component"> | string
+  config?: Prisma.JsonFilter<"Component">
+  formDataId?: Prisma.StringNullableFilter<"Component"> | string | null
+  subCompanyId?: Prisma.StringNullableFilter<"Component"> | string | null
+  createdAt?: Prisma.DateTimeFilter<"Component"> | Date | string
+  updatedAt?: Prisma.DateTimeFilter<"Component"> | Date | string
+}
+
 export type ComponentCreateWithoutFormDataInput = {
   id?: string
   name: string
@@ -436,6 +560,7 @@ export type ComponentCreateWithoutFormDataInput = {
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
+  subCompany?: Prisma.SubCompanyCreateNestedOneWithoutComponentsInput
   collectedData?: Prisma.ComponentDataCreateNestedManyWithoutComponentInput
 }
 
@@ -444,6 +569,7 @@ export type ComponentUncheckedCreateWithoutFormDataInput = {
   name: string
   html: string
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  subCompanyId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
   collectedData?: Prisma.ComponentDataUncheckedCreateNestedManyWithoutComponentInput
@@ -475,19 +601,6 @@ export type ComponentUpdateManyWithWhereWithoutFormDataInput = {
   data: Prisma.XOR<Prisma.ComponentUpdateManyMutationInput, Prisma.ComponentUncheckedUpdateManyWithoutFormDataInput>
 }
 
-export type ComponentScalarWhereInput = {
-  AND?: Prisma.ComponentScalarWhereInput | Prisma.ComponentScalarWhereInput[]
-  OR?: Prisma.ComponentScalarWhereInput[]
-  NOT?: Prisma.ComponentScalarWhereInput | Prisma.ComponentScalarWhereInput[]
-  id?: Prisma.StringFilter<"Component"> | string
-  name?: Prisma.StringFilter<"Component"> | string
-  html?: Prisma.StringFilter<"Component"> | string
-  config?: Prisma.JsonFilter<"Component">
-  formDataId?: Prisma.StringNullableFilter<"Component"> | string | null
-  createdAt?: Prisma.DateTimeFilter<"Component"> | Date | string
-  updatedAt?: Prisma.DateTimeFilter<"Component"> | Date | string
-}
-
 export type ComponentCreateWithoutCollectedDataInput = {
   id?: string
   name: string
@@ -496,6 +609,7 @@ export type ComponentCreateWithoutCollectedDataInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   formData?: Prisma.FormDataCreateNestedOneWithoutComponentsInput
+  subCompany?: Prisma.SubCompanyCreateNestedOneWithoutComponentsInput
 }
 
 export type ComponentUncheckedCreateWithoutCollectedDataInput = {
@@ -504,6 +618,7 @@ export type ComponentUncheckedCreateWithoutCollectedDataInput = {
   html: string
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
   formDataId?: string | null
+  subCompanyId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -532,9 +647,53 @@ export type ComponentUpdateWithoutCollectedDataInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   formData?: Prisma.FormDataUpdateOneWithoutComponentsNestedInput
+  subCompany?: Prisma.SubCompanyUpdateOneWithoutComponentsNestedInput
 }
 
 export type ComponentUncheckedUpdateWithoutCollectedDataInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  html?: Prisma.StringFieldUpdateOperationsInput | string
+  config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  formDataId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type ComponentCreateManySubCompanyInput = {
+  id?: string
+  name: string
+  html: string
+  config: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  formDataId?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type ComponentUpdateWithoutSubCompanyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  html?: Prisma.StringFieldUpdateOperationsInput | string
+  config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  formData?: Prisma.FormDataUpdateOneWithoutComponentsNestedInput
+  collectedData?: Prisma.ComponentDataUpdateManyWithoutComponentNestedInput
+}
+
+export type ComponentUncheckedUpdateWithoutSubCompanyInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  html?: Prisma.StringFieldUpdateOperationsInput | string
+  config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  formDataId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  collectedData?: Prisma.ComponentDataUncheckedUpdateManyWithoutComponentNestedInput
+}
+
+export type ComponentUncheckedUpdateManyWithoutSubCompanyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   html?: Prisma.StringFieldUpdateOperationsInput | string
@@ -549,6 +708,7 @@ export type ComponentCreateManyFormDataInput = {
   name: string
   html: string
   config: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  subCompanyId?: string | null
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -560,6 +720,7 @@ export type ComponentUpdateWithoutFormDataInput = {
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subCompany?: Prisma.SubCompanyUpdateOneWithoutComponentsNestedInput
   collectedData?: Prisma.ComponentDataUpdateManyWithoutComponentNestedInput
 }
 
@@ -568,6 +729,7 @@ export type ComponentUncheckedUpdateWithoutFormDataInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   html?: Prisma.StringFieldUpdateOperationsInput | string
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   collectedData?: Prisma.ComponentDataUncheckedUpdateManyWithoutComponentNestedInput
@@ -578,6 +740,7 @@ export type ComponentUncheckedUpdateManyWithoutFormDataInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   html?: Prisma.StringFieldUpdateOperationsInput | string
   config?: Prisma.JsonNullValueInput | runtime.InputJsonValue
+  subCompanyId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -619,9 +782,11 @@ export type ComponentSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   html?: boolean
   config?: boolean
   formDataId?: boolean
+  subCompanyId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   formData?: boolean | Prisma.Component$formDataArgs<ExtArgs>
+  subCompany?: boolean | Prisma.Component$subCompanyArgs<ExtArgs>
   collectedData?: boolean | Prisma.Component$collectedDataArgs<ExtArgs>
   _count?: boolean | Prisma.ComponentCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["component"]>
@@ -632,9 +797,11 @@ export type ComponentSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   html?: boolean
   config?: boolean
   formDataId?: boolean
+  subCompanyId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   formData?: boolean | Prisma.Component$formDataArgs<ExtArgs>
+  subCompany?: boolean | Prisma.Component$subCompanyArgs<ExtArgs>
 }, ExtArgs["result"]["component"]>
 
 export type ComponentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -643,9 +810,11 @@ export type ComponentSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   html?: boolean
   config?: boolean
   formDataId?: boolean
+  subCompanyId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   formData?: boolean | Prisma.Component$formDataArgs<ExtArgs>
+  subCompany?: boolean | Prisma.Component$subCompanyArgs<ExtArgs>
 }, ExtArgs["result"]["component"]>
 
 export type ComponentSelectScalar = {
@@ -654,27 +823,32 @@ export type ComponentSelectScalar = {
   html?: boolean
   config?: boolean
   formDataId?: boolean
+  subCompanyId?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type ComponentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "html" | "config" | "formDataId" | "createdAt" | "updatedAt", ExtArgs["result"]["component"]>
+export type ComponentOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "html" | "config" | "formDataId" | "subCompanyId" | "createdAt" | "updatedAt", ExtArgs["result"]["component"]>
 export type ComponentInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   formData?: boolean | Prisma.Component$formDataArgs<ExtArgs>
+  subCompany?: boolean | Prisma.Component$subCompanyArgs<ExtArgs>
   collectedData?: boolean | Prisma.Component$collectedDataArgs<ExtArgs>
   _count?: boolean | Prisma.ComponentCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type ComponentIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   formData?: boolean | Prisma.Component$formDataArgs<ExtArgs>
+  subCompany?: boolean | Prisma.Component$subCompanyArgs<ExtArgs>
 }
 export type ComponentIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   formData?: boolean | Prisma.Component$formDataArgs<ExtArgs>
+  subCompany?: boolean | Prisma.Component$subCompanyArgs<ExtArgs>
 }
 
 export type $ComponentPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Component"
   objects: {
     formData: Prisma.$FormDataPayload<ExtArgs> | null
+    subCompany: Prisma.$SubCompanyPayload<ExtArgs> | null
     collectedData: Prisma.$ComponentDataPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
@@ -683,6 +857,7 @@ export type $ComponentPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     html: string
     config: runtime.JsonValue
     formDataId: string | null
+    subCompanyId: string | null
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["component"]>
@@ -1080,6 +1255,7 @@ readonly fields: ComponentFieldRefs;
 export interface Prisma__ComponentClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   formData<T extends Prisma.Component$formDataArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Component$formDataArgs<ExtArgs>>): Prisma.Prisma__FormDataClient<runtime.Types.Result.GetResult<Prisma.$FormDataPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  subCompany<T extends Prisma.Component$subCompanyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Component$subCompanyArgs<ExtArgs>>): Prisma.Prisma__SubCompanyClient<runtime.Types.Result.GetResult<Prisma.$SubCompanyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   collectedData<T extends Prisma.Component$collectedDataArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Component$collectedDataArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ComponentDataPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -1115,6 +1291,7 @@ export interface ComponentFieldRefs {
   readonly html: Prisma.FieldRef<"Component", 'String'>
   readonly config: Prisma.FieldRef<"Component", 'Json'>
   readonly formDataId: Prisma.FieldRef<"Component", 'String'>
+  readonly subCompanyId: Prisma.FieldRef<"Component", 'String'>
   readonly createdAt: Prisma.FieldRef<"Component", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"Component", 'DateTime'>
 }
@@ -1529,6 +1706,25 @@ export type Component$formDataArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   include?: Prisma.FormDataInclude<ExtArgs> | null
   where?: Prisma.FormDataWhereInput
+}
+
+/**
+ * Component.subCompany
+ */
+export type Component$subCompanyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the SubCompany
+   */
+  select?: Prisma.SubCompanySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the SubCompany
+   */
+  omit?: Prisma.SubCompanyOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.SubCompanyInclude<ExtArgs> | null
+  where?: Prisma.SubCompanyWhereInput
 }
 
 /**

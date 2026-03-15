@@ -5,7 +5,8 @@ import ConditionalSidebar from "@/components/ConditionalSidebar";
 import { GlobalConfig } from "@/config/config";
 import ThemeProvider from "@/providers/theme-provider";
 import MainWrapper from "@/components/MainWrapper";
-import { SiteProvider } from "@/context/site-context";
+import { SiteProvider } from "@/contexts/SiteContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,13 +36,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SiteProvider>
-          <ThemeProvider />
-          <ConditionalSidebar />
-          <MainWrapper>
-            {children}
-          </MainWrapper>
-        </SiteProvider>
+        <AuthProvider>
+          <SiteProvider>
+            <ThemeProvider />
+            <ConditionalSidebar />
+            <MainWrapper>
+              {children}
+            </MainWrapper>
+          </SiteProvider>
+        </AuthProvider>
       </body>
     </html>
   );
