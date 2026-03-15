@@ -8,7 +8,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, name: true, email: true, role: true, isActive: true, companyId: true, company: true }
+      select: { id: true, name: true, email: true, role: true, isActive: true, forcePasswordChange: true, companyId: true, company: true }
     });
     if (!user) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     return NextResponse.json(user);
@@ -20,9 +20,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const { name, email, password, role, companyId, isActive } = await req.json();
+    // ADICIONADO forcePasswordChange
+    const { name, email, password, role, companyId, isActive, forcePasswordChange } = await req.json();
     
-    const updateData: any = { name, email, role, companyId, isActive };
+    const updateData: any = { name, email, role, companyId, isActive, forcePasswordChange };
     
     if (password && password.trim() !== "") {
       updateData.password = await bcrypt.hash(password, 10);
@@ -31,7 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const user = await prisma.user.update({
       where: { id },
       data: updateData,
-      select: { id: true, name: true, email: true, role: true, isActive: true, companyId: true }
+      select: { id: true, name: true, email: true, role: true, isActive: true, forcePasswordChange: true, companyId: true }
     });
 
     return NextResponse.json(user);

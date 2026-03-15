@@ -76,6 +76,8 @@ model User {
   isActive    Boolean   @default(true)
   lastLogin   DateTime?
 
+  forcePasswordChange Boolean  @default(false)
+
   companyId   String?
   company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
 

@@ -6,7 +6,7 @@ import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { Switch } from "@/components/Switch";
-import { Users, Plus, Edit2, Trash2, Loader2, X, ShieldAlert } from "lucide-react";
+import { Users, Plus, Edit2, Trash2, Loader2, X, ShieldAlert, KeyRound } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function UsuariosCRUD() {
@@ -16,8 +16,9 @@ export default function UsuariosCRUD() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
+  // 1. ADICIONADO forcePasswordChange no estado inicial
   const [formData, setFormData] = useState({
-    name: "", email: "", password: "", role: "USER", companyId: "", isActive: true
+    name: "", email: "", password: "", role: "USER", companyId: "", isActive: true, forcePasswordChange: false
   });
   const [saving, setSaving] = useState(false);
 
@@ -79,7 +80,7 @@ export default function UsuariosCRUD() {
   };
 
   const openNew = () => {
-    setFormData({ name: "", email: "", password: "", role: "USER", companyId: "", isActive: true });
+    setFormData({ name: "", email: "", password: "", role: "USER", companyId: "", isActive: true, forcePasswordChange: false });
     setEditingId(null);
     setIsModalOpen(true);
   };
@@ -87,7 +88,9 @@ export default function UsuariosCRUD() {
   const openEdit = (user: any) => {
     setFormData({ 
       name: user.name, email: user.email, password: "", 
-      role: user.role, companyId: user.companyId || "", isActive: user.isActive 
+      role: user.role, companyId: user.companyId || "", isActive: user.isActive,
+      // 2. RECUPERA O ESTADO DO BANCO NA EDIÇÃO
+      forcePasswordChange: user.forcePasswordChange || false
     });
     setEditingId(user.id);
     setIsModalOpen(true);
@@ -126,7 +129,10 @@ export default function UsuariosCRUD() {
                   {users.map(u => (
                     <tr key={u.id} className="hover:bg-zinc-800/50 transition-colors">
                       <td className="px-6 py-4">
-                        <p className="font-medium text-white">{u.name}</p>
+                        <p className="font-medium text-white flex items-center gap-2">
+                          {u.name} 
+                          {u.forcePasswordChange && <KeyRound size={12} className="text-amber-500" />}
+                        </p>
                         <p className="text-xs text-zinc-500">{u.email}</p>
                       </td>
                       <td className="px-6 py-4">
@@ -181,6 +187,15 @@ export default function UsuariosCRUD() {
                   <div>
                     <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Senha {editingId && <span className="text-zinc-600 normal-case">(Deixe em branco para manter a atual)</span>}</label>
                     <Input type="password" required={!editingId} value={formData.password} onChange={(e: any) => setFormData({...formData, password: e.target.value})} placeholder="••••••••" className="bg-black/50 border-zinc-800 text-white" />
+                  </div>
+
+                  {/* 3. SWITCH DE TROCA DE SENHA OBRIGATÓRIA */}
+                  <div className="flex items-center justify-between p-4 bg-amber-500/5 rounded-xl border border-amber-500/20">
+                    <div>
+                      <p className="text-sm font-semibold text-amber-500 flex items-center gap-2"><KeyRound size={16} /> Exigir Troca de Senha</p>
+                      <p className="text-xs text-zinc-400">O usuário será obrigado a trocar a senha no próximo login.</p>
+                    </div>
+                    <Switch checked={formData.forcePasswordChange} onCheckedChange={(val) => setFormData({...formData, forcePasswordChange: val})} />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-2 border-t border-zinc-800">

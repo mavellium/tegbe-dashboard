@@ -5,9 +5,9 @@ import bcrypt from "bcryptjs";
 
 export async function GET() {
   try {
-    // Não retornamos a senha por segurança
+    // 1. ADICIONADO forcePasswordChange AQUI
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, isActive: true, companyId: true, company: true, lastLogin: true, createdAt: true },
+      select: { id: true, name: true, email: true, role: true, isActive: true, companyId: true, company: true, forcePasswordChange: true, lastLogin: true, createdAt: true },
       orderBy: { createdAt: "desc" }
     });
     return NextResponse.json(users);
@@ -18,7 +18,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password, role, companyId, isActive } = await req.json();
+    // 2. ADICIONADO forcePasswordChange NO CORPO
+    const { name, email, password, role, companyId, isActive, forcePasswordChange } = await req.json();
     
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Nome, e-mail e senha são obrigatórios" }, { status: 400 });
@@ -36,9 +37,10 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         role: role || "USER",
         companyId: companyId || null,
-        isActive: isActive !== undefined ? isActive : true
+        isActive: isActive !== undefined ? isActive : true,
+        forcePasswordChange: forcePasswordChange || false // <--- SALVA NO BANCO
       },
-      select: { id: true, name: true, email: true, role: true, companyId: true } // Omitir senha no retorno
+      select: { id: true, name: true, email: true, role: true, companyId: true }
     });
 
     return NextResponse.json(user, { status: 201 });

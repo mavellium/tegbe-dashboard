@@ -7,6 +7,7 @@ import ThemeProvider from "@/providers/theme-provider";
 import MainWrapper from "@/components/MainWrapper";
 import { SiteProvider } from "@/contexts/SiteContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import ForcePasswordModal from "@/components/ForcePasswordModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,11 +39,12 @@ export default function RootLayout({
       >
         <AuthProvider>
           <SiteProvider>
+            <ForcePasswordModal />
             <ThemeProvider />
-            <ConditionalSidebar />
-            <MainWrapper>
-              {children}
-            </MainWrapper>
+              <ConditionalSidebar />
+              <MainWrapper>
+                {children}
+              </MainWrapper>
           </SiteProvider>
         </AuthProvider>
       </body>

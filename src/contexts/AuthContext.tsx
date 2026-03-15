@@ -10,6 +10,7 @@ interface User {
   email: string;
   role: "ADMIN" | "USER";
   companyId: string | null;
+  forcePasswordChange: boolean;
 }
 
 interface AuthContextType {

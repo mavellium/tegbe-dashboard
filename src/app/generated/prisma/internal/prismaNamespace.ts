@@ -1016,6 +1016,7 @@ export const UserScalarFieldEnum = {
   role: 'role',
   isActive: 'isActive',
   lastLogin: 'lastLogin',
+  forcePasswordChange: 'forcePasswordChange',
   companyId: 'companyId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
