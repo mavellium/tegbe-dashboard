@@ -46,6 +46,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
               siteName: sub.name,
               description: sub.description || "",
               logoUrl: sub.logo_img || "",
+              planType: sub.planType || "pro", 
               theme: sub.theme ? (typeof sub.theme === 'string' ? JSON.parse(sub.theme) : sub.theme) : null,
               menuItems: sub.menuItems ? (typeof sub.menuItems === 'string' ? JSON.parse(sub.menuItems) : sub.menuItems) : []
             }));
@@ -70,6 +71,7 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
           return;
         }
       }
+
       const savedId = localStorage.getItem('currentSiteId');
       const foundSaved = savedId ? sites.find(s => s.id === savedId) : null;
       setCurrentSiteState(foundSaved || sites[0]);
@@ -92,6 +94,13 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
 
 export function useSite() {
   const context = useContext(SiteContext);
-  if (context === undefined) throw new Error('useSite must be used within SiteProvider');
-  return context;
+
+  if (context === undefined) {
+    throw new Error('useSite must be used within SiteProvider');
+  }
+
+  return {
+    ...context,
+    currentSite: context.currentSite ?? { planType: "pro" }
+  };
 }
