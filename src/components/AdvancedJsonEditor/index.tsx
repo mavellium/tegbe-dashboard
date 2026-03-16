@@ -9,195 +9,40 @@ import { Input } from "@/components/Input";
 import { Switch } from "@/components/Switch";
 import { Button } from "@/components/Button";
 import { ImageUpload } from "@/components/ImageUpload";
-import IconSelector from "@/components/IconSelector";
-import { Card } from "@/components/Card";
+import IconSelector from "@/components/IconSelector"; // O SEU SELETOR PADRÃO
+import { VideoUpload } from "@/components/VideoUpload"; // IMPORTANDO O SEU COMPONENTE EXTERNO
+import { Icon } from "@iconify/react"; 
+import * as Icons from "lucide-react"; 
 import { 
-  Palette, Check, ChevronDown, ChevronUp, AlertTriangle, 
-  CheckCircle2, Layers, X, Save, RefreshCw, Trash2, 
-  Image as ImageIcon, Type as TypeIcon, AlignLeft, Smile, List, 
-  PlayCircle, Link as LinkIcon, ArrowUp, ArrowDown, PlusCircle, Settings2,
-  VideoIcon, Upload, Play, Pause, Volume2, VolumeX, Loader2,
-  Code
+  Palette, ChevronDown, ChevronUp, Layers, X, RefreshCw, Trash2, 
+  Type as TypeIcon, List, Link as LinkIcon, ArrowUp, ArrowDown, Settings2,
+  VideoIcon, Play, Code, LayoutTemplate, Image as ImageIcon
 } from "lucide-react";
 
 // ==========================================
-// 1. COMPONENTE VIDEO UPLOAD
-// ==========================================
-interface VideoUploadProps {
-  label: string; currentVideo: string; onChange: (url: string) => void;
-  aspectRatio?: string; previewWidth?: number; previewHeight?: number;
-  description?: string; accept?: string; maxSizeMB?: number;
-}
-
-const VideoUpload = ({ 
-  label, currentVideo, onChange, aspectRatio = "aspect-video",
-  previewWidth = 400, previewHeight = 225, description,
-  accept = "video/mp4,video/webm,video/ogg", maxSizeMB = 1000
-}: VideoUploadProps) => {
-  const [previewUrl, setPreviewUrl] = useState<string>("");
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string>("");
-  
-  const [showFullscreen, setShowFullscreen] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isUploading) setPreviewUrl(currentVideo || "");
-  }, [currentVideo, isUploading]);
-
-  const handleUpload = async (file: File) => {
-    setIsUploading(true); setUploadProgress(0); setError("");
-    const storageZone = process.env.NEXT_PUBLIC_BUNNY_STORAGE_ZONE;
-    const accessKey = process.env.NEXT_PUBLIC_BUNNY_ACCESS_KEY;
-    const pullZone = process.env.NEXT_PUBLIC_BUNNY_PULL_ZONE;
-    const host = process.env.NEXT_PUBLIC_BUNNY_HOST || "storage.bunnycdn.com";
-
-    if (!storageZone || !accessKey || !pullZone) {
-      setError("Configuração de CDN não encontrada.");
-      setIsUploading(false); return;
-    }
-
-    const timestamp = Date.now();
-    const cleanFileName = file.name.replace(/[^a-zA-Z0-9.]/g, "-");
-    const fileName = `${timestamp}-${cleanFileName}`;
-    const uploadUrl = `https://${host}/${storageZone}/uploads/${fileName}`;
-
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl, true);
-        xhr.setRequestHeader("AccessKey", accessKey);
-        xhr.setRequestHeader("Content-Type", file.type);
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable) setUploadProgress(Math.round((event.loaded / event.total) * 100));
-        };
-        xhr.onload = () => {
-          if (xhr.status === 201 || xhr.status === 200) {
-            onChange(`https://${pullZone}/uploads/${fileName}`);
-            resolve();
-          } else reject(new Error(`Erro: ${xhr.status}`));
-        };
-        xhr.onerror = () => reject(new Error("Erro de rede"));
-        xhr.send(file);
-      });
-    } catch (err: any) {
-      setError("Falha ao enviar vídeo.");
-      console.error(err);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (maxSizeMB && file.size > maxSizeMB * 1024 * 1024) {
-      setError(`Arquivo muito grande. Máximo: ${maxSizeMB}MB`); return;
-    }
-    setPreviewUrl(URL.createObjectURL(file));
-    handleUpload(file);
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60);
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
-  return (
-    <>
-      <div className="space-y-4">
-        <label className="block text-xs font-medium text-[var(--color-secondary)] mb-1">{label}</label>
-        {description && <p className="text-xs text-zinc-500 mb-2">{description}</p>}
-        {error && <div className="p-3 bg-red-900/20 border border-red-800 rounded-lg"><p className="text-sm text-red-400">{error}</p></div>}
-
-        <div className="flex flex-col items-start w-full">
-          {previewUrl ? (
-            <div className="relative group w-full">
-              <div className={`relative ${aspectRatio} rounded-lg overflow-hidden border border-[var(--color-border)] bg-black cursor-pointer`} 
-                   style={{ width: previewWidth ? `${previewWidth}px` : '100%', height: previewHeight ? `${previewHeight}px` : 'auto' }} 
-                   onClick={() => setShowFullscreen(true)}>
-                {isUploading && (
-                  <div className="absolute inset-0 z-20 bg-black/60 flex flex-col items-center justify-center">
-                    <Loader2 className="w-10 h-10 text-[var(--color-primary)] animate-spin mb-2" />
-                    <span className="text-white font-medium">{uploadProgress}%</span>
-                  </div>
-                )}
-                <video src={previewUrl} className="w-full h-full object-contain" muted />
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Play className="w-8 h-8 text-white" />
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className={`${aspectRatio} flex items-center justify-center bg-zinc-900 rounded-lg border-2 border-dashed border-zinc-800 w-full`}>
-                <VideoIcon className="w-12 h-12 text-zinc-700" />
-            </div>
-          )}
-
-          <div className="mt-4 flex gap-3">
-            <label className="cursor-pointer px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-sm font-semibold flex items-center gap-2">
-              <Upload size={16} /> {previewUrl ? "Trocar Vídeo" : "Selecionar Vídeo"}
-              <input type="file" accept={accept} className="hidden" onChange={handleFileSelect} />
-            </label>
-            {previewUrl && (
-              <button type="button" onClick={() => { setPreviewUrl(""); onChange(""); }} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-lg text-sm font-semibold">Remover</button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showFullscreen && (
-          <div className="fixed inset-0 z-[999999] bg-black/90 flex items-center justify-center p-8" onClick={() => setShowFullscreen(false)}>
-             <div className="relative max-w-5xl w-full" onClick={e => e.stopPropagation()}>
-                <button className="absolute -top-12 right-0 text-white" onClick={() => setShowFullscreen(false)}><X /></button>
-                <video src={previewUrl} controls autoPlay className="w-full h-auto rounded-xl" />
-             </div>
-          </div>
-        )}
-      </AnimatePresence>
-    </>
-  );
-};
-
-// ==========================================
-// 2. COMPONENTE COLOR PICKER
+// 1. COMPONENTE COLOR PICKER
 // ==========================================
 const presetColors = ["#FFFFFF", "#000000", "#E61A4A", "#C9A050", "#1E40AF", "#10B981", "#F59E0B", "#3B82F6", "#8B5CF6", "#6366F1"];
-
 function ColorPicker({ color, onChange }: { color: string; onChange: (c: string) => void }) {
   const [show, setShow] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const clickOut = (e: any) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setShow(false); };
     document.addEventListener("mousedown", clickOut);
     return () => document.removeEventListener("mousedown", clickOut);
   }, []);
-
   const safeColor = color?.startsWith("#") ? color : "#000000";
-
   return (
     <div className="relative w-full" ref={pickerRef}>
-      <button type="button" onClick={() => setShow(!show)} className="h-10 px-3 w-full rounded-lg border border-[var(--color-border)] bg-zinc-950 flex items-center justify-between">
+      <button type="button" onClick={() => setShow(!show)} className="h-[34px] px-3 w-full rounded border border-zinc-800 bg-black flex items-center justify-between mt-1">
         <span className="text-xs font-mono text-zinc-400 uppercase">{safeColor}</span>
-        <div className="w-5 h-5 rounded border border-white/10" style={{ backgroundColor: safeColor }} />
+        <div className="w-4 h-4 rounded border border-white/10" style={{ backgroundColor: safeColor }} />
       </button>
       {show && (
         <div className="absolute z-50 top-full mt-2 p-3 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl space-y-3 w-48">
           <input type="color" value={safeColor} onChange={(e) => onChange(e.target.value)} className="w-full h-8 rounded cursor-pointer bg-transparent" />
           <div className="grid grid-cols-5 gap-1">
-            {presetColors.map(c => (
-              <button key={c} onClick={() => { onChange(c); setShow(false); }} className="w-6 h-6 rounded border border-white/5" style={{ backgroundColor: c }} />
-            ))}
+            {presetColors.map(c => <button key={c} onClick={() => { onChange(c); setShow(false); }} className="w-6 h-6 rounded border border-white/5" style={{ backgroundColor: c }} />)}
           </div>
         </div>
       )}
@@ -205,17 +50,88 @@ function ColorPicker({ color, onChange }: { color: string; onChange: (c: string)
   );
 }
 
-// ==========================================
-// 3. RENDERIZADOR DINÂMICO
-// ==========================================
 function humanizeKey(key: string) {
   return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
 }
 
-function DynamicFieldRenderer({ dataKey, value, path, onChange }: any) {
+// ==========================================
+// 2. RENDERIZADOR DINÂMICO
+// ==========================================
+function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any) {
   const lKey = dataKey.toLowerCase();
   const label = humanizeKey(dataKey);
 
+  // --- LÓGICA ESPECIAL PARA O COMPONENTE CTA / FORMS ---
+  if (value && typeof value === 'object' && !Array.isArray(value) && (lKey.includes("cta") || lKey.includes("button") || lKey.includes("botao"))) {
+    const ctaVal = { text: value.text || "", icon: value.icon || "", use_form: value.use_form || false, form_id: value.form_id || "", href: value.href || "" };
+    
+    return (
+      <div className="col-span-full p-5 border border-zinc-800 bg-black/40 rounded-xl space-y-4 shadow-inner">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-800/50">
+           <div>
+              <label className="text-[11px] font-bold text-cyan-400 uppercase flex items-center gap-2">
+                <LayoutTemplate size={14} /> {label} (Ação do Botão)
+              </label>
+              <p className="text-[10px] text-zinc-500 mt-1">Configure a ação deste botão. Ative a chave abaixo para abrir um formulário na tela.</p>
+           </div>
+           <div className="flex items-center gap-3 bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-800 shadow-inner shrink-0">
+              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Abrir Formulário?</span>
+              <Switch checked={ctaVal.use_form} onCheckedChange={(val) => onChange(path, { ...ctaVal, use_form: val })} />
+           </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div>
+             <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Texto do Botão</label>
+             <Input value={ctaVal.text} onChange={(e) => onChange(path, { ...ctaVal, text: e.target.value })} placeholder="Ex: Saiba mais" className="bg-black border-zinc-800 rounded text-xs py-1.5 mt-1" />
+           </div>
+           <div>
+             {/* VOLTOU PARA O SELETOR DE ÍCONE PADRÃO */}
+             <IconSelector label="Ícone do Botão" value={ctaVal.icon} onChange={(val) => onChange(path, { ...ctaVal, icon: val })} placeholder="Ex: lucide:arrow-right" />
+           </div>
+           
+           <div className="col-span-full pt-2">
+             {ctaVal.use_form ? (
+                <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="bg-cyan-950/20 border border-cyan-900/50 p-4 rounded-lg space-y-3">
+                   <div>
+                     <label className="block text-[10px] font-bold text-cyan-500 uppercase flex items-center gap-2 mb-1">
+                       <LayoutTemplate size={14} /> Selecione o Formulário Vinculado
+                     </label>
+                     <p className="text-[10px] text-zinc-500 mb-2">Este formulário abrirá num modal flutuante na tela (Popup).</p>
+                   </div>
+                   
+                   <select 
+                     value={ctaVal.form_id || ""} 
+                     onChange={(e) => onChange(path, { ...ctaVal, form_id: e.target.value })} 
+                     className="w-full bg-black border border-cyan-500/30 text-white rounded-lg text-xs py-2.5 px-3 outline-none focus:border-cyan-500 transition-colors"
+                   >
+                      <option value="">-- Selecione um formulário --</option>
+                      {formsList?.map((f: any) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                   </select>
+
+                   {(!formsList || formsList.length === 0) && (
+                     <p className="text-[10px] text-red-400 mt-2">Nenhum formulário cadastrado no sistema.</p>
+                   )}
+                </motion.div>
+             ) : (
+                <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg space-y-3">
+                   <div>
+                     <label className="block text-[10px] font-bold text-zinc-500 uppercase flex items-center gap-2 mb-1">
+                       <LinkIcon size={14} /> Link de Destino (URL)
+                     </label>
+                     <p className="text-[10px] text-zinc-500 mb-2">O botão vai redirecionar o usuário para esta página ou link.</p>
+                   </div>
+                   
+                   <Input value={ctaVal.href} onChange={(e) => onChange(path, { ...ctaVal, href: e.target.value })} placeholder="Ex: /contato ou https://wa.me/..." className="bg-black border-zinc-800 rounded text-xs py-1.5" />
+                </motion.div>
+             )}
+           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RESTANTE DOS CAMPOS ---
   if (typeof value === "boolean") {
     return (
       <div className="flex items-center justify-between p-3 bg-black/20 border border-zinc-800 rounded-lg">
@@ -229,7 +145,7 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange }: any) {
     return (
       <div>
         <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
-        <Input type="number" value={value} onChange={(e) => onChange(path, Number(e.target.value))} className="bg-zinc-950 border-zinc-800" />
+        <Input type="number" value={value} onChange={(e) => onChange(path, Number(e.target.value))} className="bg-black border-zinc-800 rounded text-xs mt-1 py-1" />
       </div>
     );
   }
@@ -246,6 +162,7 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange }: any) {
     if (lKey.includes("video") || value.endsWith(".mp4")) {
       return (
         <div className="col-span-full">
+          {/* USANDO SEU COMPONENTE EXTERNO AQUI */}
           <VideoUpload label={label} currentVideo={value} onChange={(url) => onChange(path, url)} />
         </div>
       );
@@ -260,8 +177,8 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange }: any) {
     if (lKey.includes("icon")) {
       return (
         <div>
-          <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
-          <IconSelector value={value} onChange={(val) => onChange(path, val)} />
+          {/* VOLTOU PARA O SELETOR DE ÍCONE PADRÃO AQUI TAMBÉM */}
+          <IconSelector label={label} value={value} onChange={(val) => onChange(path, val)} placeholder="Ex: lucide:home" />
         </div>
       );
     }
@@ -269,14 +186,14 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange }: any) {
       return (
         <div className="col-span-full">
           <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
-          <textarea value={value} onChange={(e) => onChange(path, e.target.value)} className="w-full p-3 border border-zinc-800 rounded-lg bg-zinc-950 text-sm text-zinc-300 outline-none focus:border-indigo-500 min-h-[100px]" />
+          <textarea value={value} onChange={(e) => onChange(path, e.target.value)} className="w-full p-2 mt-1 border border-zinc-800 rounded bg-black text-xs text-white outline-none focus:border-cyan-500 min-h-[80px]" />
         </div>
       );
     }
     return (
       <div>
         <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
-        <Input value={value} onChange={(e) => onChange(path, e.target.value)} className="bg-zinc-950 border-zinc-800" />
+        <Input value={value} onChange={(e) => onChange(path, e.target.value)} className="bg-black border-zinc-800 rounded text-xs mt-1 py-1" />
       </div>
     );
   }
@@ -284,35 +201,26 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange }: any) {
   if (Array.isArray(value)) {
     return (
       <div className="col-span-full border-2 border-indigo-500/10 bg-indigo-500/5 rounded-xl p-4 space-y-4">
-        <h5 className="text-xs font-bold text-indigo-400 uppercase flex items-center gap-2">
-           <List size={14} /> {label} (Lista Dinâmica)
-        </h5>
+        <h5 className="text-xs font-bold text-indigo-400 uppercase flex items-center gap-2"><List size={14} /> {label} (Lista Dinâmica)</h5>
         {value.map((item, idx) => (
           <div key={idx} className="p-4 bg-zinc-900 border border-zinc-800 rounded-lg relative pt-10">
             <div className="absolute top-0 left-0 right-0 h-8 bg-zinc-800/50 flex items-center px-3 justify-between rounded-t-lg">
                <span className="text-[10px] font-bold text-zinc-500">ITEM #{idx + 1}</span>
-               <button onClick={() => {
-                 const newVal = value.filter((_, i) => i !== idx);
-                 onChange(path, newVal);
-               }} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button>
+               <button onClick={() => { const newVal = value.filter((_, i) => i !== idx); onChange(path, newVal); }} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(item).map(([k, v]) => (
-                <DynamicFieldRenderer key={k} dataKey={k} value={v} path={`${path}.${idx}.${k}`} onChange={onChange} />
+                <DynamicFieldRenderer key={k} dataKey={k} value={v} path={`${path}.${idx}.${k}`} onChange={onChange} formsList={formsList} />
               ))}
             </div>
           </div>
         ))}
-        <button onClick={() => {
-          const newItem = value.length > 0 ? JSON.parse(JSON.stringify(value[0])) : { titulo: "Novo Item" };
-          onChange(path, [...value, newItem]);
-        }} className="w-full py-2 border border-dashed border-indigo-500/30 text-indigo-500 text-xs font-bold rounded-lg hover:bg-indigo-500/10 transition-colors">
+        <button onClick={() => { const newItem = value.length > 0 ? JSON.parse(JSON.stringify(value[0])) : { titulo: "Novo Item" }; onChange(path, [...value, newItem]); }} className="w-full py-2 border border-dashed border-indigo-500/30 text-indigo-500 text-xs font-bold rounded-lg hover:bg-indigo-500/10 transition-colors">
           + Adicionar Item
         </button>
       </div>
     );
   }
-
   return null;
 }
 
@@ -328,17 +236,18 @@ const SectionHeader = ({ title, expanded, onToggle }: any) => (
 
 const INBUILT_TEMPLATES = [
   { name: "Nova Seção", icon: <Layers size={14}/>, category: "complex", key: "secao", data: { titulo: "Título", ativo: true } },
-  { name: "Lista / Array", icon: <List size={14}/>, category: "complex", key: "lista", data: [{ item: "Texto" }] },
+  { name: "Lista / Array", icon: <List size={14}/>, category: "complex", key: "lista", data: [{ titulo: "Texto", icon: "lucide:check" }] },
+  { name: "Botão CTA (Form/Link)", icon: <LayoutTemplate size={14}/>, category: "complex", key: "cta", data: { text: "Saiba Mais", icon: "lucide:arrow-right", href: "/", use_form: false, form_id: "" } }, 
   { name: "Cor", icon: <Palette size={14}/>, category: "simple", key: "cor", data: "#E61A4A" },
   { name: "Texto", icon: <TypeIcon size={14}/>, category: "simple", key: "texto", data: "Escreva algo..." },
   { name: "Imagem", icon: <ImageIcon size={14}/>, category: "simple", key: "imagem", data: "" },
-  { name: "Botão", icon: <LinkIcon size={14}/>, category: "simple", key: "link", data: { label: "Saiba mais", url: "#" } }
+  { name: "Vídeo", icon: <VideoIcon size={14}/>, category: "simple", key: "video", data: "" }, 
 ];
 
 // ==========================================
-// 4. COMPONENTE PRINCIPAL
+// 3. COMPONENTE PRINCIPAL
 // ==========================================
-interface AdvancedJsonEditorProps {
+export interface AdvancedJsonEditorProps {
   data: any;
   structure?: any;
   readOnlyStructure?: boolean;
@@ -346,13 +255,17 @@ interface AdvancedJsonEditorProps {
   onChange: (path: string, value: any) => void;
   onReplaceData?: (newData: any) => void;
   previewUrl?: string;
+  pageTitle?: string;    
+  pageSubtitle?: string; 
+  pageIcon?: string;     
 }
 
 export default function AdvancedJsonEditor({ 
-  data, structure, readOnlyStructure = false, basePath = "data", onChange, onReplaceData, previewUrl = "/" 
+  data, structure, readOnlyStructure = false, basePath = "data", onChange, onReplaceData, previewUrl = "/",
+  pageTitle, pageSubtitle, pageIcon
 }: AdvancedJsonEditorProps) {
   
-  const safeData = useMemo(() => (data && typeof data === 'object') ? data : {}, [data]);
+  const safeData = useMemo(() => (data ? data : {}), [data]);
   const displaySchema = useMemo(() => structure || safeData, [structure, safeData]);
   const dynamicKeys = Object.keys(displaySchema);
 
@@ -362,13 +275,28 @@ export default function AdvancedJsonEditor({
   const [targetSection, setTargetSection] = useState("ROOT");
   const [tab, setTab] = useState<"manage" | "add">("manage");
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  const [formsList, setFormsList] = useState<{id: string, name: string}[]>([]);
+
+  useEffect(() => {
+    const fetchForms = async () => {
+      try {
+        const res = await fetch("/api/components");
+        const json = await res.json();
+        if (json.success) setFormsList(json.components);
+      } catch (error) { console.error("Erro ao buscar formulários:", error); }
+    };
+    fetchForms();
+  }, []);
 
   useEffect(() => {
     if (isDevMode) setRawJson(JSON.stringify(safeData, null, 2));
   }, [safeData, isDevMode]);
 
   const toggleSection = (s: string) => setExpanded(prev => ({ ...prev, [s]: !prev[s] }));
-  const reloadPreview = () => { if(iframeRef.current) iframeRef.current.src = `${previewUrl}?t=${Date.now()}`; };
+  
+  const isApiRoute = previewUrl?.includes("/api/") || previewUrl?.includes("json");
+  const reloadPreview = () => { if(iframeRef.current && !isApiRoute) iframeRef.current.src = `${previewUrl}?t=${Date.now()}`; };
 
   const handleJsonApply = () => {
     try {
@@ -381,14 +309,27 @@ export default function AdvancedJsonEditor({
   const handleInjectTemplate = (temp: any) => {
     const current = JSON.parse(JSON.stringify(safeData));
     const key = `${temp.key}_${Math.random().toString(36).substr(2, 4)}`;
+    if (temp.category === "complex" || targetSection === "ROOT") current[key] = temp.data;
+    else if (current[targetSection]) current[targetSection][key] = temp.data;
+    if (onReplaceData) onReplaceData(current);
+  };
+
+  const handleFieldChange = (path: string, val: any) => {
+    const keys = path.split('.');
+    const newData = JSON.parse(JSON.stringify(safeData)); 
+    let current = newData;
     
-    if (temp.category === "complex" || targetSection === "ROOT") {
-      current[key] = temp.data;
-    } else {
-      if (current[targetSection]) current[targetSection][key] = temp.data;
+    for (let i = 0; i < keys.length - 1; i++) {
+      if (current[keys[i]] === undefined) {
+        current[keys[i]] = isNaN(Number(keys[i+1])) ? {} : [];
+      }
+      current = current[keys[i]];
     }
     
-    if (onReplaceData) onReplaceData(current);
+    current[keys[keys.length - 1]] = val;
+    
+    if (onReplaceData) onReplaceData(newData);
+    onChange(path, val);
   };
 
   const manageAction = (type: "up" | "down" | "del", key: string) => {
@@ -406,33 +347,70 @@ export default function AdvancedJsonEditor({
     }
   };
 
+  const jsonPreviewHtml = `
+    <html style="background: #09090b; margin: 0; padding: 20px; font-family: monospace; color: #10b981;">
+      <body>
+        <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 13px;">${JSON.stringify(safeData, null, 2)}</pre>
+      </body>
+    </html>
+  `;
+
+  const HeaderIconLegacy = (Icons as any)[pageIcon || ""] || LayoutTemplate;
+
   return (
-    <div className="flex flex-col h-[700px] overflow-hidden bg-zinc-950 border border-zinc-800 rounded-2xl">
+    <div className="flex flex-col h-full min-h-[700px] overflow-hidden bg-zinc-950 border border-zinc-800 rounded-2xl">
       <div className="flex flex-1 overflow-hidden divide-x divide-zinc-800">
         
-        {/* LADO ESQUERDO: CAMPOS */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 bg-black/40">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 bg-black/40 relative">
+           
+           <div className="mb-8 pb-6 border-b border-zinc-800 flex flex-col sm:flex-row sm:items-center gap-5">
+             <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl flex items-center justify-center text-indigo-400 shadow-[0_0_20px_rgba(99,102,241,0.15)] shrink-0">
+               {pageIcon?.includes(':') ? (
+                 <Icon icon={pageIcon} className="w-8 h-8" />
+               ) : (
+                 <HeaderIconLegacy size={32} />
+               )}
+             </div>
+             <div>
+               <h1 className="text-2xl font-bold text-white tracking-tight">{pageTitle || "Nova Página Dinâmica"}</h1>
+               <p className="text-sm text-zinc-400 mt-1">{pageSubtitle || "Adicione e edite os campos JSON para estruturar os dados."}</p>
+             </div>
+           </div>
+
            {dynamicKeys.length === 0 ? (
-             <div className="h-full flex flex-col items-center justify-center text-zinc-600 opacity-50">
+             <div className="h-64 flex flex-col items-center justify-center text-zinc-600 opacity-50">
                 <Layers size={48} className="mb-4" />
                 <p className="text-sm font-medium">Nenhum campo definido ainda.</p>
              </div>
            ) : (
              dynamicKeys.map(key => (
                <div key={key} className="space-y-3">
-                  <SectionHeader title={humanizeKey(key)} expanded={expanded[key]} onToggle={() => toggleSection(key)} />
+                  {!key.toLowerCase().includes("cta") && !Array.isArray(safeData[key]) && (
+                    <SectionHeader title={humanizeKey(key)} expanded={expanded[key]} onToggle={() => toggleSection(key)} />
+                  )}
+                  
                   <AnimatePresence>
-                    {expanded[key] && (
+                    {(expanded[key] || key.toLowerCase().includes("cta") || Array.isArray(safeData[key])) && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                        <div className="p-6 bg-zinc-900/30 border border-zinc-800 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
-                           {Object.entries(displaySchema[key]).map(([subK, subV]: [string, any]) => (
-                             <DynamicFieldRenderer 
-                               key={subK} dataKey={subK} 
-                               value={safeData[key]?.[subK] !== undefined ? safeData[key][subK] : subV} 
-                               path={`${key}.${subK}`} onChange={onChange} 
-                             />
-                           ))}
-                        </div>
+                        
+                        {key.toLowerCase().includes("cta") || Array.isArray(safeData[key]) ? (
+                          <DynamicFieldRenderer 
+                             key={key} dataKey={key} 
+                             value={safeData[key]} 
+                             path={key} onChange={handleFieldChange} formsList={formsList}
+                           />
+                        ) : (
+                          <div className="p-6 bg-zinc-900/30 border border-zinc-800 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-6">
+                             {Object.entries(displaySchema[key]).map(([subK, subV]: [string, any]) => (
+                               <DynamicFieldRenderer 
+                                 key={subK} dataKey={subK} 
+                                 value={safeData[key]?.[subK] !== undefined ? safeData[key][subK] : subV} 
+                                 path={`${key}.${subK}`} onChange={handleFieldChange} formsList={formsList}
+                               />
+                             ))}
+                          </div>
+                        )}
+                        
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -441,21 +419,25 @@ export default function AdvancedJsonEditor({
            )}
         </div>
 
-        {/* LADO DIREITO: PREVIEW (SÓ SE HOUVER URL) */}
-        {!readOnlyStructure && previewUrl !== "/" && (
-           <div className="hidden lg:flex w-[400px] flex-col bg-zinc-950">
-              <div className="h-12 border-b border-zinc-800 flex items-center justify-between px-4 bg-black/20">
-                 <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Visualização Real</span>
-                 <button onClick={reloadPreview} className="text-zinc-500 hover:text-white"><RefreshCw size={14}/></button>
+        {!readOnlyStructure && previewUrl !== "/" && previewUrl !== "" && (
+           <div className="hidden lg:flex w-[400px] flex-col bg-zinc-950 relative">
+              <div className="h-12 border-b border-zinc-800 flex items-center justify-between px-4 bg-black/20 shrink-0">
+                 <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                   {isApiRoute ? "Visualização API (Em Tempo Real)" : "Visualização da Página"}
+                 </span>
+                 {!isApiRoute && <button onClick={reloadPreview} className="text-zinc-500 hover:text-white"><RefreshCw size={14}/></button>}
               </div>
-              <iframe ref={iframeRef} src={previewUrl} className="flex-1 w-full bg-white" />
+              {isApiRoute ? (
+                <iframe srcDoc={jsonPreviewHtml} className="flex-1 w-full bg-zinc-950 border-none" title="JSON Preview" />
+              ) : (
+                <iframe ref={iframeRef} src={previewUrl} className="flex-1 w-full bg-white border-none" title="Page Preview" />
+              )}
            </div>
         )}
       </div>
 
-      {/* FOOTER: ADMIN TOOLS */}
       {!readOnlyStructure && (
-        <div className="p-4 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center">
+        <div className="p-4 bg-zinc-900 border-t border-zinc-800 flex justify-between items-center shrink-0">
            <p className="text-[10px] text-zinc-500 font-medium">Use o modo construtor para definir a estrutura da página.</p>
            <button onClick={() => setIsDevMode(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-500/20">
               <Settings2 size={14} /> Gerenciar Estrutura
@@ -463,7 +445,6 @@ export default function AdvancedJsonEditor({
         </div>
       )}
 
-      {/* DRAWER ADMIN */}
       <AnimatePresence>
         {isDevMode && (
           <>
@@ -473,7 +454,7 @@ export default function AdvancedJsonEditor({
                   <h2 className="text-white font-bold flex items-center gap-2"><Code size={20} className="text-indigo-500" /> Editor de Layout</h2>
                   <div className="flex gap-2">
                      <Button onClick={handleJsonApply} className="bg-green-600 h-8 text-xs">Aplicar Alterações</Button>
-                     <button onClick={() => setIsDevMode(false)} className="p-1.5 bg-zinc-800 rounded-md text-zinc-400"><X size={16}/></button>
+                     <button onClick={() => setIsDevMode(false)} className="p-1.5 bg-zinc-800 rounded-md text-zinc-400 hover:text-white"><X size={16}/></button>
                   </div>
                </div>
 

@@ -9,8 +9,8 @@ interface AdminIconSelectorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  label?: string;
-  showHelperText?: boolean;
+  variant?: "compact" | "default";
+  className?: string; 
 }
 
 const iconCategories = [
@@ -81,14 +81,16 @@ export default function AdminIconSelector({
   value, 
   onChange, 
   placeholder = "Ex: lucide:home", 
-  label,
-  showHelperText = false 
+  variant = "compact",
+  className = "" 
 }: AdminIconSelectorProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [search, setSearch] = useState('');
   const [filteredIcons, setFilteredIcons] = useState<Array<{value: string, label: string}>>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const isCompact = variant === "compact";
 
   const closeDropdown = () => {
     setShowDropdown(false);
@@ -139,8 +141,8 @@ export default function AdminIconSelector({
     const viewportHeight = window.innerHeight;
     
     let left = inputRect.left;
-    let top = inputRect.bottom + 4; // Bem coladinho no input
-    const width = Math.max(inputRect.width, 280); // Um pouco mais compacto
+    let top = inputRect.bottom + 4; 
+    const width = Math.max(inputRect.width, 280); 
 
     if (left + width > viewportWidth - 16) left = viewportWidth - width - 16;
     if (top + 300 > viewportHeight) top = inputRect.top - 310; 
@@ -149,65 +151,55 @@ export default function AdminIconSelector({
     return { top: `${top}px`, left: `${left}px`, width: `${width}px` };
   };
 
+  // Classes adaptáveis para "compact" (MenuBuilder/JsonEditor) ou "default" (PagesCRUD topo)
+  const inputClass = `w-full bg-black/50 border border-zinc-800 text-white outline-none focus:border-cyan-500 transition-colors cursor-text ${
+    isCompact ? "py-1 pl-7 pr-7 text-xs rounded" : "p-2.5 pl-10 pr-10 text-sm rounded-lg"
+  }`;
+  const leftIconContainer = `absolute top-1/2 transform -translate-y-1/2 flex items-center justify-center pointer-events-none ${isCompact ? "left-2" : "left-3"}`;
+  const rightIconContainer = `absolute top-1/2 transform -translate-y-1/2 flex items-center justify-center hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors ${isCompact ? "right-1 p-1" : "right-2 p-1.5"}`;
+
   return (
-    <div className="relative w-full" ref={containerRef}>
-      {/* LABEL EXATAMENTE IGUAL AOS OUTROS CAMPOS */}
-      {label && <label className="block text-[10px] uppercase font-bold text-zinc-500">{label}</label>}
+    <div className={`relative w-full ${className}`} ref={containerRef}>
       
-      {/* INPUT COM MARGEM TOP 1 (mt-1) E PADDING (py-1) IGUAL AOS OUTROS */}
-      <div className="relative mt-1">
-        <div className="absolute left-2 top-1/2 transform -translate-y-1/2 flex items-center justify-center pointer-events-none">
-          {value ? (
-            <Icon icon={value} className="w-3.5 h-3.5 text-white" />
-          ) : (
-            <Search className="w-3.5 h-3.5 text-zinc-500" />
-          )}
-        </div>
-        
-        <input
-          ref={inputRef}
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setShowDropdown(true)}
-          placeholder={placeholder}
-          className="w-full pl-7 pr-7 bg-black border border-zinc-800 rounded py-1 text-xs text-white outline-none focus:border-cyan-500 transition-colors cursor-text"
-        />
-        
-        <button 
-          type="button" 
-          onClick={() => {
-            if (showDropdown) {
-              closeDropdown();
-            } else if (value) {
-              onChange(''); 
-            } else {
-              setShowDropdown(true);
-            }
-          }} 
-          className="absolute right-1 top-1/2 transform -translate-y-1/2 flex items-center justify-center p-1 hover:bg-zinc-800 rounded text-zinc-500 hover:text-white transition-colors"
-        >
-          {showDropdown ? <X size={12} /> : (value ? <X size={12} /> : <ChevronDown size={12} />)}
-        </button>
+      <div className={leftIconContainer}>
+        {value ? (
+          <Icon icon={value} className={isCompact ? "w-3.5 h-3.5 text-white" : "w-5 h-5 text-white"} />
+        ) : (
+          <Search className={isCompact ? "w-3.5 h-3.5 text-zinc-500" : "w-5 h-5 text-zinc-500"} />
+        )}
       </div>
+      
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => setShowDropdown(true)}
+        placeholder={placeholder}
+        className={inputClass}
+      />
+      
+      <button 
+        type="button" 
+        onClick={() => {
+          if (showDropdown) closeDropdown();
+          else if (value) onChange(''); 
+          else setShowDropdown(true);
+        }} 
+        className={rightIconContainer}
+      >
+        {showDropdown ? <X size={isCompact ? 12 : 16} /> : (value ? <X size={isCompact ? 12 : 16} /> : <ChevronDown size={isCompact ? 12 : 16} />)}
+      </button>
 
       {showDropdown && (
         <>
           <div className="fixed inset-0 bg-transparent z-40" onClick={closeDropdown} />
           
           <div style={getPickerPosition()} className="fixed z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-2xl overflow-hidden flex flex-col h-[300px]">
-            
             <div className="p-2 border-b border-zinc-800 bg-zinc-950 flex items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-zinc-500" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Pesquisar..."
-                  className="w-full pl-7 pr-2 py-1 border border-zinc-800 rounded bg-black text-[11px] text-white outline-none focus:border-cyan-500 transition-colors"
-                  autoFocus
-                />
+                <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Pesquisar..." className="w-full pl-7 pr-2 py-1 border border-zinc-800 rounded bg-black text-[11px] text-white outline-none focus:border-cyan-500 transition-colors" autoFocus />
               </div>
             </div>
 
@@ -218,10 +210,7 @@ export default function AdminIconSelector({
                     <h3 className="text-[9px] font-bold uppercase text-zinc-500 mb-1.5 px-1.5 tracking-wider">{category.name}</h3>
                     <div className="grid grid-cols-6 gap-0.5 px-1">
                       {category.icons.map((icon) => (
-                        <button
-                          key={icon.value} type="button" onClick={() => handleSelect(icon.value)} title={icon.label}
-                          className={`flex items-center justify-center p-1.5 rounded hover:bg-zinc-800 transition-colors ${value === icon.value ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-zinc-400 border border-transparent'}`}
-                        >
+                        <button key={icon.value} type="button" onClick={() => handleSelect(icon.value)} title={icon.label} className={`flex items-center justify-center p-1.5 rounded hover:bg-zinc-800 transition-colors ${value === icon.value ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-zinc-400 border border-transparent'}`}>
                           <Icon icon={icon.value} className="w-4 h-4" />
                         </button>
                       ))}
@@ -231,30 +220,15 @@ export default function AdminIconSelector({
               ) : (
                 <div className="grid grid-cols-6 gap-0.5 p-1">
                   {filteredIcons.map((icon) => (
-                    <button
-                      key={icon.value} type="button" onClick={() => handleSelect(icon.value)} title={icon.label}
-                      className={`flex items-center justify-center p-1.5 rounded hover:bg-zinc-800 transition-colors ${value === icon.value ? 'bg-cyan-500/20 text-cyan-400' : 'text-zinc-400'}`}
-                    >
+                    <button key={icon.value} type="button" onClick={() => handleSelect(icon.value)} title={icon.label} className={`flex items-center justify-center p-1.5 rounded hover:bg-zinc-800 transition-colors ${value === icon.value ? 'bg-cyan-500/20 text-cyan-400' : 'text-zinc-400'}`}>
                       <Icon icon={icon.value} className="w-4 h-4" />
                     </button>
                   ))}
                 </div>
               )}
-              {search.trim() !== '' && filteredIcons.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-6 opacity-50">
-                  <Search className="w-6 h-6 text-zinc-500 mb-1" />
-                  <p className="text-[10px] text-zinc-400">Sem resultados</p>
-                </div>
-              )}
             </div>
           </div>
         </>
-      )}
-
-      {showHelperText && (
-        <div className="mt-1">
-          <p className="text-[9px] text-zinc-500">Ex: lucide:home</p>
-        </div>
       )}
     </div>
   );

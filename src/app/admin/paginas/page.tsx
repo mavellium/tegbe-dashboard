@@ -7,8 +7,10 @@ import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
 import { LayoutTemplate, Plus, Edit2, Trash2, Loader2, X } from "lucide-react";
 import * as Icons from "lucide-react"; 
+import { Icon } from "@iconify/react"; 
 import { motion, AnimatePresence } from "framer-motion";
 import AdvancedJsonEditor from "@/components/AdvancedJsonEditor"; 
+import AdminIconSelector from "@/components/Admin/AdminIconSelector"; 
 
 export default function PagesCRUD() {
   const [pages, setPages] = useState<any[]>([]);
@@ -19,7 +21,7 @@ export default function PagesCRUD() {
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
-    title: "", subtitle: "", icon: "FileText", endpoint: "", subCompanyId: "", formData: {} as any
+    title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: "", formData: {} as any
   });
 
   const fetchData = async () => {
@@ -64,19 +66,40 @@ export default function PagesCRUD() {
   };
 
   const openNew = () => {
-    setFormData({ title: "", subtitle: "", icon: "FileText", endpoint: "/api/sua-rota/json/tipo", subCompanyId: subCompanies[0]?.id || "", formData: {} });
+    setFormData({ title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: subCompanies[0]?.id || "", formData: {} });
     setEditingId(null); setIsModalOpen(true);
   };
 
   const openEdit = (page: any) => {
     setFormData({ 
-      title: page.title, subtitle: page.subtitle || "", icon: page.icon, endpoint: page.endpoint, 
+      title: page.title, subtitle: page.subtitle || "", icon: page.icon || "lucide:file-text", endpoint: page.endpoint, 
       subCompanyId: page.subCompanyId, formData: page.formData || {} 
     });
     setEditingId(page.id); setIsModalOpen(true);
   };
 
-  const IconPreview = (Icons as any)[formData.icon] || Icons.FileText;
+  const autoGenerateEndpoint = (subId: string, titleText: string) => {
+    const sub = subCompanies.find(c => c.id === subId);
+    const subSlug = sub ? sub.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "") : "filial";
+    const titleSlug = titleText ? titleText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "") : "pagina";
+    return `/api/${subSlug}/json/${titleSlug}`;
+  };
+
+  const handleTitleChange = (val: string) => {
+    setFormData(prev => {
+      const next = { ...prev, title: val };
+      if (!editingId) next.endpoint = autoGenerateEndpoint(prev.subCompanyId, val);
+      return next;
+    });
+  };
+
+  const handleSubCompanyChange = (val: string) => {
+    setFormData(prev => {
+      const next = { ...prev, subCompanyId: val };
+      if (!editingId) next.endpoint = autoGenerateEndpoint(val, prev.title);
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-900 to-zinc-800 text-zinc-100">
@@ -109,11 +132,15 @@ export default function PagesCRUD() {
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
                   {pages.map(page => {
-                    const PageIcon = (Icons as any)[page.icon] || Icons.FileText;
+                    const PageIconLegacy = (Icons as any)[page.icon] || Icons.FileText;
                     return (
                       <tr key={page.id} className="hover:bg-zinc-800/50 transition-colors">
                         <td className="px-6 py-4 font-medium text-white flex items-center gap-3">
-                          <PageIcon size={18} className="text-zinc-500" />
+                          {page.icon?.includes(':') ? (
+                            <Icon icon={page.icon} className="text-zinc-500 w-[18px] h-[18px]" />
+                          ) : (
+                            <PageIconLegacy size={18} className="text-zinc-500" />
+                          )}
                           <div>
                             <p>{page.title}</p>
                             <p className="text-xs text-zinc-500 font-normal">{page.subtitle}</p>
@@ -137,63 +164,61 @@ export default function PagesCRUD() {
         <AnimatePresence>
           {isModalOpen && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-5xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
-                <div className="flex justify-between items-center p-6 border-b border-zinc-800 shrink-0">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-6xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col h-[95vh] overflow-hidden">
+                
+                <div className="p-4 border-b border-zinc-800 bg-zinc-950 shrink-0 flex items-center justify-between gap-4">
                   <h3 className="text-lg font-bold text-white">{editingId ? "Editar Página" : "Nova Página"}</h3>
-                  <div className="flex gap-3">
-                     <Button type="button" onClick={handleSubmit} loading={saving} className="bg-cyan-600 hover:bg-cyan-700 text-white h-8">Salvar Página</Button>
-                     <button onClick={() => setIsModalOpen(false)} className="text-zinc-400 hover:text-white"><X size={20} /></button>
+                  <div className="flex items-center gap-3">
+                     <Button type="button" onClick={handleSubmit} loading={saving} className="bg-cyan-600 hover:bg-cyan-700 text-white h-9 px-4">Salvar Alterações</Button>
+                     <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"><X size={20} /></button>
                   </div>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col p-6 space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0">
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0 bg-black/20 p-4 rounded-xl border border-zinc-800/50">
                     <div className="md:col-span-2">
                       <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Título da Página</label>
-                      <Input required value={formData.title} onChange={(e: any) => setFormData({...formData, title: e.target.value})} className="bg-black/50 border-zinc-800 text-white" placeholder="Ex: Configurações do Header" />
+                      <Input required value={formData.title} onChange={(e: any) => handleTitleChange(e.target.value)} className="bg-black/50 border-zinc-800 text-white mt-1" placeholder="Ex: Configurações do Header" />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Vincular à Filial</label>
-                      <select required value={formData.subCompanyId} onChange={(e) => setFormData({...formData, subCompanyId: e.target.value})} className="w-full p-3 bg-black/50 border border-zinc-800 rounded-lg text-white outline-none focus:border-cyan-500">
+                      <select required value={formData.subCompanyId} onChange={(e) => handleSubCompanyChange(e.target.value)} className="w-full p-2.5 mt-1 bg-black/50 border border-zinc-800 rounded-lg text-sm text-white outline-none focus:border-cyan-500">
                         <option value="" disabled>Selecione...</option>
                         {subCompanies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Subtítulo</label>
-                      <Input value={formData.subtitle} onChange={(e: any) => setFormData({...formData, subtitle: e.target.value})} className="bg-black/50 border-zinc-800 text-white" placeholder="Breve descrição visível ao usuário" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Endpoint de Salvamento (API)</label>
-                      <Input required value={formData.endpoint} onChange={(e: any) => setFormData({...formData, endpoint: e.target.value})} className="bg-black/50 border-zinc-800 text-white font-mono text-sm" placeholder="/api/[subtype]/json/[type]" />
-                    </div>
-                  </div>
-
-                  <div className="shrink-0">
-                    <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Ícone (Nome em Inglês - Lucide React)</label>
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-zinc-950 border border-zinc-800 rounded-lg flex items-center justify-center">
-                        <IconPreview className="text-cyan-500" />
-                      </div>
-                      <Input value={formData.icon} onChange={(e: any) => setFormData({...formData, icon: e.target.value})} className="bg-black/50 border-zinc-800 text-white flex-1" placeholder="Ex: Home, FileText, Settings, Image..." />
-                    </div>
-                  </div>
-
-                  <div className="border-t border-zinc-800 pt-6 flex-1 flex flex-col min-h-[500px]">
-                    <label className="block text-xs font-semibold text-cyan-400 uppercase mb-4 flex items-center gap-2 shrink-0">
-                      <LayoutTemplate size={16} /> Estrutura de Dados (FormData JSON)
-                    </label>
-                    <div className="bg-zinc-950 rounded-xl overflow-hidden border border-zinc-800 flex-1 relative flex flex-col">
-                      <AdvancedJsonEditor 
-                        data={formData.formData} 
-                        onChange={(path: string, val: any) => {}} // Dummy, usamos onReplaceData
-                        onReplaceData={(newJson: any) => setFormData({...formData, formData: newJson})} 
-                        previewUrl={formData.endpoint} // Usa o endpoint como preview se quiser
+                    <div className="col-span-1 md:col-span-1">
+                      {/* === LABEL EXTERNA E ADAPTÁVEL === */}
+                      <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Ícone da Página</label>
+                      <AdminIconSelector
+                        value={formData.icon}
+                        onChange={(val) => setFormData({...formData, icon: val})}
+                        placeholder="Ex: lucide:layout-template"
+                        variant="default"
+                        className="mt-1"
                       />
                     </div>
+                    <div className="col-span-1 md:col-span-1">
+                      <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Subtítulo</label>
+                      <Input value={formData.subtitle} onChange={(e: any) => setFormData({...formData, subtitle: e.target.value})} className="bg-black/50 border-zinc-800 text-white mt-1" placeholder="Breve descrição" />
+                    </div>
+                    <div className="col-span-1 md:col-span-1">
+                      <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Endpoint (API)</label>
+                      <Input required value={formData.endpoint} onChange={(e: any) => setFormData({...formData, endpoint: e.target.value})} className="bg-black/50 border-zinc-800 text-white font-mono text-sm mt-1" placeholder="/api/[filial]/json/[pagina]" />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 flex flex-col relative">
+                    <AdvancedJsonEditor 
+                      data={formData.formData} 
+                      onChange={() => {}} 
+                      onReplaceData={(newJson: any) => setFormData({...formData, formData: newJson})} 
+                      previewUrl={formData.endpoint} 
+                      pageTitle={formData.title}      
+                      pageSubtitle={formData.subtitle} 
+                      pageIcon={formData.icon}         
+                    />
                   </div>
                 </div>
               </motion.div>
