@@ -206,7 +206,6 @@ export default function MenuBuilder({
                     
                     <div className="col-span-4">
                       <AdminIconSelector
-                        label="Ícone"
                         value={item.icon} 
                         onChange={val => updateItem(val, 'icon', idx)} 
                         placeholder="Ex: lucide:folder"
@@ -259,7 +258,6 @@ export default function MenuBuilder({
                             </div>
                             <div className="col-span-4">
                               <AdminIconSelector 
-                                label="Ícone"
                                 value={child.icon} 
                                 onChange={val => updateItem(val, 'icon', cIdx, idx)} 
                                 placeholder="Ex: lucide:file-text"
