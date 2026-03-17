@@ -3,20 +3,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useRef, useMemo, useEffect } from "react";
+import React, { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/Input";
 import { Switch } from "@/components/Switch";
 import { Button } from "@/components/Button";
 import { ImageUpload } from "@/components/ImageUpload";
-import IconSelector from "@/components/IconSelector"; // O SEU SELETOR PADRÃO
-import { VideoUpload } from "@/components/VideoUpload"; // IMPORTANDO O SEU COMPONENTE EXTERNO
+import IconSelector from "@/components/IconSelector"; 
+import { VideoUpload } from "@/components/VideoUpload"; 
 import { Icon } from "@iconify/react"; 
 import * as Icons from "lucide-react"; 
 import { 
   Palette, ChevronDown, ChevronUp, Layers, X, RefreshCw, Trash2, 
   Type as TypeIcon, List, Link as LinkIcon, ArrowUp, ArrowDown, Settings2,
-  VideoIcon, Play, Code, LayoutTemplate, Image as ImageIcon
+  VideoIcon, LayoutTemplate, Image as ImageIcon, Code
 } from "lucide-react";
 
 // ==========================================
@@ -26,11 +26,13 @@ const presetColors = ["#FFFFFF", "#000000", "#E61A4A", "#C9A050", "#1E40AF", "#1
 function ColorPicker({ color, onChange }: { color: string; onChange: (c: string) => void }) {
   const [show, setShow] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
+  
   useEffect(() => {
     const clickOut = (e: any) => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setShow(false); };
     document.addEventListener("mousedown", clickOut);
     return () => document.removeEventListener("mousedown", clickOut);
   }, []);
+  
   const safeColor = color?.startsWith("#") ? color : "#000000";
   return (
     <div className="relative w-full" ref={pickerRef}>
@@ -61,9 +63,15 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
   const lKey = dataKey.toLowerCase();
   const label = humanizeKey(dataKey);
 
-  // --- LÓGICA ESPECIAL PARA O COMPONENTE CTA / FORMS ---
+  // --- LÓGICA ESPECIAL CTA / FORMS ---
   if (value && typeof value === 'object' && !Array.isArray(value) && (lKey.includes("cta") || lKey.includes("button") || lKey.includes("botao"))) {
-    const ctaVal = { text: value.text || "", icon: value.icon || "", use_form: value.use_form || false, form_id: value.form_id || "", href: value.href || "" };
+    const ctaVal = { 
+      text: value.text || "", 
+      icon: value.icon || "", 
+      use_form: value.use_form || false, 
+      form_id: value.form_id || "", 
+      href: value.href || "" 
+    };
     
     return (
       <div className="col-span-full p-5 border border-zinc-800 bg-black/40 rounded-xl space-y-4 shadow-inner">
@@ -86,7 +94,6 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
              <Input value={ctaVal.text} onChange={(e) => onChange(path, { ...ctaVal, text: e.target.value })} placeholder="Ex: Saiba mais" className="bg-black border-zinc-800 rounded text-xs py-1.5 mt-1" />
            </div>
            <div>
-             {/* VOLTOU PARA O SELETOR DE ÍCONE PADRÃO */}
              <IconSelector label="Ícone do Botão" value={ctaVal.icon} onChange={(val) => onChange(path, { ...ctaVal, icon: val })} placeholder="Ex: lucide:arrow-right" />
            </div>
            
@@ -131,7 +138,6 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
     );
   }
 
-  // --- RESTANTE DOS CAMPOS ---
   if (typeof value === "boolean") {
     return (
       <div className="flex items-center justify-between p-3 bg-black/20 border border-zinc-800 rounded-lg">
@@ -162,7 +168,6 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
     if (lKey.includes("video") || value.endsWith(".mp4")) {
       return (
         <div className="col-span-full">
-          {/* USANDO SEU COMPONENTE EXTERNO AQUI */}
           <VideoUpload label={label} currentVideo={value} onChange={(url) => onChange(path, url)} />
         </div>
       );
@@ -177,7 +182,6 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
     if (lKey.includes("icon")) {
       return (
         <div>
-          {/* VOLTOU PARA O SELETOR DE ÍCONE PADRÃO AQUI TAMBÉM */}
           <IconSelector label={label} value={value} onChange={(val) => onChange(path, val)} placeholder="Ex: lucide:home" />
         </div>
       );
@@ -265,8 +269,21 @@ export default function AdvancedJsonEditor({
   pageTitle, pageSubtitle, pageIcon
 }: AdvancedJsonEditorProps) {
   
-  const safeData = useMemo(() => (data ? data : {}), [data]);
-  const displaySchema = useMemo(() => structure || safeData, [structure, safeData]);
+  // === ESTADO LOCAL PROTEGIDO ===
+  // Impede perda de dados quando se digita muito rápido
+  const [localData, setLocalData] = useState<any>({});
+
+  // Sincroniza apenas quando o 'data' pai muda estruturalmente ou chega pela 1ª vez
+  useEffect(() => {
+    let parsed = data;
+    if (typeof data === 'string') {
+      try { parsed = JSON.parse(data); } catch { parsed = {}; }
+    }
+    if (!parsed || parsed === "null") parsed = {};
+    setLocalData(parsed);
+  }, [data]);
+
+  const displaySchema = useMemo(() => structure || localData, [structure, localData]);
   const dynamicKeys = Object.keys(displaySchema);
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -290,8 +307,8 @@ export default function AdvancedJsonEditor({
   }, []);
 
   useEffect(() => {
-    if (isDevMode) setRawJson(JSON.stringify(safeData, null, 2));
-  }, [safeData, isDevMode]);
+    if (isDevMode) setRawJson(JSON.stringify(localData, null, 2));
+  }, [localData, isDevMode]);
 
   const toggleSection = (s: string) => setExpanded(prev => ({ ...prev, [s]: !prev[s] }));
   
@@ -301,56 +318,71 @@ export default function AdvancedJsonEditor({
   const handleJsonApply = () => {
     try {
       const parsed = JSON.parse(rawJson);
+      setLocalData(parsed);
       if (onReplaceData) onReplaceData(parsed);
       reloadPreview();
     } catch (e) { alert("JSON Inválido"); }
   };
 
   const handleInjectTemplate = (temp: any) => {
-    const current = JSON.parse(JSON.stringify(safeData));
-    const key = `${temp.key}_${Math.random().toString(36).substr(2, 4)}`;
-    if (temp.category === "complex" || targetSection === "ROOT") current[key] = temp.data;
-    else if (current[targetSection]) current[targetSection][key] = temp.data;
-    if (onReplaceData) onReplaceData(current);
+    setLocalData((prev: any) => {
+      const current = JSON.parse(JSON.stringify(prev));
+      const key = `${temp.key}_${Math.random().toString(36).substr(2, 4)}`;
+      if (temp.category === "complex" || targetSection === "ROOT") current[key] = temp.data;
+      else if (current[targetSection]) current[targetSection][key] = temp.data;
+      
+      if (onReplaceData) onReplaceData(current);
+      return current;
+    });
   };
 
-  const handleFieldChange = (path: string, val: any) => {
-    const keys = path.split('.');
-    const newData = JSON.parse(JSON.stringify(safeData)); 
-    let current = newData;
-    
-    for (let i = 0; i < keys.length - 1; i++) {
-      if (current[keys[i]] === undefined) {
-        current[keys[i]] = isNaN(Number(keys[i+1])) ? {} : [];
+  // --- NOVA LÓGICA DE ATUALIZAÇÃO SEGURA (EVITA PERDA DE TECLAS) ---
+  const handleFieldChange = useCallback((path: string, val: any) => {
+    setLocalData((prev: any) => {
+      const keys = path.split('.');
+      const newData = JSON.parse(JSON.stringify(prev)); 
+      let current = newData;
+      
+      for (let i = 0; i < keys.length - 1; i++) {
+        if (current[keys[i]] === undefined) {
+          current[keys[i]] = isNaN(Number(keys[i+1])) ? {} : [];
+        }
+        current = current[keys[i]];
       }
-      current = current[keys[i]];
-    }
-    
-    current[keys[keys.length - 1]] = val;
-    
-    if (onReplaceData) onReplaceData(newData);
-    onChange(path, val);
-  };
+      
+      current[keys[keys.length - 1]] = val;
+      
+      // Dispara o callback pro Pai só depois de atualizar o próprio estado
+      if (onReplaceData) onReplaceData(newData);
+      
+      return newData;
+    });
+  }, [onReplaceData]);
 
   const manageAction = (type: "up" | "down" | "del", key: string) => {
-    const keys = Object.keys(safeData);
-    const idx = keys.indexOf(key);
-    if (type === "del") {
-       if(!confirm("Excluir seção?")) return;
-       const next = { ...safeData }; delete next[key];
-       if (onReplaceData) onReplaceData(next);
-    } else {
-       if (type === "up" && idx > 0) [keys[idx-1], keys[idx]] = [keys[idx], keys[idx-1]];
-       if (type === "down" && idx < keys.length-1) [keys[idx], keys[idx+1]] = [keys[idx+1], keys[idx]];
-       const next: any = {}; keys.forEach(k => next[k] = safeData[k]);
-       if (onReplaceData) onReplaceData(next);
-    }
+    setLocalData((prev: any) => {
+      const keys = Object.keys(prev);
+      const idx = keys.indexOf(key);
+      
+      if (type === "del") {
+         if(!confirm("Excluir seção?")) return prev;
+         const next = { ...prev }; delete next[key];
+         if (onReplaceData) onReplaceData(next);
+         return next;
+      } else {
+         if (type === "up" && idx > 0) [keys[idx-1], keys[idx]] = [keys[idx], keys[idx-1]];
+         if (type === "down" && idx < keys.length-1) [keys[idx], keys[idx+1]] = [keys[idx+1], keys[idx]];
+         const next: any = {}; keys.forEach(k => next[k] = prev[k]);
+         if (onReplaceData) onReplaceData(next);
+         return next;
+      }
+    });
   };
 
   const jsonPreviewHtml = `
     <html style="background: #09090b; margin: 0; padding: 20px; font-family: monospace; color: #10b981;">
       <body>
-        <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 13px;">${JSON.stringify(safeData, null, 2)}</pre>
+        <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 13px;">${JSON.stringify(localData, null, 2)}</pre>
       </body>
     </html>
   `;
@@ -373,7 +405,7 @@ export default function AdvancedJsonEditor({
              </div>
              <div>
                <h1 className="text-2xl font-bold text-white tracking-tight">{pageTitle || "Nova Página Dinâmica"}</h1>
-               <p className="text-sm text-zinc-400 mt-1">{pageSubtitle || "Adicione e edite os campos JSON para estruturar os dados."}</p>
+               <p className="text-sm text-zinc-400 mt-1">{pageSubtitle || "Adicione e edite os campos JSON para estruturar os dados desta página."}</p>
              </div>
            </div>
 
@@ -385,18 +417,18 @@ export default function AdvancedJsonEditor({
            ) : (
              dynamicKeys.map(key => (
                <div key={key} className="space-y-3">
-                  {!key.toLowerCase().includes("cta") && !Array.isArray(safeData[key]) && (
+                  {!key.toLowerCase().includes("cta") && !Array.isArray(localData[key]) && (
                     <SectionHeader title={humanizeKey(key)} expanded={expanded[key]} onToggle={() => toggleSection(key)} />
                   )}
                   
                   <AnimatePresence>
-                    {(expanded[key] || key.toLowerCase().includes("cta") || Array.isArray(safeData[key])) && (
+                    {(expanded[key] || key.toLowerCase().includes("cta") || Array.isArray(localData[key])) && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         
-                        {key.toLowerCase().includes("cta") || Array.isArray(safeData[key]) ? (
+                        {key.toLowerCase().includes("cta") || Array.isArray(localData[key]) ? (
                           <DynamicFieldRenderer 
                              key={key} dataKey={key} 
-                             value={safeData[key]} 
+                             value={localData[key]} 
                              path={key} onChange={handleFieldChange} formsList={formsList}
                            />
                         ) : (
@@ -404,7 +436,7 @@ export default function AdvancedJsonEditor({
                              {Object.entries(displaySchema[key]).map(([subK, subV]: [string, any]) => (
                                <DynamicFieldRenderer 
                                  key={subK} dataKey={subK} 
-                                 value={safeData[key]?.[subK] !== undefined ? safeData[key][subK] : subV} 
+                                 value={localData[key]?.[subK] !== undefined ? localData[key][subK] : subV} 
                                  path={`${key}.${subK}`} onChange={handleFieldChange} formsList={formsList}
                                />
                              ))}

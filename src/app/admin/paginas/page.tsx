@@ -10,7 +10,7 @@ import * as Icons from "lucide-react";
 import { Icon } from "@iconify/react"; 
 import { motion, AnimatePresence } from "framer-motion";
 import AdvancedJsonEditor from "@/components/AdvancedJsonEditor"; 
-import AdminIconSelector from "@/components/Admin/AdminIconSelector"; 
+import AdminIconSelector from "@/components/Admin/AdminIconSelector";
 
 export default function PagesCRUD() {
   const [pages, setPages] = useState<any[]>([]);
@@ -42,19 +42,43 @@ export default function PagesCRUD() {
       const method = editingId ? "PUT" : "POST";
       const url = editingId ? `/api/pages/${editingId}` : "/api/pages";
       
+      // 1. Salva a configuração da página na tabela 'Page'
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          formData: typeof formData.formData === 'string' ? JSON.parse(formData.formData) : formData.formData
+        })
       });
       
       if (res.ok) {
+        
+        // 2. FORÇA A CRIAÇÃO DO JSON NA API DINÂMICA
+        // Envia os dados no formato FormData esperado pela rota [subtype]/json/[type]
+        if (formData.endpoint) {
+          const payload = typeof formData.formData === 'string' ? JSON.parse(formData.formData) : formData.formData;
+          const finalPayload = Object.keys(payload || {}).length > 0 ? payload : { _init: true };
+          
+          const apiFormData = new FormData();
+          apiFormData.append("values", JSON.stringify(finalPayload));
+
+          await fetch(formData.endpoint, {
+            method: "POST",
+            // Não passamos Content-Type aqui para que o navegador configure o boundary multipart do FormData
+            body: apiFormData
+          }).catch(err => console.error("Aviso: Falha ao injetar JSON no endpoint.", err));
+        }
+
         setIsModalOpen(false);
         fetchData();
       } else {
         const err = await res.json();
         alert(err.error || "Erro ao salvar página.");
       }
+    } catch (err) {
+      console.error(err);
+      alert("Erro de comunicação com a API.");
     } finally {
       setSaving(false);
     }
@@ -71,9 +95,19 @@ export default function PagesCRUD() {
   };
 
   const openEdit = (page: any) => {
+    let parsedData = page.formData;
+    if (typeof parsedData === "string") {
+      try { parsedData = JSON.parse(parsedData); } catch { parsedData = {}; }
+    }
+    if (!parsedData || parsedData === "null") parsedData = {};
+
     setFormData({ 
-      title: page.title, subtitle: page.subtitle || "", icon: page.icon || "lucide:file-text", endpoint: page.endpoint, 
-      subCompanyId: page.subCompanyId, formData: page.formData || {} 
+      title: page.title || "", 
+      subtitle: page.subtitle || "", 
+      icon: page.icon || "lucide:file-text", 
+      endpoint: page.endpoint || "", 
+      subCompanyId: page.subCompanyId || "", 
+      formData: parsedData 
     });
     setEditingId(page.id); setIsModalOpen(true);
   };
@@ -189,11 +223,10 @@ export default function PagesCRUD() {
                       </select>
                     </div>
                     <div className="col-span-1 md:col-span-1">
-                      {/* === LABEL EXTERNA E ADAPTÁVEL === */}
                       <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Ícone da Página</label>
                       <AdminIconSelector
                         value={formData.icon}
-                        onChange={(val) => setFormData({...formData, icon: val})}
+                        onChange={(val) => setFormData(prev => ({...prev, icon: val}))}
                         placeholder="Ex: lucide:layout-template"
                         variant="default"
                         className="mt-1"
@@ -201,11 +234,11 @@ export default function PagesCRUD() {
                     </div>
                     <div className="col-span-1 md:col-span-1">
                       <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Subtítulo</label>
-                      <Input value={formData.subtitle} onChange={(e: any) => setFormData({...formData, subtitle: e.target.value})} className="bg-black/50 border-zinc-800 text-white mt-1" placeholder="Breve descrição" />
+                      <Input value={formData.subtitle} onChange={(e: any) => setFormData(prev => ({...prev, subtitle: e.target.value}))} className="bg-black/50 border-zinc-800 text-white mt-1" placeholder="Breve descrição" />
                     </div>
                     <div className="col-span-1 md:col-span-1">
                       <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Endpoint (API)</label>
-                      <Input required value={formData.endpoint} onChange={(e: any) => setFormData({...formData, endpoint: e.target.value})} className="bg-black/50 border-zinc-800 text-white font-mono text-sm mt-1" placeholder="/api/[filial]/json/[pagina]" />
+                      <Input required value={formData.endpoint} onChange={(e: any) => setFormData(prev => ({...prev, endpoint: e.target.value}))} className="bg-black/50 border-zinc-800 text-white font-mono text-sm mt-1" placeholder="/api/[filial]/json/[pagina]" />
                     </div>
                   </div>
 
@@ -213,7 +246,7 @@ export default function PagesCRUD() {
                     <AdvancedJsonEditor 
                       data={formData.formData} 
                       onChange={() => {}} 
-                      onReplaceData={(newJson: any) => setFormData({...formData, formData: newJson})} 
+                      onReplaceData={(newJson: any) => setFormData(prev => ({...prev, formData: newJson}))} 
                       previewUrl={formData.endpoint} 
                       pageTitle={formData.title}      
                       pageSubtitle={formData.subtitle} 
