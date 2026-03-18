@@ -8,7 +8,7 @@ import {
   Menu, X, HelpCircle, FileText, Newspaper, Building, PlayCircle,
   LayoutDashboard, ChevronDown, LogOutIcon, Users, Settings, Network, Loader2, Globe, LayoutTemplate
 } from "lucide-react";
-import { Icon } from '@iconify/react'; // <-- IMPORT DO ICONIFY
+import { Icon } from '@iconify/react'; 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -44,16 +44,17 @@ export default function Sidebar() {
     
     if (user.role === "ADMIN") {
       return [
-        { type: "item", name: "Visão Geral", href: "/", icon: "LayoutDashboard", exact: true },
+        { type: "item", name: "Visão Geral", href: "/", icon: "LayoutDashboard", exact: true, isActive: true },
         { 
           type: "group", 
           title: "Gestão do Sistema", 
           icon: "Settings",
+          isActive: true,
           children: [
-            { name: "Usuários", href: "/admin/usuarios", icon: "Users" },
-            { name: "Empresas", href: "/admin/empresas", icon: "Building" },
-            { name: "Filiais", href: "/admin/subempresas", icon: "Network" },
-            { name: "Páginas", href: "/admin/paginas", icon: "LayoutTemplate" }
+            { name: "Usuários", href: "/admin/usuarios", icon: "Users", isActive: true },
+            { name: "Empresas", href: "/admin/empresas", icon: "Building", isActive: true },
+            { name: "Filiais", href: "/admin/subempresas", icon: "Network", isActive: true },
+            { name: "Páginas", href: "/admin/paginas", icon: "LayoutTemplate", isActive: true }
           ] 
         }
       ];
@@ -61,9 +62,8 @@ export default function Sidebar() {
     
     const baseMenu = currentSite?.menuItems || [];
     
-    // exact: true para o Dashboard não sobrepor as páginas filhas
     const analyticsLink = currentSite ? {
-      type: "item", name: "Dashboard", href: `/dashboard/${currentSite.id}`, icon: "LayoutDashboard", exact: true
+      type: "item", name: "Dashboard", href: `/dashboard/${currentSite.id}`, icon: "LayoutDashboard", exact: true, isActive: true
     } : null;
 
     const filteredBase = baseMenu.filter((item: any) => item.name !== "Dashboard");
@@ -112,7 +112,6 @@ export default function Sidebar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMobile, isOpen, showSiteSwitcher]);
 
-  // QUEBRA DO LOOP INFINITO
   if (authLoading && !user) {
     return (
       <aside className={`h-screen z-40 fixed border-r border-[var(--color-border)] bg-[var(--color-aside)] w-64 flex items-center justify-center`}>
@@ -149,7 +148,7 @@ export default function Sidebar() {
           <motion.aside
             ref={sidebarRef}
             initial={{ x: isMobile ? -320 : 0 }} animate={{ x: 0 }} exit={{ x: -320 }} transition={{ duration: 0.25, ease: "easeInOut" }}
-            className={`h-screen shadow-2xl flex flex-col justify-between z-40 fixed border-r border-[var(--color-border)] bg-[var(--color-aside)] ${sidebarWidth} transition-all duration-250`}
+            className={`h-screen shadow-2xl flex flex-col justify-between z-100 fixed border-r border-[var(--color-border)] bg-[var(--color-aside)] ${sidebarWidth} transition-all duration-250`}
           >
             <div className="p-4 border-b border-[var(--color-border)]" ref={siteSwitcherRef}>
               {user.role === "ADMIN" ? (
@@ -244,6 +243,9 @@ export default function Sidebar() {
             <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
               {menuItems.map((item: any) => {
                 
+                // === VERIFICAÇÃO DE VISIBILIDADE (isActive) ===
+                if (item.isActive === false) return null;
+
                 // === ITEM SOLTO ===
                 if (item.type === "item") {
                   const isActive = isActiveLink(item.href, item.exact);
@@ -256,7 +258,6 @@ export default function Sidebar() {
                         onClick={closeSidebar}
                         className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 relative ${isActive ? "bg-[var(--color-primary)]/10 text-white shadow-md shadow-[var(--color-primary)]/20" : "text-[var(--color-secondary)]/80 hover:bg-black/5 dark:hover:bg-white/5"}`}
                       >
-                        {/* RENDERIZAÇÃO MISTA: ICONIFY OU LUCIDE */}
                         {item.icon?.includes(':') ? (
                           <Icon icon={item.icon} className="flex-shrink-0 w-[22px] h-[22px]" />
                         ) : (
@@ -273,6 +274,13 @@ export default function Sidebar() {
                 const isGroupActive = item.children?.some((child: any) => isActiveLink(child.href, child.exact));
                 const isGroupOpen = manualGroups[item.title] ?? isGroupActive;
 
+                // Filtra os filhos para exibir apenas os que têm isActive diferente de false
+                const visibleChildren = item.children?.filter((child: any) => child.isActive !== false) || [];
+
+                // Se não sobrar nenhum filho visível no grupo, podemos optar por não exibir o grupo, 
+                // mas se quiser exibir vazio, basta remover este if.
+                if (visibleChildren.length === 0) return null;
+
                 return (
                   <div key={item.title} className="space-y-1">
                     <button 
@@ -280,7 +288,6 @@ export default function Sidebar() {
                       className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 ${isGroupActive ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)]" : "text-[var(--color-secondary)]/80 hover:bg-black/5 dark:hover:bg-white/5"}`}
                     >
                       <div className="flex items-center gap-3">
-                        {/* RENDERIZAÇÃO MISTA: GRUPO */}
                         {item.icon?.includes(':') ? (
                           <Icon icon={item.icon} className="flex-shrink-0 w-5 h-5" />
                         ) : (
@@ -294,7 +301,7 @@ export default function Sidebar() {
                     <AnimatePresence>
                       {isGroupOpen && (
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="ml-6 space-y-1 overflow-hidden">
-                          {item.children.map((child: any) => {
+                          {visibleChildren.map((child: any) => {
                             const ChildIcon = iconMap[child.icon] || FileText;
                             const isActive = isActiveLink(child.href, child.exact);
                             
@@ -305,7 +312,6 @@ export default function Sidebar() {
                                 onClick={closeSidebar} 
                                 className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${isActive ? "bg-[var(--color-primary)]/10 text-white" : "text-[var(--color-secondary)]/70 hover:bg-black/5 dark:hover:bg-white/5"}`}
                               >
-                                {/* RENDERIZAÇÃO MISTA: FILHOS */}
                                 {child.icon?.includes(':') ? (
                                   <Icon icon={child.icon} className="flex-shrink-0 w-4 h-4" />
                                 ) : (
@@ -335,7 +341,7 @@ export default function Sidebar() {
 
             <div className="p-4 border-t border-[var(--color-border)] text-center">
               <p className="text-[11px] text-[var(--color-secondary)]/70 font-semibold uppercase truncate px-2">Olá: {user.name}</p>
-              <p className="text-[10px] text-[var(--color-secondary)]/40 mt-1">© {year} Mavellium CMS</p>
+              <p className="text-[10px] text-[var(--color-secondary)]/40 mt-1">© {year} Mavellium CMS - 2.0.0</p>
             </div>
           </motion.aside>
         )}

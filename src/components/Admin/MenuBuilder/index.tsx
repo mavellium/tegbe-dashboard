@@ -1,10 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable react-hooks/set-state-in-effect */
-import { FolderPlus, GripVertical, LayoutTemplate, LinkIcon, Plus, Trash2, X } from "lucide-react";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { FolderPlus, GripVertical, LayoutTemplate, LinkIcon, Eye, EyeOff, Plus, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import AdminIconSelector from "../AdminIconSelector";
 
-export default function MenuBuilder({ 
+export default function MenuBuilderInline({ 
   value, 
   onChange, 
   availablePages, 
@@ -22,14 +22,12 @@ export default function MenuBuilder({
   const [draggingPos, setDraggingPos] = useState<{ idx: number; parentIdx?: number } | null>(null);
   const [dragEnabledIdx, setDragEnabledIdx] = useState<{ idx: number; parentIdx?: number } | null>(null);
 
-  // NOVO: Ref para a âncora no final da lista
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // NOVO: Função para rolar suavemente até o final
   const scrollToBottom = () => {
     setTimeout(() => {
       bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }, 150); // Timeout pequeno para dar tempo do React renderizar o novo item na tela
+    }, 150); 
   };
 
   useEffect(() => {
@@ -46,12 +44,13 @@ export default function MenuBuilder({
   };
 
   const addGroup = () => {
-    syncParent([...items, { type: "group", title: "Novo Grupo", icon: "lucide:folder", children: [] }]);
-    scrollToBottom(); // Chama o scroll
+    // Agora o item nasce com isActive = true
+    syncParent([...items, { type: "group", title: "Novo Grupo", icon: "lucide:folder", isActive: true, children: [] }]);
+    scrollToBottom();
   };
 
   const addLink = (parentIndex?: number) => {
-    const newLink = { name: "Link Manual", href: "/", icon: "lucide:file-text" };
+    const newLink = { name: "Link Manual", href: "/", icon: "lucide:file-text", isActive: true };
     if (parentIndex !== undefined) {
       const copy = [...items];
       if (!copy[parentIndex].children) copy[parentIndex].children = [];
@@ -60,13 +59,13 @@ export default function MenuBuilder({
     } else {
       syncParent([...items, { type: "item", ...newLink }]);
     }
-    scrollToBottom(); // Chama o scroll
+    scrollToBottom(); 
   };
 
   const addPage = (parentIndex: number | undefined, pageId: string) => {
     const page = availablePages.find(p => p.id === pageId);
     if (!page) return;
-    const newLink = { name: page.title, href: `/dashboard/${editingId}/custom/${page.id}`, icon: page.icon || "lucide:file-text" };
+    const newLink = { name: page.title, href: `/dashboard/${editingId}/custom/${page.id}`, icon: page.icon || "lucide:file-text", isActive: true };
     
     if (parentIndex !== undefined) {
       const copy = [...items];
@@ -76,7 +75,7 @@ export default function MenuBuilder({
     } else {
       syncParent([...items, { type: "item", ...newLink }]);
     }
-    scrollToBottom(); // Chama o scroll
+    scrollToBottom();
   };
 
   const removeItem = (idx: number, parentIdx?: number) => {
@@ -95,6 +94,18 @@ export default function MenuBuilder({
       copy[parentIdx].children[idx][field] = val;
     } else {
       copy[idx][field] = val;
+    }
+    syncParent(copy);
+  };
+
+  const toggleActive = (idx: number, parentIdx?: number) => {
+    const copy = [...items];
+    if (parentIdx !== undefined) {
+      const current = copy[parentIdx].children[idx].isActive;
+      copy[parentIdx].children[idx].isActive = current === undefined ? false : !current;
+    } else {
+      const current = copy[idx].isActive;
+      copy[idx].isActive = current === undefined ? false : !current;
     }
     syncParent(copy);
   };
@@ -176,6 +187,9 @@ export default function MenuBuilder({
             const isDragging = draggingPos?.idx === idx && draggingPos?.parentIdx === undefined;
             const isDraggable = dragEnabledIdx?.idx === idx && dragEnabledIdx?.parentIdx === undefined;
             
+            // Controle de visibilidade (Opacidade) se estiver desativado
+            const isActive = item.isActive !== false; 
+            
             return (
               <div 
                 key={idx} 
@@ -184,7 +198,7 @@ export default function MenuBuilder({
                 onDragEnter={(e) => handleDragEnter(e, idx)}
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
-                className={`bg-zinc-900 border ${isDragging ? 'border-indigo-500/50 opacity-50 shadow-lg shadow-indigo-500/10' : 'border-zinc-800'} rounded-lg p-3 space-y-3 transition-all relative z-10`}
+                className={`bg-zinc-900 border ${isDragging ? 'border-indigo-500/50 opacity-50 shadow-lg shadow-indigo-500/10' : 'border-zinc-800'} rounded-lg p-3 space-y-3 transition-all relative z-10 ${!isActive ? 'opacity-40 grayscale' : ''}`}
               >
                 
                 <div className="flex items-start gap-3 w-full">
@@ -205,10 +219,13 @@ export default function MenuBuilder({
                     </div>
                     
                     <div className="col-span-4">
+                      <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Ícone</label>
                       <AdminIconSelector
                         value={item.icon} 
                         onChange={val => updateItem(val, 'icon', idx)} 
                         placeholder="Ex: lucide:folder"
+                        variant="compact"
+                        className="mt-1"
                       />
                     </div>
                     
@@ -222,7 +239,12 @@ export default function MenuBuilder({
                     )}
                   </div>
 
-                  <button type="button" onClick={() => removeItem(idx)} className="p-1.5 text-red-500 hover:bg-red-500/10 rounded mt-[18px] shrink-0"><Trash2 size={14}/></button>
+                  <div className="flex flex-col gap-1 mt-[18px]">
+                    <button type="button" onClick={() => toggleActive(idx)} title={isActive ? "Ocultar do Menu" : "Mostrar no Menu"} className={`p-1.5 rounded transition-colors ${isActive ? 'text-green-500 hover:bg-green-500/10' : 'text-zinc-500 hover:bg-zinc-800'}`}>
+                      {isActive ? <Eye size={14} /> : <EyeOff size={14} />}
+                    </button>
+                    <button type="button" onClick={() => removeItem(idx)} title="Excluir" className="p-1.5 text-red-500 hover:bg-red-500/10 rounded"><Trash2 size={14}/></button>
+                  </div>
                 </div>
 
                 {item.type === 'group' && (
@@ -230,6 +252,7 @@ export default function MenuBuilder({
                     {(item.children || []).map((child: any, cIdx: number) => {
                       const isChildDragging = draggingPos?.idx === cIdx && draggingPos?.parentIdx === idx;
                       const isChildDraggable = dragEnabledIdx?.idx === cIdx && dragEnabledIdx?.parentIdx === idx;
+                      const isChildActive = child.isActive !== false;
                       
                       return (
                         <div 
@@ -239,7 +262,7 @@ export default function MenuBuilder({
                           onDragEnter={(e) => handleDragEnter(e, cIdx, idx)}
                           onDragEnd={handleDragEnd}
                           onDragOver={handleDragOver}
-                          className={`flex items-start gap-3 w-full bg-black/40 p-3 rounded-lg border transition-all relative z-20 ${isChildDragging ? 'border-cyan-500/50 opacity-50' : 'border-zinc-800/50'}`}
+                          className={`flex items-start gap-3 w-full bg-black/40 p-3 rounded-lg border transition-all relative z-20 ${isChildDragging ? 'border-cyan-500/50 opacity-50' : 'border-zinc-800/50'} ${!isChildActive ? 'opacity-40 grayscale' : ''}`}
                         >
                           <div 
                             className="mt-[18px] cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white p-1 bg-black/20 rounded shrink-0" 
@@ -257,10 +280,13 @@ export default function MenuBuilder({
                               <input type="text" value={child.name} onChange={e => updateItem(e.target.value, 'name', cIdx, idx)} className="w-full mt-1 bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white outline-none focus:border-cyan-500" placeholder="Nome" />
                             </div>
                             <div className="col-span-4">
+                              <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Ícone</label>
                               <AdminIconSelector 
                                 value={child.icon} 
                                 onChange={val => updateItem(val, 'icon', cIdx, idx)} 
                                 placeholder="Ex: lucide:file-text"
+                                variant="compact"
+                                className="mt-1"
                               />
                             </div>
                             <div className="col-span-4">
@@ -269,7 +295,12 @@ export default function MenuBuilder({
                             </div>
                           </div>
 
-                          <button type="button" onClick={() => removeItem(cIdx, idx)} className="text-red-500 hover:bg-red-500/10 p-1.5 rounded mt-[18px] shrink-0"><X size={14}/></button>
+                          <div className="flex flex-col gap-1 mt-[18px]">
+                            <button type="button" onClick={() => toggleActive(cIdx, idx)} title={isChildActive ? "Ocultar do Menu" : "Mostrar no Menu"} className={`p-1.5 rounded transition-colors ${isChildActive ? 'text-green-500 hover:bg-green-500/10' : 'text-zinc-500 hover:bg-zinc-800'}`}>
+                              {isChildActive ? <Eye size={14} /> : <EyeOff size={14} />}
+                            </button>
+                            <button type="button" onClick={() => removeItem(cIdx, idx)} title="Excluir" className="text-red-500 hover:bg-red-500/10 p-1.5 rounded shrink-0"><X size={14}/></button>
+                          </div>
                         </div>
                       );
                     })}

@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
@@ -11,8 +10,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import MenuBuilder from "@/components/Admin/MenuBuilder";
-
+import MenuBuilderInline from "@/components/Admin/MenuBuilder";
+ 
 export default function SubEmpresasCRUD() {
   const [subCompanies, setSubCompanies] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
@@ -235,7 +234,7 @@ export default function SubEmpresasCRUD() {
                   <div className="border-t border-zinc-800 pt-4">
                     <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Construtor de Navegação (Menu da Sidebar)</label>
                     
-                    <MenuBuilder 
+                    <MenuBuilderInline 
                       value={formData.menuItems} 
                       onChange={(val) => setFormData(prev => ({ ...prev, menuItems: val }))} 
                       availablePages={pages.filter(p => p.subCompanyId === editingId)}
