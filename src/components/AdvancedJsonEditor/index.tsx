@@ -63,7 +63,7 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
   const lKey = dataKey.toLowerCase();
   const label = humanizeKey(dataKey);
 
-  // --- LÓGICA ESPECIAL CTA / FORMS ---
+  // --- LÓGICA ESPECIAL PARA O COMPONENTE CTA / FORMS ---
   if (value && typeof value === 'object' && !Array.isArray(value) && (lKey.includes("cta") || lKey.includes("button") || lKey.includes("botao"))) {
     const ctaVal = { 
       text: value.text || "", 
@@ -269,11 +269,8 @@ export default function AdvancedJsonEditor({
   pageTitle, pageSubtitle, pageIcon
 }: AdvancedJsonEditorProps) {
   
-  // === ESTADO LOCAL PROTEGIDO ===
-  // Impede perda de dados quando se digita muito rápido
   const [localData, setLocalData] = useState<any>({});
 
-  // Sincroniza apenas quando o 'data' pai muda estruturalmente ou chega pela 1ª vez
   useEffect(() => {
     let parsed = data;
     if (typeof data === 'string') {
@@ -331,12 +328,13 @@ export default function AdvancedJsonEditor({
       if (temp.category === "complex" || targetSection === "ROOT") current[key] = temp.data;
       else if (current[targetSection]) current[targetSection][key] = temp.data;
       
-      if (onReplaceData) onReplaceData(current);
+      // SOLUÇÃO DO BUG: Tirado de dentro do SetState para evitar erro do React
+      setTimeout(() => { if (onReplaceData) onReplaceData(current); }, 0);
       return current;
     });
   };
 
-  // --- NOVA LÓGICA DE ATUALIZAÇÃO SEGURA (EVITA PERDA DE TECLAS) ---
+  // --- SOLUÇÃO DO BUG: Atualização sem perder teclas e erro do React ---
   const handleFieldChange = useCallback((path: string, val: any) => {
     setLocalData((prev: any) => {
       const keys = path.split('.');
@@ -352,8 +350,10 @@ export default function AdvancedJsonEditor({
       
       current[keys[keys.length - 1]] = val;
       
-      // Dispara o callback pro Pai só depois de atualizar o próprio estado
-      if (onReplaceData) onReplaceData(newData);
+      // SOLUÇÃO DO BUG: setTimeout joga o callback do Pai para fora da fase de Render do Filho
+      setTimeout(() => {
+        if (onReplaceData) onReplaceData(newData);
+      }, 0);
       
       return newData;
     });
@@ -367,13 +367,13 @@ export default function AdvancedJsonEditor({
       if (type === "del") {
          if(!confirm("Excluir seção?")) return prev;
          const next = { ...prev }; delete next[key];
-         if (onReplaceData) onReplaceData(next);
+         setTimeout(() => { if (onReplaceData) onReplaceData(next); }, 0);
          return next;
       } else {
          if (type === "up" && idx > 0) [keys[idx-1], keys[idx]] = [keys[idx], keys[idx-1]];
          if (type === "down" && idx < keys.length-1) [keys[idx], keys[idx+1]] = [keys[idx+1], keys[idx]];
          const next: any = {}; keys.forEach(k => next[k] = prev[k]);
-         if (onReplaceData) onReplaceData(next);
+         setTimeout(() => { if (onReplaceData) onReplaceData(next); }, 0);
          return next;
       }
     });

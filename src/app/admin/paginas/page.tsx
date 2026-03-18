@@ -42,32 +42,33 @@ export default function PagesCRUD() {
       const method = editingId ? "PUT" : "POST";
       const url = editingId ? `/api/pages/${editingId}` : "/api/pages";
       
-      // 1. Salva a configuração da página na tabela 'Page'
+      const payloadObj = typeof formData.formData === 'string' ? JSON.parse(formData.formData) : formData.formData;
+
+      // 1. Salva a configuração da página na tabela principal do banco
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          formData: typeof formData.formData === 'string' ? JSON.parse(formData.formData) : formData.formData
-        })
+        body: JSON.stringify({ ...formData, formData: payloadObj })
       });
       
       if (res.ok) {
         
-        // 2. FORÇA A CRIAÇÃO DO JSON NA API DINÂMICA
-        // Envia os dados no formato FormData esperado pela rota [subtype]/json/[type]
+        // 2. FORÇA A CRIAÇÃO/ATUALIZAÇÃO DO JSON NA API DINÂMICA
+        // Empacota os dados como FormData para casar exatamente com o req.formData() da sua API
         if (formData.endpoint) {
-          const payload = typeof formData.formData === 'string' ? JSON.parse(formData.formData) : formData.formData;
-          const finalPayload = Object.keys(payload || {}).length > 0 ? payload : { _init: true };
+          const finalPayload = Object.keys(payloadObj || {}).length > 0 ? payloadObj : { _init: true };
           
           const apiFormData = new FormData();
           apiFormData.append("values", JSON.stringify(finalPayload));
 
-          await fetch(formData.endpoint, {
+          const endpointRes = await fetch(formData.endpoint, {
             method: "POST",
-            // Não passamos Content-Type aqui para que o navegador configure o boundary multipart do FormData
-            body: apiFormData
-          }).catch(err => console.error("Aviso: Falha ao injetar JSON no endpoint.", err));
+            body: apiFormData // Sem Content-Type para o browser gerenciar o boundary multipart
+          });
+
+          if (!endpointRes.ok) {
+            console.error("Erro ao injetar dados no endpoint dinâmico:", await endpointRes.text());
+          }
         }
 
         setIsModalOpen(false);
