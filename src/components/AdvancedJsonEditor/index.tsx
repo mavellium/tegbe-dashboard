@@ -16,7 +16,7 @@ import * as Icons from "lucide-react";
 import { 
   Palette, ChevronDown, ChevronUp, Layers, X, RefreshCw, Trash2, 
   Type as TypeIcon, List, Link as LinkIcon, ArrowUp, ArrowDown, Settings2,
-  VideoIcon, LayoutTemplate, Image as ImageIcon, Code
+  VideoIcon, LayoutTemplate, Image as ImageIcon, Code, AlignLeft, Paintbrush
 } from "lucide-react";
 
 // ==========================================
@@ -63,6 +63,128 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
   const lKey = dataKey.toLowerCase();
   const label = humanizeKey(dataKey);
 
+  // --- LÓGICA ESPECIAL PARA PARÁGRAFOS COMPOSTOS (EX: HIGHLIGHTS E TEXTOS JUNTOS) ---
+  if ((lKey.includes("paragraph") || lKey.includes("paragrafo")) && Array.isArray(value)) {
+    return (
+      <div className="col-span-full border-2 border-indigo-500/10 bg-indigo-500/5 rounded-xl p-4 space-y-4">
+        <h5 className="text-xs font-bold text-indigo-400 uppercase flex items-center gap-2"><AlignLeft size={14} /> {label}</h5>
+        
+        {value.map((paragraphArray, pIdx) => (
+          <div key={pIdx} className="p-3 bg-zinc-900 border border-zinc-800 rounded-lg relative pt-10 shadow-inner">
+            <div className="absolute top-0 left-0 right-0 h-8 bg-zinc-800/50 flex items-center px-3 justify-between rounded-t-lg">
+               <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Parágrafo #{pIdx + 1}</span>
+               <button onClick={() => { const newVal = value.filter((_, i) => i !== pIdx); onChange(path, newVal); }} className="text-red-500 hover:text-red-400"><Trash2 size={12}/></button>
+            </div>
+            
+            <div className="space-y-3">
+              {(Array.isArray(paragraphArray) ? paragraphArray : []).map((fragment: any, fIdx: number) => (
+                <div key={fIdx} className="flex flex-col gap-2 bg-black/40 p-3 rounded-lg border border-zinc-800 relative group">
+                  <div className="flex items-center justify-between w-full">
+                    <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${fragment.type === 'highlight' ? 'bg-amber-500/20 text-amber-500' : 'bg-zinc-800 text-zinc-400'}`}>
+                      {fragment.type === 'highlight' ? 'Palavra de Destaque' : 'Texto Normal'}
+                    </span>
+                    <button onClick={() => {
+                      const newParagraph = paragraphArray.filter((_: any, i: number) => i !== fIdx);
+                      const newVal = [...value];
+                      newVal[pIdx] = newParagraph;
+                      onChange(path, newVal);
+                    }} className="text-red-500 hover:bg-red-500/10 p-1.5 rounded transition-all"><X size={14} /></button>
+                  </div>
+                  
+                  <div className="flex w-full gap-2 items-start">
+                    <textarea 
+                      value={fragment.value || ""} 
+                      onChange={e => {
+                        const newParagraph = [...paragraphArray];
+                        newParagraph[fIdx] = { ...newParagraph[fIdx], value: e.target.value };
+                        const newVal = [...value];
+                        newVal[pIdx] = newParagraph;
+                        onChange(path, newVal);
+                      }} 
+                      className="flex-1 bg-black border border-zinc-700 rounded text-sm px-3 py-2 outline-none focus:border-cyan-500 min-h-[40px] resize-y custom-scrollbar" 
+                      style={fragment.type === 'highlight' ? {
+                        color: fragment.color || "#F1D95D",
+                        fontFamily: fragment.serif ? "serif" : "inherit",
+                        fontStyle: fragment.italic ? "italic" : "normal",
+                        fontWeight: fragment.bold ? "bold" : "normal"
+                      } : { color: "white" }}
+                      placeholder="Conteúdo do fragmento..."
+                      rows={2}
+                    />
+                    
+                    {fragment.type === 'highlight' && (
+                      <div className="flex flex-col items-center gap-2 shrink-0">
+                        <div className="w-8 h-8 rounded border border-zinc-700 relative overflow-hidden shrink-0" title="Cor do Destaque">
+                           <input type="color" value={fragment.color || "#F1D95D"} onChange={e => {
+                             const newParagraph = [...paragraphArray];
+                             newParagraph[fIdx] = { ...newParagraph[fIdx], color: e.target.value };
+                             const newVal = [...value];
+                             newVal[pIdx] = newParagraph;
+                             onChange(path, newVal);
+                           }} className="absolute -top-2 -left-2 w-12 h-12 cursor-pointer" />
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-1 w-[120px] justify-center">
+                          <button onClick={() => {
+                               const newParagraph = [...paragraphArray];
+                               newParagraph[fIdx] = { ...newParagraph[fIdx], bold: !newParagraph[fIdx].bold };
+                               const newVal = [...value];
+                               newVal[pIdx] = newParagraph;
+                               onChange(path, newVal);
+                          }} className={`text-[10px] font-bold px-2 py-1 rounded border flex-1 ${fragment.bold ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-transparent text-zinc-500 border-zinc-700'}`}>Bold</button>
+
+                          <button onClick={() => {
+                               const newParagraph = [...paragraphArray];
+                               newParagraph[fIdx] = { ...newParagraph[fIdx], italic: !newParagraph[fIdx].italic };
+                               const newVal = [...value];
+                               newVal[pIdx] = newParagraph;
+                               onChange(path, newVal);
+                          }} className={`text-[10px] font-bold px-2 py-1 rounded border flex-1 ${fragment.italic ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-transparent text-zinc-500 border-zinc-700'} italic`}>Italic</button>
+
+                          <button onClick={() => {
+                               const newParagraph = [...paragraphArray];
+                               newParagraph[fIdx] = { ...newParagraph[fIdx], serif: !newParagraph[fIdx].serif };
+                               const newVal = [...value];
+                               newVal[pIdx] = newParagraph;
+                               onChange(path, newVal);
+                          }} className={`text-[10px] font-bold px-2 py-1 rounded border w-full ${fragment.serif ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-transparent text-zinc-500 border-zinc-700'}`}>Serif</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="flex gap-2 pt-2 border-t border-zinc-800/50 mt-4">
+                <button onClick={() => {
+                  const newParagraph = [...(Array.isArray(paragraphArray) ? paragraphArray : []), { type: 'text', value: 'Novo texto normal' }];
+                  const newVal = [...value];
+                  newVal[pIdx] = newParagraph;
+                  onChange(path, newVal);
+                }} className="text-[10px] font-bold text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 px-3 py-2 rounded transition-colors w-full">+ Texto Normal</button>
+                
+                <button onClick={() => {
+                  const newParagraph = [...(Array.isArray(paragraphArray) ? paragraphArray : []), { type: 'highlight', value: 'Palavra Chave', color: '#F1D95D', serif: false, italic: false, bold: true }];
+                  const newVal = [...value];
+                  newVal[pIdx] = newParagraph;
+                  onChange(path, newVal);
+                }} className="text-[10px] font-bold text-amber-500 hover:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 px-3 py-2 rounded transition-colors w-full">+ Palavra Destacada</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        <button onClick={() => {
+          const newParagraphArray = [{ type: 'text', value: 'Escreva seu parágrafo aqui...' }];
+          const newVal = [...(value || []), newParagraphArray];
+          onChange(path, newVal);
+        }} className="w-full py-3 bg-indigo-500/10 border border-dashed border-indigo-500/30 text-indigo-400 text-xs font-bold rounded-lg hover:bg-indigo-500/20 transition-colors uppercase tracking-wider">
+          + Criar Novo Parágrafo
+        </button>
+      </div>
+    );
+  }
+
   // --- LÓGICA ESPECIAL PARA O COMPONENTE CTA / FORMS ---
   if (value && typeof value === 'object' && !Array.isArray(value) && (lKey.includes("cta") || lKey.includes("button") || lKey.includes("botao"))) {
     const ctaVal = { 
@@ -94,7 +216,8 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
              <Input value={ctaVal.text} onChange={(e) => onChange(path, { ...ctaVal, text: e.target.value })} placeholder="Ex: Saiba mais" className="bg-black border-zinc-800 rounded text-xs py-1.5 mt-1" />
            </div>
            <div>
-             <IconSelector label="Ícone do Botão" value={ctaVal.icon} onChange={(val) => onChange(path, { ...ctaVal, icon: val })} placeholder="Ex: lucide:arrow-right" />
+             <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">Ícone do Botão</label>
+             <IconSelector value={ctaVal.icon} onChange={(val) => onChange(path, { ...ctaVal, icon: val })} placeholder="Ex: lucide:arrow-right" />
            </div>
            
            <div className="col-span-full pt-2">
@@ -138,6 +261,7 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
     );
   }
 
+  // --- RESTANTE DOS CAMPOS ---
   if (typeof value === "boolean") {
     return (
       <div className="flex items-center justify-between p-3 bg-black/20 border border-zinc-800 rounded-lg">
@@ -182,11 +306,14 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
     if (lKey.includes("icon")) {
       return (
         <div>
-          <IconSelector label={label} value={value} onChange={(val) => onChange(path, val)} placeholder="Ex: lucide:home" />
+          <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
+          <div className="mt-1">
+             <IconSelector value={value} onChange={(val) => onChange(path, val)} placeholder="Ex: lucide:home" />
+          </div>
         </div>
       );
     }
-    if (value.length > 50 || lKey.includes("desc") || lKey.includes("text")) {
+    if (value.length > 50 || lKey.includes("desc") || lKey.includes("text") || lKey.includes("manifesto")) {
       return (
         <div className="col-span-full">
           <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
@@ -241,6 +368,7 @@ const SectionHeader = ({ title, expanded, onToggle }: any) => (
 const INBUILT_TEMPLATES = [
   { name: "Nova Seção", icon: <Layers size={14}/>, category: "complex", key: "secao", data: { titulo: "Título", ativo: true } },
   { name: "Lista / Array", icon: <List size={14}/>, category: "complex", key: "lista", data: [{ titulo: "Texto", icon: "lucide:check" }] },
+  { name: "Parágrafos (Destaque)", icon: <Paintbrush size={14}/>, category: "complex", key: "paragraphs", data: [[{ type: "text", value: "Exemplo de "}, { type: "highlight", value: "destaque", color: "#F1D95D", serif: false, italic: false, bold: true }]] },
   { name: "Botão CTA (Form/Link)", icon: <LayoutTemplate size={14}/>, category: "complex", key: "cta", data: { text: "Saiba Mais", icon: "lucide:arrow-right", href: "/", use_form: false, form_id: "" } }, 
   { name: "Cor", icon: <Palette size={14}/>, category: "simple", key: "cor", data: "#E61A4A" },
   { name: "Texto", icon: <TypeIcon size={14}/>, category: "simple", key: "texto", data: "Escreva algo..." },
@@ -328,13 +456,11 @@ export default function AdvancedJsonEditor({
       if (temp.category === "complex" || targetSection === "ROOT") current[key] = temp.data;
       else if (current[targetSection]) current[targetSection][key] = temp.data;
       
-      // SOLUÇÃO DO BUG: Tirado de dentro do SetState para evitar erro do React
       setTimeout(() => { if (onReplaceData) onReplaceData(current); }, 0);
       return current;
     });
   };
 
-  // --- SOLUÇÃO DO BUG: Atualização sem perder teclas e erro do React ---
   const handleFieldChange = useCallback((path: string, val: any) => {
     setLocalData((prev: any) => {
       const keys = path.split('.');
@@ -350,7 +476,6 @@ export default function AdvancedJsonEditor({
       
       current[keys[keys.length - 1]] = val;
       
-      // SOLUÇÃO DO BUG: setTimeout joga o callback do Pai para fora da fase de Render do Filho
       setTimeout(() => {
         if (onReplaceData) onReplaceData(newData);
       }, 0);
@@ -417,15 +542,15 @@ export default function AdvancedJsonEditor({
            ) : (
              dynamicKeys.map(key => (
                <div key={key} className="space-y-3">
-                  {!key.toLowerCase().includes("cta") && !Array.isArray(localData[key]) && (
+                  {!key.toLowerCase().includes("cta") && !key.toLowerCase().includes("paragraph") && !key.toLowerCase().includes("paragrafo") && !Array.isArray(localData[key]) && (
                     <SectionHeader title={humanizeKey(key)} expanded={expanded[key]} onToggle={() => toggleSection(key)} />
                   )}
                   
                   <AnimatePresence>
-                    {(expanded[key] || key.toLowerCase().includes("cta") || Array.isArray(localData[key])) && (
+                    {(expanded[key] || key.toLowerCase().includes("cta") || key.toLowerCase().includes("paragraph") || key.toLowerCase().includes("paragrafo") || Array.isArray(localData[key])) && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         
-                        {key.toLowerCase().includes("cta") || Array.isArray(localData[key]) ? (
+                        {key.toLowerCase().includes("cta") || key.toLowerCase().includes("paragraph") || key.toLowerCase().includes("paragrafo") || Array.isArray(localData[key]) ? (
                           <DynamicFieldRenderer 
                              key={key} dataKey={key} 
                              value={localData[key]} 

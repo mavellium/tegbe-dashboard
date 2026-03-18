@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import MenuBuilderInline from "@/components/Admin/MenuBuilder";
- 
+import { MenuBuilderInline } from "@/components/Admin/MenuBuilder";
+
 export default function SubEmpresasCRUD() {
   const [subCompanies, setSubCompanies] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);

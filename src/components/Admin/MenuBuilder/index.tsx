@@ -1,10 +1,14 @@
 /* eslint-disable react-hooks/set-state-in-effect */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { FolderPlus, GripVertical, LayoutTemplate, LinkIcon, Eye, EyeOff, Plus, Trash2, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+// =========================================================================
+// O COMPONENTE MENU BUILDER
+// =========================================================================
+import { FolderPlus, GripVertical, LayoutTemplate, LinkIcon, Eye, EyeOff, ChevronUp, ChevronDown, Trash2, Plus, X } from "lucide-react";
 import AdminIconSelector from "../AdminIconSelector";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
-export default function MenuBuilderInline({ 
+export function MenuBuilderInline({ 
   value, 
   onChange, 
   availablePages, 
@@ -16,6 +20,8 @@ export default function MenuBuilderInline({
   editingId: string | null; 
 }) {
   const [items, setItems] = useState<any[]>([]);
+  // Guarda os índices dos grupos que estão recolhidos (collapsed)
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<number, boolean>>({});
 
   const dragItem = useRef<{ idx: number; parentIdx?: number } | null>(null);
   const dragOverItem = useRef<{ idx: number; parentIdx?: number } | null>(null);
@@ -44,7 +50,6 @@ export default function MenuBuilderInline({
   };
 
   const addGroup = () => {
-    // Agora o item nasce com isActive = true
     syncParent([...items, { type: "group", title: "Novo Grupo", icon: "lucide:folder", isActive: true, children: [] }]);
     scrollToBottom();
   };
@@ -55,6 +60,9 @@ export default function MenuBuilderInline({
       const copy = [...items];
       if (!copy[parentIndex].children) copy[parentIndex].children = [];
       copy[parentIndex].children.push(newLink);
+      
+      // Se adicionar um filho, garante que o grupo esteja expandido
+      setCollapsedGroups(prev => ({ ...prev, [parentIndex]: false }));
       syncParent(copy);
     } else {
       syncParent([...items, { type: "item", ...newLink }]);
@@ -71,6 +79,9 @@ export default function MenuBuilderInline({
       const copy = [...items];
       if (!copy[parentIndex].children) copy[parentIndex].children = [];
       copy[parentIndex].children.push(newLink);
+      
+      // Expande grupo se tiver recolhido
+      setCollapsedGroups(prev => ({ ...prev, [parentIndex]: false }));
       syncParent(copy);
     } else {
       syncParent([...items, { type: "item", ...newLink }]);
@@ -108,6 +119,10 @@ export default function MenuBuilderInline({
       copy[idx].isActive = current === undefined ? false : !current;
     }
     syncParent(copy);
+  };
+
+  const toggleCollapse = (idx: number) => {
+    setCollapsedGroups(prev => ({ ...prev, [idx]: !prev[idx] }));
   };
 
   const handleDragStart = (e: React.DragEvent, idx: number, parentIdx?: number) => {
@@ -187,8 +202,8 @@ export default function MenuBuilderInline({
             const isDragging = draggingPos?.idx === idx && draggingPos?.parentIdx === undefined;
             const isDraggable = dragEnabledIdx?.idx === idx && dragEnabledIdx?.parentIdx === undefined;
             
-            // Controle de visibilidade (Opacidade) se estiver desativado
             const isActive = item.isActive !== false; 
+            const isCollapsed = collapsedGroups[idx];
             
             return (
               <div 
@@ -213,9 +228,22 @@ export default function MenuBuilderInline({
                   </div>
                   
                   <div className="flex-1 grid grid-cols-12 gap-3 items-start">
-                    <div className="col-span-4">
-                      <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">{item.type === 'group' ? 'Nome do Grupo' : 'Nome do Link'}</label>
-                      <input type="text" value={item.title || item.name} onChange={e => updateItem(e.target.value, item.type === 'group' ? 'title' : 'name', idx)} className="w-full mt-1 bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white outline-none focus:border-cyan-500" />
+                    <div className="col-span-4 relative">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] uppercase font-bold text-zinc-500">{item.type === 'group' ? 'Nome do Grupo' : 'Nome do Link'}</label>
+                        {item.type === 'group' && (
+                          <button 
+                            type="button" 
+                            onClick={() => toggleCollapse(idx)} 
+                            className="flex items-center gap-1 text-cyan-400 bg-cyan-400/10 hover:bg-cyan-400/20 px-2 py-0.5 rounded transition-colors"
+                            title={isCollapsed ? "Expandir pasta" : "Recolher pasta"}
+                          >
+                            <span className="text-[10px] font-bold uppercase">{isCollapsed ? 'Expandir' : 'Recolher'}</span>
+                            {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                          </button>
+                        )}
+                      </div>
+                      <input type="text" value={item.title || item.name} onChange={e => updateItem(e.target.value, item.type === 'group' ? 'title' : 'name', idx)} className="w-full bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white outline-none focus:border-cyan-500" />
                     </div>
                     
                     <div className="col-span-4">
@@ -235,7 +263,11 @@ export default function MenuBuilderInline({
                         <input type="text" value={item.href} onChange={e => updateItem(e.target.value, 'href', idx)} className="w-full mt-1 bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white outline-none focus:border-cyan-500" placeholder="/dashboard/..." />
                       </div>
                     ) : (
-                      <div className="col-span-4" /> 
+                      <div className="col-span-4 flex items-end pb-1">
+                        {isCollapsed && item.children?.length > 0 && (
+                           <span className="text-[10px] text-zinc-500 font-medium ml-2">({item.children.length} itens ocultos)</span>
+                        )}
+                      </div> 
                     )}
                   </div>
 
@@ -248,92 +280,101 @@ export default function MenuBuilderInline({
                 </div>
 
                 {item.type === 'group' && (
-                  <div className="ml-8 pl-4 border-l border-zinc-800 space-y-3 pt-2">
-                    {(item.children || []).map((child: any, cIdx: number) => {
-                      const isChildDragging = draggingPos?.idx === cIdx && draggingPos?.parentIdx === idx;
-                      const isChildDraggable = dragEnabledIdx?.idx === cIdx && dragEnabledIdx?.parentIdx === idx;
-                      const isChildActive = child.isActive !== false;
-                      
-                      return (
-                        <div 
-                          key={cIdx} 
-                          draggable={isChildDraggable}
-                          onDragStart={(e) => handleDragStart(e, cIdx, idx)}
-                          onDragEnter={(e) => handleDragEnter(e, cIdx, idx)}
-                          onDragEnd={handleDragEnd}
-                          onDragOver={handleDragOver}
-                          className={`flex items-start gap-3 w-full bg-black/40 p-3 rounded-lg border transition-all relative z-20 ${isChildDragging ? 'border-cyan-500/50 opacity-50' : 'border-zinc-800/50'} ${!isChildActive ? 'opacity-40 grayscale' : ''}`}
-                        >
-                          <div 
-                            className="mt-[18px] cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white p-1 bg-black/20 rounded shrink-0" 
-                            title="Segure e arraste para reordenar filho"
-                            onMouseDown={() => setDragEnabledIdx({ idx: cIdx, parentIdx: idx })}
-                            onMouseUp={() => setDragEnabledIdx(null)}
-                            onMouseLeave={() => setDragEnabledIdx(null)}
-                          >
-                            <GripVertical size={14} />
-                          </div>
+                  <AnimatePresence initial={false}>
+                    {!isCollapsed && (
+                      <motion.div 
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="ml-8 pl-4 border-l border-zinc-800 space-y-3 pt-2 overflow-hidden"
+                      >
+                        {(item.children || []).map((child: any, cIdx: number) => {
+                          const isChildDragging = draggingPos?.idx === cIdx && draggingPos?.parentIdx === idx;
+                          const isChildDraggable = dragEnabledIdx?.idx === cIdx && dragEnabledIdx?.parentIdx === idx;
+                          const isChildActive = child.isActive !== false;
                           
-                          <div className="flex-1 grid grid-cols-12 gap-3 items-start">
-                            <div className="col-span-4">
-                              <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Nome do Link</label>
-                              <input type="text" value={child.name} onChange={e => updateItem(e.target.value, 'name', cIdx, idx)} className="w-full mt-1 bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white outline-none focus:border-cyan-500" placeholder="Nome" />
-                            </div>
-                            <div className="col-span-4">
-                              <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Ícone</label>
-                              <AdminIconSelector 
-                                value={child.icon} 
-                                onChange={val => updateItem(val, 'icon', cIdx, idx)} 
-                                placeholder="Ex: lucide:file-text"
-                                variant="compact"
-                                className="mt-1"
-                              />
-                            </div>
-                            <div className="col-span-4">
-                              <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">URL Destino</label>
-                              <input type="text" value={child.href} onChange={e => updateItem(e.target.value, 'href', cIdx, idx)} className="w-full mt-1 bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-indigo-400 outline-none focus:border-cyan-500" placeholder="/url-destino" />
-                            </div>
-                          </div>
+                          return (
+                            <div 
+                              key={cIdx} 
+                              draggable={isChildDraggable}
+                              onDragStart={(e) => handleDragStart(e, cIdx, idx)}
+                              onDragEnter={(e) => handleDragEnter(e, cIdx, idx)}
+                              onDragEnd={handleDragEnd}
+                              onDragOver={handleDragOver}
+                              className={`flex items-start gap-3 w-full bg-black/40 p-3 rounded-lg border transition-all relative z-20 ${isChildDragging ? 'border-cyan-500/50 opacity-50' : 'border-zinc-800/50'} ${!isChildActive ? 'opacity-40 grayscale' : ''}`}
+                            >
+                              <div 
+                                className="mt-[18px] cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white p-1 bg-black/20 rounded shrink-0" 
+                                title="Segure e arraste para reordenar filho"
+                                onMouseDown={() => setDragEnabledIdx({ idx: cIdx, parentIdx: idx })}
+                                onMouseUp={() => setDragEnabledIdx(null)}
+                                onMouseLeave={() => setDragEnabledIdx(null)}
+                              >
+                                <GripVertical size={14} />
+                              </div>
+                              
+                              <div className="flex-1 grid grid-cols-12 gap-3 items-start">
+                                <div className="col-span-4">
+                                  <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Nome do Link</label>
+                                  <input type="text" value={child.name} onChange={e => updateItem(e.target.value, 'name', cIdx, idx)} className="w-full mt-1 bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-white outline-none focus:border-cyan-500" placeholder="Nome" />
+                                </div>
+                                <div className="col-span-4">
+                                  <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">Ícone</label>
+                                  <AdminIconSelector 
+                                    value={child.icon} 
+                                    onChange={val => updateItem(val, 'icon', cIdx, idx)} 
+                                    placeholder="Ex: lucide:file-text"
+                                    variant="compact"
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div className="col-span-4">
+                                  <label className="block text-[10px] uppercase font-bold text-zinc-500 mb-1">URL Destino</label>
+                                  <input type="text" value={child.href} onChange={e => updateItem(e.target.value, 'href', cIdx, idx)} className="w-full mt-1 bg-black border border-zinc-800 rounded px-2 py-1 text-xs text-indigo-400 outline-none focus:border-cyan-500" placeholder="/url-destino" />
+                                </div>
+                              </div>
 
-                          <div className="flex flex-col gap-1 mt-[18px]">
-                            <button type="button" onClick={() => toggleActive(cIdx, idx)} title={isChildActive ? "Ocultar do Menu" : "Mostrar no Menu"} className={`p-1.5 rounded transition-colors ${isChildActive ? 'text-green-500 hover:bg-green-500/10' : 'text-zinc-500 hover:bg-zinc-800'}`}>
-                              {isChildActive ? <Eye size={14} /> : <EyeOff size={14} />}
-                            </button>
-                            <button type="button" onClick={() => removeItem(cIdx, idx)} title="Excluir" className="text-red-500 hover:bg-red-500/10 p-1.5 rounded shrink-0"><X size={14}/></button>
-                          </div>
+                              <div className="flex flex-col gap-1 mt-[18px]">
+                                <button type="button" onClick={() => toggleActive(cIdx, idx)} title={isChildActive ? "Ocultar do Menu" : "Mostrar no Menu"} className={`p-1.5 rounded transition-colors ${isChildActive ? 'text-green-500 hover:bg-green-500/10' : 'text-zinc-500 hover:bg-zinc-800'}`}>
+                                  {isChildActive ? <Eye size={14} /> : <EyeOff size={14} />}
+                                </button>
+                                <button type="button" onClick={() => removeItem(cIdx, idx)} title="Excluir" className="text-red-500 hover:bg-red-500/10 p-1.5 rounded shrink-0"><X size={14}/></button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        
+                        <div className="flex items-center gap-4 pt-2">
+                          <button type="button" onClick={() => addLink(idx)} className="flex items-center gap-1 text-[10px] font-bold text-cyan-500 uppercase hover:text-cyan-400 transition-colors">
+                            <Plus size={12} /> Link Manual
+                          </button>
+                          
+                          {editingId && availablePages.length > 0 && (
+                            <div className="relative flex items-center group">
+                              <select 
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                onChange={(e) => { addPage(idx, e.target.value); e.target.value = ""; }}
+                                defaultValue=""
+                              >
+                                <option value="" disabled>Selecionar Página</option>
+                                {availablePages.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                              </select>
+                              <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-400 uppercase group-hover:text-indigo-300 transition-colors">
+                                <Plus size={12} /> Vincular Página
+                              </span>
+                            </div>
+                          )}
                         </div>
-                      );
-                    })}
-                    
-                    <div className="flex items-center gap-4 pt-2">
-                      <button type="button" onClick={() => addLink(idx)} className="flex items-center gap-1 text-[10px] font-bold text-cyan-500 uppercase hover:text-cyan-400 transition-colors">
-                        <Plus size={12} /> Link Manual
-                      </button>
-                      
-                      {editingId && availablePages.length > 0 && (
-                        <div className="relative flex items-center group">
-                          <select 
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                            onChange={(e) => { addPage(idx, e.target.value); e.target.value = ""; }}
-                            defaultValue=""
-                          >
-                            <option value="" disabled>Selecionar Página</option>
-                            {availablePages.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
-                          </select>
-                          <span className="flex items-center gap-1 text-[10px] font-bold text-indigo-400 uppercase group-hover:text-indigo-300 transition-colors">
-                            <Plus size={12} /> Vincular Página
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 )}
 
               </div>
             );
           })
         )}
-        {/* ÂNCORA PARA O SCROLL ROLAR ATÉ AQUI EMBAIXO */}
         <div ref={bottomRef} className="h-1" />
       </div>
     </div>
