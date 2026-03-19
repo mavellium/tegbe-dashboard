@@ -5,7 +5,7 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { LayoutTemplate, Plus, Edit2, Trash2, Loader2, X } from "lucide-react";
+import { LayoutTemplate, Plus, Edit2, Trash2, Loader2, X, ExternalLink } from "lucide-react";
 import * as Icons from "lucide-react"; 
 import { Icon } from "@iconify/react"; 
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,7 +54,6 @@ export default function PagesCRUD() {
       if (res.ok) {
         
         // 2. FORÇA A CRIAÇÃO/ATUALIZAÇÃO DO JSON NA API DINÂMICA
-        // Empacota os dados como FormData para casar exatamente com o req.formData() da sua API
         if (formData.endpoint) {
           const finalPayload = Object.keys(payloadObj || {}).length > 0 ? payloadObj : { _init: true };
           
@@ -63,7 +62,7 @@ export default function PagesCRUD() {
 
           const endpointRes = await fetch(formData.endpoint, {
             method: "POST",
-            body: apiFormData // Sem Content-Type para o browser gerenciar o boundary multipart
+            body: apiFormData 
           });
 
           if (!endpointRes.ok) {
@@ -107,10 +106,12 @@ export default function PagesCRUD() {
       subtitle: page.subtitle || "", 
       icon: page.icon || "lucide:file-text", 
       endpoint: page.endpoint || "", 
-      subCompanyId: page.subCompanyId || "", 
+      // Busca pelo subCompanyId na raiz ou por dentro da relation
+      subCompanyId: page.subCompanyId || page.subCompany?.id || "", 
       formData: parsedData 
     });
-    setEditingId(page.id); setIsModalOpen(true);
+    setEditingId(page.id); 
+    setIsModalOpen(true);
   };
 
   const autoGenerateEndpoint = (subId: string, titleText: string) => {
@@ -204,6 +205,19 @@ export default function PagesCRUD() {
                 <div className="p-4 border-b border-zinc-800 bg-zinc-950 shrink-0 flex items-center justify-between gap-4">
                   <h3 className="text-lg font-bold text-white">{editingId ? "Editar Página" : "Nova Página"}</h3>
                   <div className="flex items-center gap-3">
+                     
+                     {/* BOTÃO DE VISUALIZAR - Agora aparece independentemente se o banco manda subCompanyId na raiz ou dentro do objeto */}
+                     {editingId && (
+                       <a 
+                         href={`/dashboard/${formData.subCompanyId}/custom/${editingId}`} 
+                         target="_blank" 
+                         rel="noopener noreferrer"
+                         className="flex items-center justify-center gap-2 px-4 h-9 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white rounded-lg text-sm font-bold transition-all border border-zinc-700 hover:border-zinc-500 shadow-sm"
+                       >
+                         <ExternalLink size={16} /> Visualizar
+                       </a>
+                     )}
+
                      <Button type="button" onClick={handleSubmit} loading={saving} className="bg-cyan-600 hover:bg-cyan-700 text-white h-9 px-4">Salvar Alterações</Button>
                      <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors"><X size={20} /></button>
                   </div>

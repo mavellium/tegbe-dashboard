@@ -281,7 +281,18 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
   }
 
   if (typeof value === "string") {
-    if (lKey.includes("color") || value.startsWith("#")) {
+    // LINKS/URLS (Prioridade máxima para evitar que vire Imagem ou Cor)
+    if (lKey.includes("link") || lKey.includes("url") || lKey.includes("href") || lKey.includes("destino")) {
+      return (
+        <div>
+          <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
+          <Input value={value} onChange={(e) => onChange(path, e.target.value)} className="bg-black border-zinc-800 rounded text-xs mt-1 py-1 text-cyan-400" placeholder="Ex: /contato ou https://..." />
+        </div>
+      );
+    }
+    
+    // CORES
+    if (lKey.includes("color") || (value.startsWith("#") && value.length <= 9 && !value.includes(" "))) {
       return (
         <div>
           <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
@@ -289,20 +300,26 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
         </div>
       );
     }
-    if (lKey.includes("video") || value.endsWith(".mp4")) {
+    
+    // VÍDEO
+    if (lKey.includes("video") || value.endsWith(".mp4") || value.endsWith(".webm")) {
       return (
         <div className="col-span-full">
           <VideoUpload label={label} currentVideo={value} onChange={(url) => onChange(path, url)} />
         </div>
       );
     }
-    if (lKey.includes("image") || lKey.includes("logo") || value.startsWith("https://")) {
+    
+    // IMAGEM (Agora reconhece "src" e não cai se a string for uma URL externa qualquer que seja Link)
+    if (lKey.includes("image") || lKey.includes("logo") || lKey.includes("src") || lKey.includes("img") || lKey.includes("bg") || lKey.includes("background") || value.endsWith(".png") || value.endsWith(".jpg") || value.endsWith(".jpeg") || value.endsWith(".svg") || value.endsWith(".webp") || value.endsWith(".avif")) {
       return (
         <div className="col-span-full">
           <ImageUpload label={label} currentImage={value} onChange={(url) => onChange(path, url)} />
         </div>
       );
     }
+    
+    // ÍCONES
     if (lKey.includes("icon")) {
       return (
         <div>
@@ -313,6 +330,8 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
         </div>
       );
     }
+    
+    // TEXTAREA DE MANIFESTO OU TEXTO LONGO
     if (value.length > 50 || lKey.includes("desc") || lKey.includes("text") || lKey.includes("manifesto")) {
       return (
         <div className="col-span-full">
@@ -321,6 +340,8 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
         </div>
       );
     }
+    
+    // FALLBACK PADRÃO
     return (
       <div>
         <label className="block text-[10px] font-bold text-zinc-500 uppercase mb-1">{label}</label>
@@ -329,6 +350,7 @@ function DynamicFieldRenderer({ dataKey, value, path, onChange, formsList }: any
     );
   }
 
+  // --- LISTAS GENÉRICAS (ARRAYS) ---
   if (Array.isArray(value)) {
     return (
       <div className="col-span-full border-2 border-indigo-500/10 bg-indigo-500/5 rounded-xl p-4 space-y-4">

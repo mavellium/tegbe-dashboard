@@ -3,7 +3,7 @@
 // =========================================================================
 // O COMPONENTE MENU BUILDER
 // =========================================================================
-import { FolderPlus, GripVertical, LayoutTemplate, LinkIcon, Eye, EyeOff, ChevronUp, ChevronDown, Trash2, Plus, X } from "lucide-react";
+import { FolderPlus, GripVertical, LayoutTemplate, LinkIcon, Eye, EyeOff, ChevronUp, ChevronDown, Trash2, Plus, X, ArrowUpDown } from "lucide-react";
 import AdminIconSelector from "../AdminIconSelector";
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -20,12 +20,15 @@ export function MenuBuilderInline({
   editingId: string | null; 
 }) {
   const [items, setItems] = useState<any[]>([]);
-  // Guarda os índices dos grupos que estão recolhidos (collapsed)
+  // Guarda os índices dos grupos. Se for 'false', está expandido. Se for 'true' ou 'undefined', está recolhido.
   const [collapsedGroups, setCollapsedGroups] = useState<Record<number, boolean>>({});
 
   const dragItem = useRef<{ idx: number; parentIdx?: number } | null>(null);
   const dragOverItem = useRef<{ idx: number; parentIdx?: number } | null>(null);
+  
+  // Estados visuais do Drag & Drop
   const [draggingPos, setDraggingPos] = useState<{ idx: number; parentIdx?: number } | null>(null);
+  const [dragOverPos, setDragOverPos] = useState<{ idx: number; parentIdx?: number } | null>(null);
   const [dragEnabledIdx, setDragEnabledIdx] = useState<{ idx: number; parentIdx?: number } | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -51,6 +54,8 @@ export function MenuBuilderInline({
 
   const addGroup = () => {
     syncParent([...items, { type: "group", title: "Novo Grupo", icon: "lucide:folder", isActive: true, children: [] }]);
+    // Garante que o novo grupo nasça expandido para facilitar a edição
+    setCollapsedGroups(prev => ({ ...prev, [items.length]: false }));
     scrollToBottom();
   };
 
@@ -61,7 +66,7 @@ export function MenuBuilderInline({
       if (!copy[parentIndex].children) copy[parentIndex].children = [];
       copy[parentIndex].children.push(newLink);
       
-      // Se adicionar um filho, garante que o grupo esteja expandido
+      // Ao adicionar um filho, força a pasta a abrir
       setCollapsedGroups(prev => ({ ...prev, [parentIndex]: false }));
       syncParent(copy);
     } else {
@@ -80,7 +85,7 @@ export function MenuBuilderInline({
       if (!copy[parentIndex].children) copy[parentIndex].children = [];
       copy[parentIndex].children.push(newLink);
       
-      // Expande grupo se tiver recolhido
+      // Ao adicionar um filho, força a pasta a abrir
       setCollapsedGroups(prev => ({ ...prev, [parentIndex]: false }));
       syncParent(copy);
     } else {
@@ -122,10 +127,16 @@ export function MenuBuilderInline({
   };
 
   const toggleCollapse = (idx: number) => {
-    setCollapsedGroups(prev => ({ ...prev, [idx]: !prev[idx] }));
+    // Se for undefined, por padrão está recolhido (true), então vira expandido (false)
+    setCollapsedGroups(prev => ({ 
+      ...prev, 
+      [idx]: prev[idx] === undefined ? false : !prev[idx] 
+    }));
   };
 
+  // --- LÓGICA VISUAL DO DRAG & DROP ---
   const handleDragStart = (e: React.DragEvent, idx: number, parentIdx?: number) => {
+    e.stopPropagation();
     dragItem.current = { idx, parentIdx };
     setDraggingPos({ idx, parentIdx });
     e.dataTransfer.effectAllowed = "move";
@@ -133,10 +144,13 @@ export function MenuBuilderInline({
 
   const handleDragEnter = (e: React.DragEvent, idx: number, parentIdx?: number) => {
     e.preventDefault();
+    e.stopPropagation();
     dragOverItem.current = { idx, parentIdx };
+    setDragOverPos({ idx, parentIdx });
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.stopPropagation();
     if (dragItem.current && dragOverItem.current) {
       const { idx: dragIdx, parentIdx: dragParent } = dragItem.current;
       const { idx: overIdx, parentIdx: overParent } = dragOverItem.current;
@@ -155,13 +169,18 @@ export function MenuBuilderInline({
         syncParent(copy);
       }
     }
+    // Reseta todos os estados
     dragItem.current = null;
     dragOverItem.current = null;
     setDraggingPos(null);
+    setDragOverPos(null);
     setDragEnabledIdx(null);
   };
 
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   return (
     <div className="space-y-4 bg-black/30 p-4 rounded-xl border border-zinc-800">
@@ -194,17 +213,24 @@ export function MenuBuilderInline({
         )}
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3" onDragLeave={() => setDragOverPos(null)}>
         {items.length === 0 ? (
           <p className="text-xs text-zinc-500 text-center py-4">Nenhum item no menu. Comece adicionando um acima.</p>
         ) : (
           items.map((item, idx) => {
             const isDragging = draggingPos?.idx === idx && draggingPos?.parentIdx === undefined;
+            const isDragOver = dragOverPos?.idx === idx && dragOverPos?.parentIdx === undefined;
             const isDraggable = dragEnabledIdx?.idx === idx && dragEnabledIdx?.parentIdx === undefined;
             
             const isActive = item.isActive !== false; 
-            const isCollapsed = collapsedGroups[idx];
             
+            // Lógica Padrão: Se for diferente de false, está recolhido.
+            const isCollapsed = collapsedGroups[idx] !== false;
+            
+            let borderClass = 'border-zinc-800';
+            if (isDragging) borderClass = 'border-2 border-indigo-500 opacity-40 scale-[0.98]';
+            else if (isDragOver) borderClass = 'border-2 border-dashed border-cyan-400 bg-cyan-500/5 scale-[1.01] shadow-[0_0_15px_rgba(34,211,238,0.1)]';
+
             return (
               <div 
                 key={idx} 
@@ -213,18 +239,18 @@ export function MenuBuilderInline({
                 onDragEnter={(e) => handleDragEnter(e, idx)}
                 onDragEnd={handleDragEnd}
                 onDragOver={handleDragOver}
-                className={`bg-zinc-900 border ${isDragging ? 'border-indigo-500/50 opacity-50 shadow-lg shadow-indigo-500/10' : 'border-zinc-800'} rounded-lg p-3 space-y-3 transition-all relative z-10 ${!isActive ? 'opacity-40 grayscale' : ''}`}
+                className={`bg-zinc-900 border rounded-lg p-3 space-y-3 transition-all duration-200 relative z-10 ${borderClass} ${!isActive ? 'opacity-40 grayscale' : ''}`}
               >
                 
                 <div className="flex items-start gap-3 w-full">
                   <div 
-                    className="mt-[18px] cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors p-1 bg-black/20 rounded shrink-0" 
+                    className="mt-[18px] flex items-center cursor-grab active:cursor-grabbing text-zinc-500 hover:text-white transition-colors px-2 py-1.5 bg-black/40 hover:bg-black/60 border border-zinc-700 hover:border-cyan-500/50 rounded shrink-0" 
                     title="Segure e arraste para reordenar"
-                    onMouseDown={() => setDragEnabledIdx({ idx, parentIdx: undefined })}
+                    onMouseDown={(e) => { e.stopPropagation(); setDragEnabledIdx({ idx, parentIdx: undefined }); }}
                     onMouseUp={() => setDragEnabledIdx(null)}
-                    onMouseLeave={() => setDragEnabledIdx(null)}
                   >
                     <GripVertical size={16} />
+                    <ArrowUpDown size={14} className="text-cyan-500 ml-0.5" />
                   </div>
                   
                   <div className="flex-1 grid grid-cols-12 gap-3 items-start">
@@ -291,9 +317,14 @@ export function MenuBuilderInline({
                       >
                         {(item.children || []).map((child: any, cIdx: number) => {
                           const isChildDragging = draggingPos?.idx === cIdx && draggingPos?.parentIdx === idx;
+                          const isChildDragOver = dragOverPos?.idx === cIdx && dragOverPos?.parentIdx === idx;
                           const isChildDraggable = dragEnabledIdx?.idx === cIdx && dragEnabledIdx?.parentIdx === idx;
                           const isChildActive = child.isActive !== false;
                           
+                          let childBorder = 'border-zinc-800/50 bg-black/40';
+                          if (isChildDragging) childBorder = 'border-2 border-indigo-500 opacity-40 scale-[0.98]';
+                          else if (isChildDragOver) childBorder = 'border-2 border-dashed border-cyan-400 bg-cyan-500/10 scale-[1.01]';
+
                           return (
                             <div 
                               key={cIdx} 
@@ -302,16 +333,16 @@ export function MenuBuilderInline({
                               onDragEnter={(e) => handleDragEnter(e, cIdx, idx)}
                               onDragEnd={handleDragEnd}
                               onDragOver={handleDragOver}
-                              className={`flex items-start gap-3 w-full bg-black/40 p-3 rounded-lg border transition-all relative z-20 ${isChildDragging ? 'border-cyan-500/50 opacity-50' : 'border-zinc-800/50'} ${!isChildActive ? 'opacity-40 grayscale' : ''}`}
+                              className={`flex items-start gap-3 w-full p-3 rounded-lg border transition-all duration-200 relative z-20 ${childBorder} ${!isChildActive ? 'opacity-40 grayscale' : ''}`}
                             >
                               <div 
-                                className="mt-[18px] cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white p-1 bg-black/20 rounded shrink-0" 
+                                className="mt-[18px] flex items-center cursor-grab active:cursor-grabbing text-zinc-600 hover:text-white transition-colors px-1 py-1.5 bg-black/30 hover:bg-black/50 border border-zinc-700 hover:border-cyan-500/50 rounded shrink-0" 
                                 title="Segure e arraste para reordenar filho"
-                                onMouseDown={() => setDragEnabledIdx({ idx: cIdx, parentIdx: idx })}
+                                onMouseDown={(e) => { e.stopPropagation(); setDragEnabledIdx({ idx: cIdx, parentIdx: idx }); }}
                                 onMouseUp={() => setDragEnabledIdx(null)}
-                                onMouseLeave={() => setDragEnabledIdx(null)}
                               >
                                 <GripVertical size={14} />
+                                <ArrowUpDown size={12} className="text-cyan-500 ml-0.5" />
                               </div>
                               
                               <div className="flex-1 grid grid-cols-12 gap-3 items-start">
