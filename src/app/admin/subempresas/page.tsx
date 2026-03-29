@@ -5,12 +5,13 @@ import React, { useState, useEffect } from "react";
 import { Card } from "@/components/Card";
 import { Input } from "@/components/Input";
 import { Button } from "@/components/Button";
-import { 
-  Network, Plus, Edit2, Trash2, Loader2, X, Upload, 
+import {
+  Network, Plus, Edit2, Trash2, Loader2, X, Upload, BookOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { MenuBuilderInline } from "@/components/Admin/MenuBuilder";
+import { Switch } from "@/components/Switch";
 
 export default function SubEmpresasCRUD() {
   const [subCompanies, setSubCompanies] = useState<any[]>([]);
@@ -20,9 +21,9 @@ export default function SubEmpresasCRUD() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
-  const [formData, setFormData] = useState({ 
+  const [formData, setFormData] = useState({
     name: "", companyId: "", description: "", ga_id: "", logo_img: null as File | string | null,
-    theme: "", menuItems: ""
+    theme: "", menuItems: "", blogEnabled: false
   });
   
   const [previewLogo, setPreviewLogo] = useState<string>("");
@@ -70,6 +71,7 @@ export default function SubEmpresasCRUD() {
       if (formData.description) formPayload.append("description", formData.description);
       if (formData.ga_id) formPayload.append("ga_id", formData.ga_id);
       
+      formPayload.append("blogEnabled", String(formData.blogEnabled));
       if (formData.theme) formPayload.append("theme", formData.theme);
       if (formData.menuItems) formPayload.append("menuItems", formData.menuItems);
       
@@ -102,7 +104,7 @@ export default function SubEmpresasCRUD() {
   };
 
   const openNew = () => {
-    setFormData({ name: "", companyId: companies[0]?.id || "", description: "", ga_id: "", logo_img: null, theme: "", menuItems: "[]" });
+    setFormData({ name: "", companyId: companies[0]?.id || "", description: "", ga_id: "", logo_img: null, theme: "", menuItems: "[]", blogEnabled: false });
     setPreviewLogo(""); setEditingId(null); setIsModalOpen(true);
   };
 
@@ -113,10 +115,11 @@ export default function SubEmpresasCRUD() {
       return JSON.stringify(obj, null, 2);
     };
 
-    setFormData({ 
-      name: sub.name, companyId: sub.companyId, description: sub.description || "", 
+    setFormData({
+      name: sub.name, companyId: sub.companyId, description: sub.description || "",
       ga_id: sub.ga_id || "", logo_img: sub.logo_img || null,
-      theme: formatJson(sub.theme), menuItems: formatJson(sub.menuItems)
+      theme: formatJson(sub.theme), menuItems: formatJson(sub.menuItems),
+      blogEnabled: sub.blogEnabled ?? false
     });
     setPreviewLogo(sub.logo_img || ""); 
     setEditingId(sub.id); 
@@ -149,6 +152,7 @@ export default function SubEmpresasCRUD() {
                     <th className="px-6 py-4">Logo</th>
                     <th className="px-6 py-4">Nome da Filial</th>
                     <th className="px-6 py-4">Empresa Matriz</th>
+                    <th className="px-6 py-4 text-center">Blog</th>
                     <th className="px-6 py-4 text-right">Ações</th>
                   </tr>
                 </thead>
@@ -162,6 +166,17 @@ export default function SubEmpresasCRUD() {
                       </td>
                       <td className="px-6 py-4 font-medium text-white">{sub.name}</td>
                       <td className="px-6 py-4 text-cyan-400 font-medium">{sub.company?.name || "Sem Matriz"}</td>
+                      <td className="px-6 py-4 text-center">
+                        {sub.blogEnabled ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <BookOpen size={10} /> Ativo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-zinc-800 text-zinc-500 border border-zinc-700">
+                            Inativo
+                          </span>
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-right flex justify-end gap-2">
                         <button onClick={() => openEdit(sub)} className="p-2 text-zinc-400 hover:text-cyan-400 hover:bg-cyan-400/10 rounded-lg transition-colors"><Edit2 size={16} /></button>
                         <button onClick={() => handleDelete(sub.id)} className="p-2 text-zinc-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"><Trash2 size={16} /></button>
@@ -219,6 +234,20 @@ export default function SubEmpresasCRUD() {
                   <div>
                     <label className="block text-xs font-semibold text-zinc-400 uppercase mb-2">Google Tag Manager ID (Apenas Números)</label>
                     <Input value={formData.ga_id} onChange={(e: any) => setFormData({...formData, ga_id: e.target.value})} placeholder="Ex: 517619880" className="bg-black/50 border-zinc-800 text-white" />
+                  </div>
+
+                  <div className="border-t border-zinc-800 pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BookOpen size={16} className="text-cyan-500" />
+                        <label className="text-xs font-semibold text-zinc-400 uppercase">Habilitar Blog</label>
+                      </div>
+                      <Switch
+                        checked={formData.blogEnabled}
+                        onCheckedChange={(checked) => setFormData(prev => ({ ...prev, blogEnabled: checked }))}
+                      />
+                    </div>
+                    <p className="text-[11px] text-zinc-600 mt-1">Ativa o módulo de blog para esta filial.</p>
                   </div>
 
                   <div className="border-t border-zinc-800 pt-4">

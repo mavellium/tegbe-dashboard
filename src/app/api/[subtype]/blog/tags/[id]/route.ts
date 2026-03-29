@@ -5,15 +5,18 @@ import sharp from "sharp";
 
 const AVIF_CONFIG = { quality: 80, effort: 5, chromaSubsampling: "4:4:4" as const };
 
+function generateSlug(text: string) {
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+}
+
 async function deleteFromBunny(url: string): Promise<void> {
   try {
     const storageZone = process.env.BUNNY_STORAGE_ZONE!;
     const accessKey = process.env.BUNNY_ACCESS_KEY!;
     const host = process.env.BUNNY_HOST!;
     const urlParts = url.split(`https://${process.env.BUNNY_PULL_ZONE}/`);
-    
     if (urlParts.length < 2) return;
-    
     const deleteUrl = `https://${host}/${storageZone}/${urlParts[1]}`;
     await fetch(deleteUrl, { method: 'DELETE', headers: { 'AccessKey': accessKey } });
   } catch (error) {}
@@ -75,12 +78,12 @@ async function uploadToBunnyWithConversion(file: File, path: string = "uploads")
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const subCompany = await prisma.subCompany.findUnique({
+    const tag = await prisma.blogTag.findUnique({
       where: { id },
-      include: { company: true, formData: true }
+      include: { _count: { select: { posts: true } } }
     });
-    if (!subCompany) return NextResponse.json({ error: "Sub-Empresa não encontrada" }, { status: 404 });
-    return NextResponse.json(subCompany);
+    if (!tag) return NextResponse.json({ error: "Tag não encontrada" }, { status: 404 });
+    return NextResponse.json(tag);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -90,75 +93,65 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const formData = await req.formData();
-    
+
     const name = formData.get("name")?.toString();
-    const companyId = formData.get("companyId")?.toString();
     const description = formData.get("description")?.toString() || null;
-    const ga_id = formData.get("ga_id")?.toString() || null;
-    const blogEnabled = formData.get("blogEnabled")?.toString() === "true";
+    const seoTitle = formData.get("seoTitle")?.toString() || null;
+    const seoDescription = formData.get("seoDescription")?.toString() || null;
+    const seoKeywords = formData.get("seoKeywords")?.toString() || null;
 
-    const rawTheme = formData.get("theme")?.toString() || null;
-    const rawMenuItems = formData.get("menuItems")?.toString() || null;
+    const file = formData.get("file:image") as File | null;
     
-    console.log(`[DEBUG API PUT] Filial ID: ${id}`);
-    
-    const file = formData.get("file:logo_img") as File | null;
-    const logoUrlStr = formData.get("logo_img")?.toString() || null;
+    const imageUrlStr = formData.get("image")?.toString();
 
-    if (!name || !companyId) {
-      return NextResponse.json({ error: "Nome e Empresa são obrigatórios" }, { status: 400 });
+    if (!name) return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
+
+    const existing = await prisma.blogTag.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: "Tag não encontrada" }, { status: 404 });
+
+    let slug = existing.slug;
+    if (name !== existing.name) {
+      slug = generateSlug(name);
     }
 
-    let themeJson = null;
-    let menuItemsJson = null;
-
-    if (rawTheme && rawTheme.trim() !== "") {
-      try { themeJson = JSON.parse(rawTheme); } 
-      catch (e) { return NextResponse.json({ error: "JSON do Tema com sintaxe inválida." }, { status: 400 }); }
-    }
-
-    if (rawMenuItems && rawMenuItems.trim() !== "") {
-      try { menuItemsJson = JSON.parse(rawMenuItems); } 
-      catch (e) { return NextResponse.json({ error: "JSON do Menu com sintaxe inválida." }, { status: 400 }); }
-    }
-
-    const existingSubCompany = await prisma.subCompany.findUnique({ where: { id } });
-    if (!existingSubCompany) {
-      return NextResponse.json({ error: "Filial não encontrada" }, { status: 404 });
-    }
-
-    let finalLogoUrl = existingSubCompany.logo_img;
+    let finalImageUrl = existing.image;
 
     if (file && file.size > 0) {
-      if (finalLogoUrl && finalLogoUrl.startsWith(`https://${process.env.BUNNY_PULL_ZONE}`)) {
-        await deleteFromBunny(finalLogoUrl);
+      if (finalImageUrl && finalImageUrl.startsWith(`https://${process.env.BUNNY_PULL_ZONE}`)) {
+        await deleteFromBunny(finalImageUrl);
       }
-      finalLogoUrl = await uploadToBunnyWithConversion(file, "subcompanies/logos");
+      finalImageUrl = await uploadToBunnyWithConversion(file, "blog/tags");
     } 
-    else if (logoUrlStr === "" || logoUrlStr === null) {
-      if (finalLogoUrl && finalLogoUrl.startsWith(`https://${process.env.BUNNY_PULL_ZONE}`)) {
-        await deleteFromBunny(finalLogoUrl);
+    else if (imageUrlStr !== undefined) {
+      if (imageUrlStr === "" || imageUrlStr === "null") {
+        if (finalImageUrl && finalImageUrl.startsWith(`https://${process.env.BUNNY_PULL_ZONE}`)) {
+          await deleteFromBunny(finalImageUrl);
+        }
+        finalImageUrl = null;
+      } else {
+        finalImageUrl = imageUrlStr;
       }
-      finalLogoUrl = null;
     }
 
-    const subCompany = await prisma.subCompany.update({
-      where: { id },
-      data: {
-        name,
-        companyId,
-        description,
-        ga_id,
-        blogEnabled,
-        logo_img: finalLogoUrl,
-        theme: themeJson,
-        menuItems: menuItemsJson
+    try {
+      const tag = await prisma.blogTag.update({
+        where: { id },
+        data: { name, slug, description, image: finalImageUrl, seoTitle, seoDescription, seoKeywords }
+      });
+      return NextResponse.json(tag);
+    } catch (e: any) {
+      if (e.code === "P2002") {
+        slug = `${slug}-${Date.now()}`;
+        const tag = await prisma.blogTag.update({
+          where: { id },
+          data: { name, slug, description, image: finalImageUrl, seoTitle, seoDescription, seoKeywords }
+        });
+        return NextResponse.json(tag);
       }
-    });
-    
-    return NextResponse.json(subCompany);
+      throw e;
+    }
   } catch (error: any) {
-    console.error("[ERRO FATAL PUT SUBCOMPANY]:", error);
+    console.error("Erro PUT BlogTag:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -166,13 +159,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const existingSubCompany = await prisma.subCompany.findUnique({ where: { id } });
-    
-    if (existingSubCompany?.logo_img && existingSubCompany.logo_img.startsWith(`https://${process.env.BUNNY_PULL_ZONE}`)) {
-        await deleteFromBunny(existingSubCompany.logo_img);
+    const existing = await prisma.blogTag.findUnique({ where: { id } });
+
+    if (existing?.image && existing.image.startsWith(`https://${process.env.BUNNY_PULL_ZONE}`)) {
+      await deleteFromBunny(existing.image);
     }
 
-    await prisma.subCompany.delete({ where: { id } });
+    await prisma.blogTag.delete({ where: { id } });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ImageIcon, Upload, X, ZoomIn, Loader2, Trash2 } from "lucide-react";
+import { ImageIcon, Upload, X, ZoomIn, Loader2, Trash2, DownloadCloud } from "lucide-react";
 import { Button } from "@/components/Button";
 
 interface ImageUploadProps {
@@ -37,6 +37,9 @@ export const ImageUpload = ({
   // Estados de Upload (Identicos ao VideoUpload)
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  
+  // Estado para Drag and Drop
+  const [isDragging, setIsDragging] = useState(false);
 
   // Sincroniza preview com a URL que vem do pai (apenas se não estiver fazendo upload local)
   useEffect(() => {
@@ -118,9 +121,13 @@ export const ImageUpload = ({
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Função centralizada para processar o arquivo (usada no Click e no Drag&Drop)
+  const processFile = (file: File) => {
+    // Validação se é imagem
+    if (!file.type.startsWith("image/")) {
+      setError("Por favor, selecione um arquivo de imagem válido.");
+      return;
+    }
 
     // Validação de Tamanho
     if (maxSizeMB && file.size > maxSizeMB * 1024 * 1024) {
@@ -137,6 +144,31 @@ export const ImageUpload = ({
 
     // 2. Inicia o upload
     handleUpload(file);
+  };
+
+  // Eventos de Input e Drag & Drop
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!isUploading) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (isUploading) return;
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
   };
 
   const handleRemove = () => {
@@ -157,9 +189,11 @@ export const ImageUpload = ({
   return (
     <>
       <div className="space-y-4">
-        <label className="block text-sm font-medium text-zinc-300">
-          {label}
-        </label>
+        {label && (
+          <label className="block text-sm font-medium text-zinc-300">
+            {label}
+          </label>
+        )}
         
         {description && (
           <p className="text-sm text-zinc-400 mb-2">
@@ -174,78 +208,103 @@ export const ImageUpload = ({
         )}
 
         <div className="flex flex-col items-center justify-center">
-          {shouldShowImage ? (
-            <div className="relative group w-full flex flex-col justify-center items-center">
+          
+          {/* Container Principal com Drag and Drop */}
+          <div 
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            className={`w-full flex flex-col justify-center items-center transition-all duration-200 rounded-lg p-1 ${
+              isDragging ? "bg-blue-500/10 border-blue-500 scale-[1.02]" : "border-transparent"
+            } border-2`}
+          >
+            {shouldShowImage ? (
+              <div className="relative group w-full flex flex-col justify-center items-center">
+                <div 
+                  className={`relative flex ${aspectRatio} rounded-lg overflow-hidden border ${isDragging ? 'border-blue-500' : 'border-zinc-600'} bg-zinc-900 ${!isUploading ? 'cursor-pointer' : ''}`}
+                  style={{ 
+                    width: previewWidth ? `${previewWidth}px` : '100%',
+                    maxWidth: '100%',
+                    height: previewHeight ? `${previewHeight}px` : 'auto'
+                  }}
+                  onClick={handleImageClick}
+                >
+                  {/* Overlay de Upload (Barra de Progresso) */}
+                  {isUploading && (
+                    <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center transition-all duration-300">
+                      <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
+                      <span className="text-white font-medium drop-shadow-md">{uploadProgress}%</span>
+                      <div className="w-1/2 h-1 bg-zinc-700/50 rounded-full mt-2 overflow-hidden backdrop-blur-sm">
+                        <div 
+                          className="h-full bg-blue-500 transition-all duration-150 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Overlay de Drag (Arrastando por cima da imagem) */}
+                  {isDragging && !isUploading && (
+                    <div className="absolute inset-0 z-20 bg-blue-500/80 backdrop-blur-[2px] flex flex-col items-center justify-center transition-all duration-200">
+                      <DownloadCloud className="w-10 h-10 text-white mb-2 animate-bounce" />
+                      <span className="text-white font-bold drop-shadow-md">Solte para substituir</span>
+                    </div>
+                  )}
+
+                  <img
+                    src={previewUrl}
+                    alt="Preview"
+                    className="w-full h-full object-cover"
+                    onError={() => setHasLoadError(true)}
+                  />
+
+                  {/* Ícone de Zoom (apenas se não estiver carregando/arrastando) */}
+                  {!isUploading && !isDragging && (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                      <div className="bg-zinc-800/90 p-2 rounded-full">
+                        <ZoomIn className="w-5 h-5 text-zinc-300" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              // Placeholder (Estado Vazio)
               <div 
-                className={`relative flex ${aspectRatio} rounded-lg overflow-hidden border border-zinc-600 bg-zinc-900 ${!isUploading ? 'cursor-pointer' : ''}`}
+                className={`${aspectRatio} flex items-center justify-center rounded-lg border-2 border-dashed transition-colors ${
+                  isDragging ? 'bg-blue-500/20 border-blue-500' : 'bg-zinc-800 border-zinc-600 hover:bg-zinc-800/80 hover:border-zinc-500'
+                }`}
                 style={{ 
                   width: previewWidth ? `${previewWidth}px` : '100%',
                   maxWidth: '100%',
                   height: previewHeight ? `${previewHeight}px` : 'auto'
                 }}
-                onClick={handleImageClick}
               >
-                {/* Overlay de Upload (Barra de Progresso) */}
-                {isUploading && (
-                  <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center transition-all duration-300">
-                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-2" />
-                    <span className="text-white font-medium drop-shadow-md">{uploadProgress}%</span>
-                    <div className="w-1/2 h-1 bg-zinc-700/50 rounded-full mt-2 overflow-hidden backdrop-blur-sm">
-                      <div 
-                        className="h-full bg-blue-500 transition-all duration-150 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]" 
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-full h-full object-cover"
-                  onError={() => setHasLoadError(true)}
-                />
-
-                {/* Ícone de Zoom (apenas se não estiver carregando) */}
-                {!isUploading && (
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <div className="bg-zinc-800/90 p-2 rounded-full">
-                      <ZoomIn className="w-5 h-5 text-zinc-300" />
-                    </div>
-                  </div>
-                )}
+                <div className="flex flex-col items-center justify-center text-zinc-400 p-4 text-center pointer-events-none">
+                  {isUploading ? (
+                     <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+                  ) : isDragging ? (
+                    <DownloadCloud className="w-10 h-10 text-blue-400 mb-2 animate-bounce" />
+                  ) : (
+                     <ImageIcon className="w-10 h-10 mb-2 opacity-50" />
+                  )}
+                  
+                  {isDragging ? (
+                    <span className="text-sm font-bold text-blue-400">Solte a imagem aqui</span>
+                  ) : !isUploading && (
+                    <>
+                      <span className="text-sm font-medium">Arraste uma imagem ou clique no botão</span>
+                      {previewUrl && hasLoadError && (
+                        <span className="text-xs text-red-400 font-medium mt-2">Erro ao carregar imagem anterior</span>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-              
-              {!isUploading && (
-                <p className="text-xs text-zinc-400 mt-1 text-center">
-                  Clique na imagem para visualizar em tela cheia
-                </p>
-              )}
-            </div>
-          ) : (
-            // Placeholder (Estado Vazio)
-            <div 
-              className={`${aspectRatio} flex items-center justify-center bg-zinc-800 rounded-lg border-2 border-dashed border-zinc-600`}
-              style={{ 
-                width: previewWidth ? `${previewWidth}px` : '100%',
-                maxWidth: '100%',
-                height: previewHeight ? `${previewHeight}px` : 'auto'
-              }}
-            >
-              <div className="flex flex-col items-center justify-center text-zinc-400">
-                {isUploading ? (
-                   <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-                ) : (
-                   <ImageIcon className="w-12 h-12 mb-2" />
-                )}
-                
-                {previewUrl && hasLoadError && !isUploading && (
-                  <span className="text-xs text-red-400 font-medium">Erro ao carregar imagem</span>
-                )}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
           
+          {/* Botões de Ação */}
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3 w-full">
             {!isUploading && (
               <label className="cursor-pointer px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2">
@@ -273,7 +332,7 @@ export const ImageUpload = ({
           </div>
           
           <div className="mt-3 text-center w-full">
-            <p className="text-sm text-zinc-400">
+            <p className="text-sm text-zinc-500 font-medium">
               Formatos: JPG, PNG, WebP • Máx: {maxSizeMB}MB
             </p>
           </div>

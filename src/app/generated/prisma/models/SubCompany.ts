@@ -31,6 +31,7 @@ export type SubCompanyMinAggregateOutputType = {
   logo_img: string | null
   description: string | null
   ga_id: string | null
+  blogEnabled: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -42,6 +43,7 @@ export type SubCompanyMaxAggregateOutputType = {
   logo_img: string | null
   description: string | null
   ga_id: string | null
+  blogEnabled: boolean | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -55,6 +57,7 @@ export type SubCompanyCountAggregateOutputType = {
   ga_id: number
   theme: number
   menuItems: number
+  blogEnabled: number
   createdAt: number
   updatedAt: number
   _all: number
@@ -68,6 +71,7 @@ export type SubCompanyMinAggregateInputType = {
   logo_img?: true
   description?: true
   ga_id?: true
+  blogEnabled?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -79,6 +83,7 @@ export type SubCompanyMaxAggregateInputType = {
   logo_img?: true
   description?: true
   ga_id?: true
+  blogEnabled?: true
   createdAt?: true
   updatedAt?: true
 }
@@ -92,6 +97,7 @@ export type SubCompanyCountAggregateInputType = {
   ga_id?: true
   theme?: true
   menuItems?: true
+  blogEnabled?: true
   createdAt?: true
   updatedAt?: true
   _all?: true
@@ -178,6 +184,7 @@ export type SubCompanyGroupByOutputType = {
   ga_id: string | null
   theme: runtime.JsonValue | null
   menuItems: runtime.JsonValue | null
+  blogEnabled: boolean
   createdAt: Date
   updatedAt: Date
   _count: SubCompanyCountAggregateOutputType | null
@@ -212,12 +219,14 @@ export type SubCompanyWhereInput = {
   ga_id?: Prisma.StringNullableFilter<"SubCompany"> | string | null
   theme?: Prisma.JsonNullableFilter<"SubCompany">
   menuItems?: Prisma.JsonNullableFilter<"SubCompany">
+  blogEnabled?: Prisma.BoolFilter<"SubCompany"> | boolean
   createdAt?: Prisma.DateTimeFilter<"SubCompany"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubCompany"> | Date | string
   company?: Prisma.XOR<Prisma.CompanyScalarRelationFilter, Prisma.CompanyWhereInput>
   formData?: Prisma.FormDataListRelationFilter
   components?: Prisma.ComponentListRelationFilter
   pages?: Prisma.PageListRelationFilter
+  blogPosts?: Prisma.BlogPostListRelationFilter
 }
 
 export type SubCompanyOrderByWithRelationInput = {
@@ -229,12 +238,14 @@ export type SubCompanyOrderByWithRelationInput = {
   ga_id?: Prisma.SortOrderInput | Prisma.SortOrder
   theme?: Prisma.SortOrderInput | Prisma.SortOrder
   menuItems?: Prisma.SortOrderInput | Prisma.SortOrder
+  blogEnabled?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   company?: Prisma.CompanyOrderByWithRelationInput
   formData?: Prisma.FormDataOrderByRelationAggregateInput
   components?: Prisma.ComponentOrderByRelationAggregateInput
   pages?: Prisma.PageOrderByRelationAggregateInput
+  blogPosts?: Prisma.BlogPostOrderByRelationAggregateInput
 }
 
 export type SubCompanyWhereUniqueInput = Prisma.AtLeast<{
@@ -249,12 +260,14 @@ export type SubCompanyWhereUniqueInput = Prisma.AtLeast<{
   ga_id?: Prisma.StringNullableFilter<"SubCompany"> | string | null
   theme?: Prisma.JsonNullableFilter<"SubCompany">
   menuItems?: Prisma.JsonNullableFilter<"SubCompany">
+  blogEnabled?: Prisma.BoolFilter<"SubCompany"> | boolean
   createdAt?: Prisma.DateTimeFilter<"SubCompany"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubCompany"> | Date | string
   company?: Prisma.XOR<Prisma.CompanyScalarRelationFilter, Prisma.CompanyWhereInput>
   formData?: Prisma.FormDataListRelationFilter
   components?: Prisma.ComponentListRelationFilter
   pages?: Prisma.PageListRelationFilter
+  blogPosts?: Prisma.BlogPostListRelationFilter
 }, "id">
 
 export type SubCompanyOrderByWithAggregationInput = {
@@ -266,6 +279,7 @@ export type SubCompanyOrderByWithAggregationInput = {
   ga_id?: Prisma.SortOrderInput | Prisma.SortOrder
   theme?: Prisma.SortOrderInput | Prisma.SortOrder
   menuItems?: Prisma.SortOrderInput | Prisma.SortOrder
+  blogEnabled?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   _count?: Prisma.SubCompanyCountOrderByAggregateInput
@@ -285,6 +299,7 @@ export type SubCompanyScalarWhereWithAggregatesInput = {
   ga_id?: Prisma.StringNullableWithAggregatesFilter<"SubCompany"> | string | null
   theme?: Prisma.JsonNullableWithAggregatesFilter<"SubCompany">
   menuItems?: Prisma.JsonNullableWithAggregatesFilter<"SubCompany">
+  blogEnabled?: Prisma.BoolWithAggregatesFilter<"SubCompany"> | boolean
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"SubCompany"> | Date | string
   updatedAt?: Prisma.DateTimeWithAggregatesFilter<"SubCompany"> | Date | string
 }
@@ -297,12 +312,14 @@ export type SubCompanyCreateInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutSubCompaniesInput
   formData?: Prisma.FormDataCreateNestedManyWithoutSubCompanyInput
   components?: Prisma.ComponentCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyUncheckedCreateInput = {
@@ -314,11 +331,13 @@ export type SubCompanyUncheckedCreateInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   formData?: Prisma.FormDataUncheckedCreateNestedManyWithoutSubCompanyInput
   components?: Prisma.ComponentUncheckedCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageUncheckedCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostUncheckedCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyUpdateInput = {
@@ -329,12 +348,14 @@ export type SubCompanyUpdateInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutSubCompaniesNestedInput
   formData?: Prisma.FormDataUpdateManyWithoutSubCompanyNestedInput
   components?: Prisma.ComponentUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyUncheckedUpdateInput = {
@@ -346,11 +367,13 @@ export type SubCompanyUncheckedUpdateInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   formData?: Prisma.FormDataUncheckedUpdateManyWithoutSubCompanyNestedInput
   components?: Prisma.ComponentUncheckedUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUncheckedUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUncheckedUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyCreateManyInput = {
@@ -362,6 +385,7 @@ export type SubCompanyCreateManyInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -374,6 +398,7 @@ export type SubCompanyUpdateManyMutationInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -387,6 +412,7 @@ export type SubCompanyUncheckedUpdateManyInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -410,6 +436,7 @@ export type SubCompanyCountOrderByAggregateInput = {
   ga_id?: Prisma.SortOrder
   theme?: Prisma.SortOrder
   menuItems?: Prisma.SortOrder
+  blogEnabled?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -421,6 +448,7 @@ export type SubCompanyMaxOrderByAggregateInput = {
   logo_img?: Prisma.SortOrder
   description?: Prisma.SortOrder
   ga_id?: Prisma.SortOrder
+  blogEnabled?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -432,6 +460,7 @@ export type SubCompanyMinOrderByAggregateInput = {
   logo_img?: Prisma.SortOrder
   description?: Prisma.SortOrder
   ga_id?: Prisma.SortOrder
+  blogEnabled?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
 }
@@ -492,6 +521,10 @@ export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
 }
 
+export type BoolFieldUpdateOperationsInput = {
+  set?: boolean
+}
+
 export type SubCompanyCreateNestedOneWithoutPagesInput = {
   create?: Prisma.XOR<Prisma.SubCompanyCreateWithoutPagesInput, Prisma.SubCompanyUncheckedCreateWithoutPagesInput>
   connectOrCreate?: Prisma.SubCompanyCreateOrConnectWithoutPagesInput
@@ -504,6 +537,22 @@ export type SubCompanyUpdateOneRequiredWithoutPagesNestedInput = {
   upsert?: Prisma.SubCompanyUpsertWithoutPagesInput
   connect?: Prisma.SubCompanyWhereUniqueInput
   update?: Prisma.XOR<Prisma.XOR<Prisma.SubCompanyUpdateToOneWithWhereWithoutPagesInput, Prisma.SubCompanyUpdateWithoutPagesInput>, Prisma.SubCompanyUncheckedUpdateWithoutPagesInput>
+}
+
+export type SubCompanyCreateNestedOneWithoutBlogPostsInput = {
+  create?: Prisma.XOR<Prisma.SubCompanyCreateWithoutBlogPostsInput, Prisma.SubCompanyUncheckedCreateWithoutBlogPostsInput>
+  connectOrCreate?: Prisma.SubCompanyCreateOrConnectWithoutBlogPostsInput
+  connect?: Prisma.SubCompanyWhereUniqueInput
+}
+
+export type SubCompanyUpdateOneWithoutBlogPostsNestedInput = {
+  create?: Prisma.XOR<Prisma.SubCompanyCreateWithoutBlogPostsInput, Prisma.SubCompanyUncheckedCreateWithoutBlogPostsInput>
+  connectOrCreate?: Prisma.SubCompanyCreateOrConnectWithoutBlogPostsInput
+  upsert?: Prisma.SubCompanyUpsertWithoutBlogPostsInput
+  disconnect?: Prisma.SubCompanyWhereInput | boolean
+  delete?: Prisma.SubCompanyWhereInput | boolean
+  connect?: Prisma.SubCompanyWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.SubCompanyUpdateToOneWithWhereWithoutBlogPostsInput, Prisma.SubCompanyUpdateWithoutBlogPostsInput>, Prisma.SubCompanyUncheckedUpdateWithoutBlogPostsInput>
 }
 
 export type SubCompanyCreateNestedOneWithoutFormDataInput = {
@@ -546,11 +595,13 @@ export type SubCompanyCreateWithoutCompanyInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   formData?: Prisma.FormDataCreateNestedManyWithoutSubCompanyInput
   components?: Prisma.ComponentCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyUncheckedCreateWithoutCompanyInput = {
@@ -561,11 +612,13 @@ export type SubCompanyUncheckedCreateWithoutCompanyInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   formData?: Prisma.FormDataUncheckedCreateNestedManyWithoutSubCompanyInput
   components?: Prisma.ComponentUncheckedCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageUncheckedCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostUncheckedCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyCreateOrConnectWithoutCompanyInput = {
@@ -606,6 +659,7 @@ export type SubCompanyScalarWhereInput = {
   ga_id?: Prisma.StringNullableFilter<"SubCompany"> | string | null
   theme?: Prisma.JsonNullableFilter<"SubCompany">
   menuItems?: Prisma.JsonNullableFilter<"SubCompany">
+  blogEnabled?: Prisma.BoolFilter<"SubCompany"> | boolean
   createdAt?: Prisma.DateTimeFilter<"SubCompany"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"SubCompany"> | Date | string
 }
@@ -618,11 +672,13 @@ export type SubCompanyCreateWithoutPagesInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutSubCompaniesInput
   formData?: Prisma.FormDataCreateNestedManyWithoutSubCompanyInput
   components?: Prisma.ComponentCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyUncheckedCreateWithoutPagesInput = {
@@ -634,10 +690,12 @@ export type SubCompanyUncheckedCreateWithoutPagesInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   formData?: Prisma.FormDataUncheckedCreateNestedManyWithoutSubCompanyInput
   components?: Prisma.ComponentUncheckedCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostUncheckedCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyCreateOrConnectWithoutPagesInput = {
@@ -664,11 +722,13 @@ export type SubCompanyUpdateWithoutPagesInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutSubCompaniesNestedInput
   formData?: Prisma.FormDataUpdateManyWithoutSubCompanyNestedInput
   components?: Prisma.ComponentUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyUncheckedUpdateWithoutPagesInput = {
@@ -680,10 +740,96 @@ export type SubCompanyUncheckedUpdateWithoutPagesInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   formData?: Prisma.FormDataUncheckedUpdateManyWithoutSubCompanyNestedInput
   components?: Prisma.ComponentUncheckedUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUncheckedUpdateManyWithoutSubCompanyNestedInput
+}
+
+export type SubCompanyCreateWithoutBlogPostsInput = {
+  id?: string
+  name: string
+  logo_img?: string | null
+  description?: string | null
+  ga_id?: string | null
+  theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  company: Prisma.CompanyCreateNestedOneWithoutSubCompaniesInput
+  formData?: Prisma.FormDataCreateNestedManyWithoutSubCompanyInput
+  components?: Prisma.ComponentCreateNestedManyWithoutSubCompanyInput
+  pages?: Prisma.PageCreateNestedManyWithoutSubCompanyInput
+}
+
+export type SubCompanyUncheckedCreateWithoutBlogPostsInput = {
+  id?: string
+  name: string
+  companyId: string
+  logo_img?: string | null
+  description?: string | null
+  ga_id?: string | null
+  theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  formData?: Prisma.FormDataUncheckedCreateNestedManyWithoutSubCompanyInput
+  components?: Prisma.ComponentUncheckedCreateNestedManyWithoutSubCompanyInput
+  pages?: Prisma.PageUncheckedCreateNestedManyWithoutSubCompanyInput
+}
+
+export type SubCompanyCreateOrConnectWithoutBlogPostsInput = {
+  where: Prisma.SubCompanyWhereUniqueInput
+  create: Prisma.XOR<Prisma.SubCompanyCreateWithoutBlogPostsInput, Prisma.SubCompanyUncheckedCreateWithoutBlogPostsInput>
+}
+
+export type SubCompanyUpsertWithoutBlogPostsInput = {
+  update: Prisma.XOR<Prisma.SubCompanyUpdateWithoutBlogPostsInput, Prisma.SubCompanyUncheckedUpdateWithoutBlogPostsInput>
+  create: Prisma.XOR<Prisma.SubCompanyCreateWithoutBlogPostsInput, Prisma.SubCompanyUncheckedCreateWithoutBlogPostsInput>
+  where?: Prisma.SubCompanyWhereInput
+}
+
+export type SubCompanyUpdateToOneWithWhereWithoutBlogPostsInput = {
+  where?: Prisma.SubCompanyWhereInput
+  data: Prisma.XOR<Prisma.SubCompanyUpdateWithoutBlogPostsInput, Prisma.SubCompanyUncheckedUpdateWithoutBlogPostsInput>
+}
+
+export type SubCompanyUpdateWithoutBlogPostsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  logo_img?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  company?: Prisma.CompanyUpdateOneRequiredWithoutSubCompaniesNestedInput
+  formData?: Prisma.FormDataUpdateManyWithoutSubCompanyNestedInput
+  components?: Prisma.ComponentUpdateManyWithoutSubCompanyNestedInput
+  pages?: Prisma.PageUpdateManyWithoutSubCompanyNestedInput
+}
+
+export type SubCompanyUncheckedUpdateWithoutBlogPostsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  companyId?: Prisma.StringFieldUpdateOperationsInput | string
+  logo_img?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  description?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  formData?: Prisma.FormDataUncheckedUpdateManyWithoutSubCompanyNestedInput
+  components?: Prisma.ComponentUncheckedUpdateManyWithoutSubCompanyNestedInput
+  pages?: Prisma.PageUncheckedUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyCreateWithoutFormDataInput = {
@@ -694,11 +840,13 @@ export type SubCompanyCreateWithoutFormDataInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutSubCompaniesInput
   components?: Prisma.ComponentCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyUncheckedCreateWithoutFormDataInput = {
@@ -710,10 +858,12 @@ export type SubCompanyUncheckedCreateWithoutFormDataInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   components?: Prisma.ComponentUncheckedCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageUncheckedCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostUncheckedCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyCreateOrConnectWithoutFormDataInput = {
@@ -740,11 +890,13 @@ export type SubCompanyUpdateWithoutFormDataInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutSubCompaniesNestedInput
   components?: Prisma.ComponentUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyUncheckedUpdateWithoutFormDataInput = {
@@ -756,10 +908,12 @@ export type SubCompanyUncheckedUpdateWithoutFormDataInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   components?: Prisma.ComponentUncheckedUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUncheckedUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUncheckedUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyCreateWithoutComponentsInput = {
@@ -770,11 +924,13 @@ export type SubCompanyCreateWithoutComponentsInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   company: Prisma.CompanyCreateNestedOneWithoutSubCompaniesInput
   formData?: Prisma.FormDataCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyUncheckedCreateWithoutComponentsInput = {
@@ -786,10 +942,12 @@ export type SubCompanyUncheckedCreateWithoutComponentsInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
   formData?: Prisma.FormDataUncheckedCreateNestedManyWithoutSubCompanyInput
   pages?: Prisma.PageUncheckedCreateNestedManyWithoutSubCompanyInput
+  blogPosts?: Prisma.BlogPostUncheckedCreateNestedManyWithoutSubCompanyInput
 }
 
 export type SubCompanyCreateOrConnectWithoutComponentsInput = {
@@ -816,11 +974,13 @@ export type SubCompanyUpdateWithoutComponentsInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   company?: Prisma.CompanyUpdateOneRequiredWithoutSubCompaniesNestedInput
   formData?: Prisma.FormDataUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyUncheckedUpdateWithoutComponentsInput = {
@@ -832,10 +992,12 @@ export type SubCompanyUncheckedUpdateWithoutComponentsInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   formData?: Prisma.FormDataUncheckedUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUncheckedUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUncheckedUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyCreateManyCompanyInput = {
@@ -846,6 +1008,7 @@ export type SubCompanyCreateManyCompanyInput = {
   ga_id?: string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: boolean
   createdAt?: Date | string
   updatedAt?: Date | string
 }
@@ -858,11 +1021,13 @@ export type SubCompanyUpdateWithoutCompanyInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   formData?: Prisma.FormDataUpdateManyWithoutSubCompanyNestedInput
   components?: Prisma.ComponentUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyUncheckedUpdateWithoutCompanyInput = {
@@ -873,11 +1038,13 @@ export type SubCompanyUncheckedUpdateWithoutCompanyInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   formData?: Prisma.FormDataUncheckedUpdateManyWithoutSubCompanyNestedInput
   components?: Prisma.ComponentUncheckedUpdateManyWithoutSubCompanyNestedInput
   pages?: Prisma.PageUncheckedUpdateManyWithoutSubCompanyNestedInput
+  blogPosts?: Prisma.BlogPostUncheckedUpdateManyWithoutSubCompanyNestedInput
 }
 
 export type SubCompanyUncheckedUpdateManyWithoutCompanyInput = {
@@ -888,6 +1055,7 @@ export type SubCompanyUncheckedUpdateManyWithoutCompanyInput = {
   ga_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   theme?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   menuItems?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  blogEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -901,12 +1069,14 @@ export type SubCompanyCountOutputType = {
   formData: number
   components: number
   pages: number
+  blogPosts: number
 }
 
 export type SubCompanyCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   formData?: boolean | SubCompanyCountOutputTypeCountFormDataArgs
   components?: boolean | SubCompanyCountOutputTypeCountComponentsArgs
   pages?: boolean | SubCompanyCountOutputTypeCountPagesArgs
+  blogPosts?: boolean | SubCompanyCountOutputTypeCountBlogPostsArgs
 }
 
 /**
@@ -940,6 +1110,13 @@ export type SubCompanyCountOutputTypeCountPagesArgs<ExtArgs extends runtime.Type
   where?: Prisma.PageWhereInput
 }
 
+/**
+ * SubCompanyCountOutputType without action
+ */
+export type SubCompanyCountOutputTypeCountBlogPostsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.BlogPostWhereInput
+}
+
 
 export type SubCompanySelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -950,12 +1127,14 @@ export type SubCompanySelect<ExtArgs extends runtime.Types.Extensions.InternalAr
   ga_id?: boolean
   theme?: boolean
   menuItems?: boolean
+  blogEnabled?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
   formData?: boolean | Prisma.SubCompany$formDataArgs<ExtArgs>
   components?: boolean | Prisma.SubCompany$componentsArgs<ExtArgs>
   pages?: boolean | Prisma.SubCompany$pagesArgs<ExtArgs>
+  blogPosts?: boolean | Prisma.SubCompany$blogPostsArgs<ExtArgs>
   _count?: boolean | Prisma.SubCompanyCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["subCompany"]>
 
@@ -968,6 +1147,7 @@ export type SubCompanySelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
   ga_id?: boolean
   theme?: boolean
   menuItems?: boolean
+  blogEnabled?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
@@ -982,6 +1162,7 @@ export type SubCompanySelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
   ga_id?: boolean
   theme?: boolean
   menuItems?: boolean
+  blogEnabled?: boolean
   createdAt?: boolean
   updatedAt?: boolean
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
@@ -996,16 +1177,18 @@ export type SubCompanySelectScalar = {
   ga_id?: boolean
   theme?: boolean
   menuItems?: boolean
+  blogEnabled?: boolean
   createdAt?: boolean
   updatedAt?: boolean
 }
 
-export type SubCompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "companyId" | "logo_img" | "description" | "ga_id" | "theme" | "menuItems" | "createdAt" | "updatedAt", ExtArgs["result"]["subCompany"]>
+export type SubCompanyOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "companyId" | "logo_img" | "description" | "ga_id" | "theme" | "menuItems" | "blogEnabled" | "createdAt" | "updatedAt", ExtArgs["result"]["subCompany"]>
 export type SubCompanyInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   company?: boolean | Prisma.CompanyDefaultArgs<ExtArgs>
   formData?: boolean | Prisma.SubCompany$formDataArgs<ExtArgs>
   components?: boolean | Prisma.SubCompany$componentsArgs<ExtArgs>
   pages?: boolean | Prisma.SubCompany$pagesArgs<ExtArgs>
+  blogPosts?: boolean | Prisma.SubCompany$blogPostsArgs<ExtArgs>
   _count?: boolean | Prisma.SubCompanyCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type SubCompanyIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1022,6 +1205,7 @@ export type $SubCompanyPayload<ExtArgs extends runtime.Types.Extensions.Internal
     formData: Prisma.$FormDataPayload<ExtArgs>[]
     components: Prisma.$ComponentPayload<ExtArgs>[]
     pages: Prisma.$PagePayload<ExtArgs>[]
+    blogPosts: Prisma.$BlogPostPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1032,6 +1216,7 @@ export type $SubCompanyPayload<ExtArgs extends runtime.Types.Extensions.Internal
     ga_id: string | null
     theme: runtime.JsonValue | null
     menuItems: runtime.JsonValue | null
+    blogEnabled: boolean
     createdAt: Date
     updatedAt: Date
   }, ExtArgs["result"]["subCompany"]>
@@ -1432,6 +1617,7 @@ export interface Prisma__SubCompanyClient<T, Null = never, ExtArgs extends runti
   formData<T extends Prisma.SubCompany$formDataArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubCompany$formDataArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$FormDataPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   components<T extends Prisma.SubCompany$componentsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubCompany$componentsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ComponentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   pages<T extends Prisma.SubCompany$pagesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubCompany$pagesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PagePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  blogPosts<T extends Prisma.SubCompany$blogPostsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubCompany$blogPostsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$BlogPostPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1469,6 +1655,7 @@ export interface SubCompanyFieldRefs {
   readonly ga_id: Prisma.FieldRef<"SubCompany", 'String'>
   readonly theme: Prisma.FieldRef<"SubCompany", 'Json'>
   readonly menuItems: Prisma.FieldRef<"SubCompany", 'Json'>
+  readonly blogEnabled: Prisma.FieldRef<"SubCompany", 'Boolean'>
   readonly createdAt: Prisma.FieldRef<"SubCompany", 'DateTime'>
   readonly updatedAt: Prisma.FieldRef<"SubCompany", 'DateTime'>
 }
@@ -1936,6 +2123,30 @@ export type SubCompany$pagesArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.PageScalarFieldEnum | Prisma.PageScalarFieldEnum[]
+}
+
+/**
+ * SubCompany.blogPosts
+ */
+export type SubCompany$blogPostsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BlogPost
+   */
+  select?: Prisma.BlogPostSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the BlogPost
+   */
+  omit?: Prisma.BlogPostOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlogPostInclude<ExtArgs> | null
+  where?: Prisma.BlogPostWhereInput
+  orderBy?: Prisma.BlogPostOrderByWithRelationInput | Prisma.BlogPostOrderByWithRelationInput[]
+  cursor?: Prisma.BlogPostWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.BlogPostScalarFieldEnum | Prisma.BlogPostScalarFieldEnum[]
 }
 
 /**

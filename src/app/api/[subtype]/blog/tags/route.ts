@@ -5,6 +5,11 @@ import sharp from "sharp";
 
 const AVIF_CONFIG = { quality: 80, effort: 5, chromaSubsampling: "4:4:4" as const };
 
+function generateSlug(text: string) {
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
+}
+
 async function convertToAvif(file: File): Promise<{ data: Buffer; filename: string }> {
   const arrayBuffer = await file.arrayBuffer();
   try {
@@ -60,70 +65,57 @@ async function uploadToBunnyWithConversion(file: File, path: string = "uploads")
 
 export async function GET() {
   try {
-    const subCompanies = await prisma.subCompany.findMany({ 
-      include: { company: true }, 
-      orderBy: { createdAt: "desc" } 
+    const tags = await prisma.blogTag.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { _count: { select: { posts: true } } }
     });
-    return NextResponse.json(subCompanies);
-  } catch (error: any) { 
-    return NextResponse.json({ error: error.message }, { status: 500 }); 
+    return NextResponse.json(tags);
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    
-    // toString() explícito para garantir que o FormData extraia como string
+
     const name = formData.get("name")?.toString();
-    const companyId = formData.get("companyId")?.toString();
     const description = formData.get("description")?.toString() || null;
-    const ga_id = formData.get("ga_id")?.toString() || null;
-    const blogEnabled = formData.get("blogEnabled")?.toString() === "true";
+    const seoTitle = formData.get("seoTitle")?.toString() || null;
+    const seoDescription = formData.get("seoDescription")?.toString() || null;
+    const seoKeywords = formData.get("seoKeywords")?.toString() || null;
 
-    // JSONs
-    const rawTheme = formData.get("theme")?.toString() || null;
-    const rawMenuItems = formData.get("menuItems")?.toString() || null;
-
-    const file = formData.get("file:logo_img") as File | null;
-    const logoUrlStr = formData.get("logo_img")?.toString() || null;
-
-    if (!name || !companyId) return NextResponse.json({ error: "Nome e Empresa são obrigatórios" }, { status: 400 });
-
-    let themeJson = null;
-    let menuItemsJson = null;
-
-    if (rawTheme && rawTheme.trim() !== "") {
-      try { themeJson = JSON.parse(rawTheme); } 
-      catch (e) { return NextResponse.json({ error: "JSON do Tema inválido" }, { status: 400 }); }
-    }
-
-    if (rawMenuItems && rawMenuItems.trim() !== "") {
-      try { menuItemsJson = JSON.parse(rawMenuItems); } 
-      catch (e) { return NextResponse.json({ error: "JSON do Menu inválido" }, { status: 400 }); }
-    }
-
-    let finalLogoUrl = logoUrlStr;
-    if (file && file.size > 0) {
-      finalLogoUrl = await uploadToBunnyWithConversion(file, "subcompanies/logos");
-    }
-
-    const subCompany = await prisma.subCompany.create({
-      data: {
-        name,
-        companyId,
-        description,
-        ga_id,
-        blogEnabled,
-        logo_img: finalLogoUrl,
-        theme: themeJson,
-        menuItems: menuItemsJson
-      }
-    });
+    const file = formData.get("file:image") as File | null;
     
-    return NextResponse.json(subCompany, { status: 201 });
+    const imageUrlStr = formData.get("image")?.toString() || null;
+
+    if (!name) return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 });
+
+    let slug = generateSlug(name);
+    
+    let imageUrl: string | null = imageUrlStr && imageUrlStr !== "" ? imageUrlStr : null;
+
+    if (file && file.size > 0) {
+      imageUrl = await uploadToBunnyWithConversion(file, "blog/tags");
+    }
+
+    try {
+      const tag = await prisma.blogTag.create({
+        data: { name, slug, description, image: imageUrl, seoTitle, seoDescription, seoKeywords }
+      });
+      return NextResponse.json(tag, { status: 201 });
+    } catch (e: any) {
+      if (e.code === "P2002") {
+        slug = `${slug}-${Date.now()}`;
+        const tag = await prisma.blogTag.create({
+          data: { name, slug, description, image: imageUrl, seoTitle, seoDescription, seoKeywords }
+        });
+        return NextResponse.json(tag, { status: 201 });
+      }
+      throw e;
+    }
   } catch (error: any) {
-    console.error("Erro POST SubCompany:", error);
+    console.error("Erro POST BlogTag:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

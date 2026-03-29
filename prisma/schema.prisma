@@ -36,12 +36,15 @@ model SubCompany {
   description String?     
   ga_id       String?   
 
-  theme       Json?      
-  menuItems   Json?     
-  
+  theme       Json?
+  menuItems   Json?
+
+  blogEnabled Boolean    @default(false)
+
   formData    FormData[]
   components  Component[]
   pages       Page[]
+  blogPosts   BlogPost[]
 
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -71,7 +74,7 @@ model User {
   name        String
   email       String    @unique
   password    String
-  
+
   role        Role      @default(USER)
   isActive    Boolean   @default(true)
   lastLogin   DateTime?
@@ -81,10 +84,104 @@ model User {
   companyId   String?
   company     Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  posts       BlogPost[]
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@map("users")
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model BlogCategory {
+  id              String     @id @default(cuid())
+  name            String
+  slug            String     @unique
+  description     String?    @db.Text
+  image           String?
+
+  seoTitle        String?
+  seoDescription  String?    @db.Text
+  seoKeywords     String?
+
+  posts           BlogPost[]
+
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@map("blog_categories")
+}
+
+model BlogTag {
+  id              String          @id @default(cuid())
+  name            String
+  slug            String          @unique
+  description     String?         @db.Text
+  image           String?
+
+  seoTitle        String?
+  seoDescription  String?         @db.Text
+  seoKeywords     String?
+
+  posts           BlogPostTag[]
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("blog_tags")
+}
+
+model BlogPost {
+  id              String          @id @default(cuid())
+  title           String
+  subtitle        String?
+  slug            String          @unique
+  image           String?
+  body            String          @db.Text
+  excerpt         String?         @db.Text
+  status          BlogPostStatus  @default(DRAFT)
+  featured        Boolean         @default(false)
+  readingTime     Int?
+
+  // Autor: pode ser um User vinculado OU um nome livre
+  authorId        String?
+  author          User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorName      String?
+
+  // SEO
+  seoTitle        String?
+  seoDescription  String?         @db.Text
+  seoKeywords     String?
+
+  // Relações
+  subCompanyId    String?
+  subCompany      SubCompany?     @relation(fields: [subCompanyId], references: [id], onDelete: SetNull)
+
+  categoryId      String?
+  category        BlogCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags            BlogPostTag[]
+
+  publishedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@map("blog_posts")
+}
+
+model BlogPostTag {
+  postId    String
+  post      BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  tagId     String
+  tag       BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("blog_post_tags")
 }
 
 model FormData {
