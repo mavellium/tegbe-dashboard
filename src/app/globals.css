@@ -22,14 +22,242 @@
   .hover\:text-primary:hover { color: var(--color-primary); }
 }
 
-/* Espaçamento fixo para a sidebar menor (16rem = 256px = classe w-64) */
-main {
+/* Estilos para posicionamento de imagens e vídeos */
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  margin: 1rem 0;
+  cursor: move;
+  position: relative;
+  user-select: none;
+}
+
+.ProseMirror img:hover {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.ProseMirror iframe {
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  margin: 1rem 0;
+  cursor: move;
+  position: relative;
+  user-select: none;
+}
+
+.ProseMirror iframe:hover {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Classes de alinhamento para imagens e vídeos */
+.ProseMirror .image-left {
+  float: left;
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror .image-right {
+  float: right;
+  margin-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror .image-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.ProseMirror .video-left {
+  float: left;
+  margin-right: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror .video-right {
+  float: right;
+  margin-left: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.ProseMirror .video-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/* Limpeza de float */
+.ProseMirror .clearfix::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Estilos para o TipTap Editor */
+.ProseMirror {
+  outline: none;
+  padding: 1.5rem;
+  min-height: 500px;
+  background: rgb(9 9 11);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  color: rgb(243 244 246);
+  line-height: 1.75;
+  font-size: 1rem;
+}
+
+.ProseMirror p {
+  margin-bottom: 1rem;
+}
+
+.ProseMirror h1 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+  margin-top: 2rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.ProseMirror ul li {
+  margin-bottom: 0.25rem;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.ProseMirror ol li {
+  margin-bottom: 0.25rem;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid var(--color-primary);
+  padding-left: 1rem;
+  font-style: italic;
+  color: rgb(203 213 225);
+  margin-bottom: 1rem;
+}
+
+.ProseMirror code {
+  background: rgb(31 41 55);
+  color: rgb(243 244 246);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.875rem;
+}
+
+.ProseMirror a {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.ProseMirror a:hover {
+  opacity: 0.8;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  margin: 1rem 0;
+  cursor: move;
+  position: relative;
+  user-select: none;
+}
+
+.ProseMirror img:hover {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.ProseMirror iframe {
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -2px rgb(0 0 0 / 0.05);
+  margin: 1rem 0;
+  cursor: move;
+  position: relative;
+  user-select: none;
+}
+
+.ProseMirror iframe:hover {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Estilos para o placeholder */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: rgb(156 163 175);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Scrollbar customizado */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Espaçamento para main quando sidebar estiver presente */
+main.with-sidebar {
   padding-left: 16rem;
 }
 
 /* No mobile, a página ocupa a tela toda (a sidebar fica por cima) */
 @media (max-width: 1024px) {
-  main {
+  main.with-sidebar {
     padding-left: 0 !important;
   }
 }

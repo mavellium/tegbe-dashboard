@@ -203,6 +203,15 @@ export default function BlogDashboardLayout({ subCompanyId, initialPosts, initia
   const currentItems = activeTab === "categories" ? filteredCategories : filteredTags;
   const isTaxonomyTab = activeTab === "categories" || activeTab === "tags";
 
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'DRAFT': return 'Rascunho';
+      case 'PUBLISHED': return 'Publicado';
+      case 'ARCHIVED': return 'Arquivado';
+      default: return status;
+    }
+  };
+
   return (
     <ManageLayout headerIcon={BookOpen} title="Gestão do Blog" description="Gerencie seus posts, categorias e tags do blog." exists={true} itemName="Blog">
       <div className="space-y-8 pb-24 max-w-[1400px] mx-auto text-zinc-100">
@@ -255,7 +264,7 @@ export default function BlogDashboardLayout({ subCompanyId, initialPosts, initia
                     )}
                     <div className="absolute top-3 right-3 z-10">
                       <span className={`px-2.5 py-1 rounded-md border text-[10px] font-bold uppercase tracking-wider shadow-sm backdrop-blur-md ${post.status === 'PUBLISHED' ? 'bg-emerald-500/80 text-white border-emerald-400' : 'bg-amber-500/80 text-white border-amber-400'}`}>
-                        {post.status}
+                        {getStatusText(post.status)}
                       </span>
                     </div>
                   </div>

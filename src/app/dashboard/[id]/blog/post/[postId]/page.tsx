@@ -35,12 +35,15 @@ export default async function EditPostPage({ params }: { params: Promise<{ id: s
     body: post.body,
     excerpt: post.excerpt || "",
     image: post.image || "",
+    video: "", // Temporariamente vazio até adicionar ao banco
     status: post.status as "DRAFT" | "PUBLISHED" | "ARCHIVED", 
     featured: post.featured,
     categoryId: post.categoryId || "",
     seoTitle: post.seoTitle || "",
     seoDescription: post.seoDescription || "",
     seoKeywords: post.seoKeywords || "",
+    authorId: post.authorId || "",
+    authorName: post.authorName || "",
   };
 
   const initialTagIds = post.tags.map(t => t.tagId);

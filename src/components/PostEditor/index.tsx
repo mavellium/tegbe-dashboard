@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ImageUpload } from "@/components/ImageUpload";
 import { Button } from "@/components/Button";
 import { FeedbackMessages } from "@/components/Manage/FeedbackMessages";
+import RichTextEditor from "@/components/RichTextEditor";
 import { ArrowLeft, Save, Globe, Settings, FileText, Loader2, Check } from "lucide-react";
 
 interface Category { id: string; name: string; }
@@ -14,6 +15,7 @@ interface BlogPost {
   id?: string; title: string; subtitle: string; body: string; excerpt: string;
   image: string; status: "DRAFT" | "PUBLISHED" | "ARCHIVED"; featured: boolean;
   categoryId: string; seoTitle: string; seoDescription: string; seoKeywords: string;
+  authorId?: string; authorName?: string;
 }
 
 interface PostEditorProps {
@@ -30,23 +32,72 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
 
   const [activeTab, setActiveTab] = useState<"content" | "seo">("content");
   const [formData, setFormData] = useState<BlogPost>(initialData || {
-    title: "", subtitle: "", body: "", excerpt: "", image: "", status: "DRAFT", featured: false, categoryId: "", seoTitle: "", seoDescription: "", seoKeywords: ""
+    title: "", subtitle: "", body: "", excerpt: "", image: "", status: "DRAFT", featured: false, categoryId: "", seoTitle: "", seoDescription: "", seoKeywords: "", authorId: "", authorName: ""
   });
   const [selectedTags, setSelectedTags] = useState<string[]>(initialTagIds);
   const [isSaving, setIsSaving] = useState(false);
-  const [feedback, setFeedback] = useState({ show: false, success: false, msg: "" });
+  const [feedback, setFeedback] = useState({ show: false, success: false, msg: "", id: 0 });
+  const isSavingRef = useRef(false);
+  const lastSaveTime = useRef(0);
+  const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const feedbackIdRef = useRef(0);
+  const isShowingFeedback = useRef(false); // Flag absoluta
 
   const showFeedback = (success: boolean, msg: string) => {
-    setFeedback({ show: true, success, msg });
-    setTimeout(() => setFeedback(prev => ({ ...prev, show: false })), 4000);
+    // Bloqueio absoluto - se já está mostrando, ignora
+    if (isShowingFeedback.current) {
+      return;
+    }
+    
+    isShowingFeedback.current = true; // Marcar como ativo
+    
+    if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current);
+    
+    // Incrementar ID para cada mensagem
+    const currentId = ++feedbackIdRef.current;
+    
+    setFeedback({ show: true, success, msg, id: currentId });
+    
+    feedbackTimeoutRef.current = setTimeout(() => {
+      // Só esconder se for a mesma mensagem
+      setFeedback(prev => {
+        if (prev.id === currentId) {
+          return { ...prev, show: false };
+        }
+        return prev;
+      });
+      
+      // Resetar flag após esconder
+      setTimeout(() => {
+        isShowingFeedback.current = false;
+      }, 100);
+    }, 4000);
   };
 
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleSave = async () => {
+    const now = Date.now();
+    
+    // Prevenir cliques duplos e execuções muito rápidas (menos de 1 segundo)
+    if (isSavingRef.current || isSaving || (now - lastSaveTime.current < 1000)) {
+      return;
+    }
+    
+    lastSaveTime.current = now;
+    
     if (!formData.title || !formData.body || !formData.categoryId) {
       showFeedback(false, "Título, corpo e categoria são obrigatórios.");
       return;
     }
     
+    isSavingRef.current = true;
     setIsSaving(true);
     const data = new FormData();
     Object.entries(formData).forEach(([key, value]) => {
@@ -63,16 +114,20 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
       const res = await fetch(url, { method, body: data });
       if (res.ok) {
         showFeedback(true, "Post salvo com sucesso!");
-        router.refresh();
+        
+        // Temporariamente removido para testar duplicação
+        // router.refresh();
+        
         if (!isEditing) router.push(`/dashboard/${subCompanyId}/blog`);
       } else {
         const err = await res.json();
         showFeedback(false, err.error || "Erro ao salvar.");
       }
-    } catch (e) {
+    } catch {
       showFeedback(false, "Erro de conexão.");
     } finally {
       setIsSaving(false);
+      isSavingRef.current = false;
     }
   };
 
@@ -158,11 +213,9 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
               <div className="bg-zinc-900/90 p-8 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md space-y-4">
                 <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Corpo do Artigo <span className="text-rose-500">*</span></label>
                 
-                {/* Aqui você vai plugar o seu Rich Text Editor futuramente */}
-                <textarea 
+                <RichTextEditor 
                   value={formData.body} 
-                  onChange={e => setFormData({...formData, body: e.target.value})} 
-                  className="w-full px-6 py-5 bg-zinc-950 border border-white/10 rounded-xl min-h-[500px] text-base leading-relaxed text-zinc-100 placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all resize-y custom-scrollbar shadow-inner"
+                  onChange={(value) => setFormData({...formData, body: value})} 
                   placeholder="Comece a escrever sua história épica aqui..."
                 />
               </div>
@@ -213,6 +266,18 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
                 <option value="" disabled>Selecione uma categoria...</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Nome do Autor (Opcional)</label>
+              <input 
+                type="text" 
+                value={formData.authorName || ""} 
+                onChange={e => setFormData({...formData, authorName: e.target.value})} 
+                placeholder="Digite o nome do autor (se diferente do usuário logado)..." 
+                className="w-full px-4 py-3 bg-zinc-950 border border-white/10 rounded-xl text-sm font-medium text-zinc-100 placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all shadow-inner" 
+              />
+              <p className="text-xs text-zinc-500 font-medium">Se não preenchido, o autor será o usuário que salvou o post.</p>
             </div>
 
             <div className="space-y-3">

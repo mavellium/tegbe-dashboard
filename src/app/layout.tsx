@@ -1,50 +1,49 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 import ConditionalSidebar from "@/components/ConditionalSidebar";
-import { GlobalConfig } from "@/config/config";
-import ThemeProvider from "@/providers/theme-provider";
 import MainWrapper from "@/components/MainWrapper";
 import { SiteProvider } from "@/contexts/SiteContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ForcePasswordModal from "@/components/ForcePasswordModal";
+import ThemeClientUpdater from "@/components/ThemeClientUpdater";
+import { getThemeFromRequest, generateThemeCSS } from "@/lib/theme-server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-// Pegue o site padrão para metadata
-const defaultSite = GlobalConfig.sites.find(site => site.id === GlobalConfig.defaultSiteId) || GlobalConfig.sites[0];
-
 export const metadata: Metadata = {
-  title: `${defaultSite.siteName} | Dashboard`,
-  description: `${defaultSite.description}`,
+  title: `Mavellium | CMS`,
+  description: `CMS da Mavellium`,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Obter tema no server-side para tema inicial
+  const theme = await getThemeFromRequest();
+  const themeCSS = generateThemeCSS(theme);
+
   return (
-    <html lang="pt-br">
+    <html lang="pt-br" style={theme as React.CSSProperties}>
+      <head>
+        <style dangerouslySetInnerHTML={{ __html: themeCSS }} />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} antialiased`}
       >
         <AuthProvider>
           <SiteProvider>
             <ForcePasswordModal />
-            <ThemeProvider />
-              <ConditionalSidebar />
-              <MainWrapper>
-                {children}
-              </MainWrapper>
+            <ThemeClientUpdater />
+            <ConditionalSidebar />
+            <MainWrapper>
+              {children}
+            </MainWrapper>
           </SiteProvider>
         </AuthProvider>
       </body>
