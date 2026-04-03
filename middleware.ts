@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
+  // Skip middleware during static generation
+  if (request.headers.get('x-middleware-skip') === 'true') {
+    return NextResponse.next();
+  }
+  
   const response = NextResponse.next();
   
   // Injetar pathname nos headers para uso no server-side

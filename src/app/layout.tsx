@@ -9,6 +9,20 @@ import ForcePasswordModal from "@/components/ForcePasswordModal";
 import ThemeClientUpdater from "@/components/ThemeClientUpdater";
 import { getThemeFromRequest, generateThemeCSS } from "@/lib/theme-server";
 
+// Import default theme for fallback
+const defaultTheme = {
+  mainColor: "#ffffff",      
+  secondColor: "#ffffff",   
+  boxShadowColor: "#ffffff1a",
+  asideColor: "#000000",      
+  borderColor: "#f1f1f1",   
+  backgroundColor: "#111111",
+  backgroundBody: "#000000"   
+};
+
+// Force dynamic rendering to avoid static generation issues
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -25,7 +39,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   // Obter tema no server-side para tema inicial
-  const theme = await getThemeFromRequest();
+  let theme = defaultTheme;
+  try {
+    theme = await getThemeFromRequest("/");
+  } catch (error) {
+    // Fallback to default theme if there's an error
+    console.warn('Failed to get theme during layout generation:', error);
+  }
   const themeCSS = generateThemeCSS(theme);
 
   return (

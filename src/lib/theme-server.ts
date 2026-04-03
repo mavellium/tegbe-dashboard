@@ -1,5 +1,3 @@
-import { headers } from "next/headers";
-
 const defaultTheme = {
   mainColor: "#ffffff",      
   secondColor: "#ffffff",   
@@ -12,11 +10,15 @@ const defaultTheme = {
 
 export async function getThemeFromRequest(pathname?: string): Promise<typeof defaultTheme> {
   try {
-    const headersList = await headers();
-    const currentPathname = pathname || headersList.get('x-pathname') || '';
+    // Check if we're in static generation mode
+    if (typeof window === 'undefined' && !pathname) {
+      return defaultTheme;
+    }
+    
+    if (!pathname) return defaultTheme;
     
     // Extrair ID do site da URL
-    const match = currentPathname.match(/^\/dashboard\/([^/]+)/);
+    const match = pathname.match(/^\/dashboard\/([^/]+)/);
     if (!match) return defaultTheme;
 
     const siteId = match[1];
