@@ -70,6 +70,11 @@ export async function GET(req: NextRequest) {
     const categoryId = searchParams.get("categoryId");
     const status = searchParams.get("status");
     const featured = searchParams.get("featured");
+    
+    // Parâmetros de paginação
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "12");
+    const skip = (page - 1) * limit;
 
     const where: any = {};
     if (subCompanyId) where.subCompanyId = subCompanyId;
@@ -77,9 +82,14 @@ export async function GET(req: NextRequest) {
     if (status) where.status = status;
     if (featured) where.featured = featured === "true";
 
+    // Busca total de posts para metadados de paginação
+    const total = await prisma.blogPost.count({ where });
+
     const posts = await prisma.blogPost.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
       include: {
         category: true,
         tags: { include: { tag: true } },
@@ -87,7 +97,22 @@ export async function GET(req: NextRequest) {
         author: { select: { id: true, name: true } }
       }
     });
-    return NextResponse.json(posts);
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
+
+    return NextResponse.json({
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev
+      }
+    });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

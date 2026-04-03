@@ -274,10 +274,9 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
                 type="text" 
                 value={formData.authorName || ""} 
                 onChange={e => setFormData({...formData, authorName: e.target.value})} 
-                placeholder="Digite o nome do autor (se diferente do usuário logado)..." 
+                placeholder="Digite o nome do autor" 
                 className="w-full px-4 py-3 bg-zinc-950 border border-white/10 rounded-xl text-sm font-medium text-zinc-100 placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all shadow-inner" 
               />
-              <p className="text-xs text-zinc-500 font-medium">Se não preenchido, o autor será o usuário que salvou o post.</p>
             </div>
 
             <div className="space-y-3">

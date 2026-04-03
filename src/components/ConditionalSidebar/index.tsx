@@ -11,10 +11,11 @@ export default function ConditionalSidebar() {
     return null;
   }
   
-  // Só mostrar sidebar quando estiver em um site específico (dashboard/[id])
-  // Páginas como /dashboard, /admin, etc não terão sidebar
+  // Mostrar sidebar para páginas de admin e dashboard sites específicos
   const dashboardSitePattern = /^\/dashboard\/[^\/]+/;
-  if (!dashboardSitePattern.test(pathname)) {
+  const adminPattern = /^\/admin/;
+  
+  if (!dashboardSitePattern.test(pathname) && !adminPattern.test(pathname)) {
     return null;
   }
   

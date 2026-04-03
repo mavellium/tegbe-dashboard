@@ -26,23 +26,34 @@ interface Taxon {
   seoDescription: string | null;
   seoKeywords: string | null;
 }
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
 
 interface Props {
   subCompanyId: string;
   initialPosts: BlogPost[];
   initialCategories: Taxon[];
   initialTags: Taxon[];
+  initialPagination: Pagination;
 }
 
-export default function BlogDashboardLayout({ subCompanyId, initialPosts, initialCategories, initialTags }: Props) {
+export default function BlogDashboardLayout({ subCompanyId, initialPosts, initialCategories, initialTags, initialPagination }: Props) {
   const router = useRouter();
   
   const [activeTab, setActiveTab] = useState<TabType>("posts");
   const [posts, setPosts] = useState<BlogPost[]>(initialPosts);
   const [categories, setCategories] = useState<Taxon[]>(initialCategories);
   const [tags, setTags] = useState<Taxon[]>(initialTags);
+  const [pagination, setPagination] = useState<Pagination>(initialPagination);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const [quickEditPost, setQuickEditPost] = useState<string | null>(null);
   const [quickEditData, setQuickEditData] = useState({ title: "", status: "DRAFT" });
@@ -57,12 +68,62 @@ export default function BlogDashboardLayout({ subCompanyId, initialPosts, initia
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Função para carregar posts com paginação
+  const loadPosts = async (page: number = 1, search: string = "") => {
+    setIsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "12",
+        subCompanyId,
+        ...(search && { search })
+      });
+      
+      const res = await fetch(`/api/${subCompanyId}/blog/posts?${params}`);
+      const data = await res.json();
+      
+      if (res.ok) {
+        setPosts(data.posts.map((post: any) => ({
+          id: post.id,
+          title: post.title,
+          status: post.status,
+          categoryName: post.category?.name || "Sem categoria",
+          updatedAt: post.updatedAt,
+          image: post.image || null,
+        })));
+        setPagination(data.pagination);
+      }
+    } catch {
+      triggerFeedback(false, "Erro ao carregar posts");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Funções de navegação
+  const handleNextPage = () => {
+    if (pagination.hasNext) {
+      loadPosts(pagination.page + 1, searchTerm);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (pagination.hasPrev) {
+      loadPosts(pagination.page - 1, searchTerm);
+    }
+  };
+
+  const handleSearch = (term: string) => {
+    setSearchTerm(term);
+    loadPosts(1, term);
+  };
+
   const triggerFeedback = (isSuccess: boolean, msg: string = "") => {
     if (isSuccess) { setSuccess(true); setTimeout(() => setSuccess(false), 3000); } 
     else { setErrorMsg(msg); setTimeout(() => setErrorMsg(""), 4000); }
   };
 
-  const handleNewPost = () => router.push(`/dashboard/${subCompanyId}/blog/post/new`);
+  const handleNewPost = () => router.push(`/dashboard/${subCompanyId}/blog/post`);
   const handleEditPost = (id: string) => router.push(`/dashboard/${subCompanyId}/blog/post/${id}`);
   
   const startQuickEdit = (post: BlogPost) => {
@@ -163,7 +224,7 @@ export default function BlogDashboardLayout({ subCompanyId, initialPosts, initia
       } else {
         triggerFeedback(false, savedItem.error || "Erro ao salvar.");
       }
-    } catch (e) {
+    } catch {
       triggerFeedback(false, "Erro de conexão.");
     } finally {
       setIsSaving(false);
@@ -239,7 +300,7 @@ export default function BlogDashboardLayout({ subCompanyId, initialPosts, initia
                   type="text" 
                   placeholder="Pesquisar publicações..." 
                   value={searchTerm} 
-                  onChange={(e) => setSearchTerm(e.target.value)} 
+                  onChange={(e) => handleSearch(e.target.value)} 
                   className="w-full pl-12 pr-4 py-3 bg-zinc-950/50 border border-white/5 rounded-xl text-zinc-100 placeholder:text-zinc-500 outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all" 
                 />
               </div>

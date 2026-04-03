@@ -12,8 +12,8 @@ export default function MainWrapper({
 
   const isLogin = pathname === '/login'
   
-  // Verificar se está em um site específico (dashboard/[id])
-  const hasSidebar = /^\/dashboard\/[^\/]+/.test(pathname)
+  // Verificar se está em um site específico (dashboard/[id]) ou em páginas admin
+  const hasSidebar = /^\/dashboard\/[^\/]+/.test(pathname) || /^\/admin/.test(pathname)
 
   return (
     <main

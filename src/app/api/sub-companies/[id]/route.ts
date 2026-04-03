@@ -93,12 +93,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     
     const name = formData.get("name")?.toString();
     const companyId = formData.get("companyId")?.toString();
-    const description = formData.get("description")?.toString() || null;
-    const ga_id = formData.get("ga_id")?.toString() || null;
-    const blogEnabled = formData.get("blogEnabled")?.toString() === "true";
+    
+    // Only process fields that are actually sent in the request
+    const description = formData.has("description") ? formData.get("description")?.toString() || null : undefined;
+    const ga_id = formData.has("ga_id") ? formData.get("ga_id")?.toString() || null : undefined;
+    const blogEnabled = formData.has("blogEnabled") ? formData.get("blogEnabled")?.toString() === "true" : undefined;
 
-    const rawTheme = formData.get("theme")?.toString() || null;
-    const rawMenuItems = formData.get("menuItems")?.toString() || null;
+    const rawTheme = formData.has("theme") ? formData.get("theme")?.toString() || null : undefined;
+    const rawMenuItems = formData.has("menuItems") ? formData.get("menuItems")?.toString() || null : undefined;
     
     console.log(`[DEBUG API PUT] Filial ID: ${id}`);
     
@@ -142,18 +144,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       finalLogoUrl = null;
     }
 
+    // Build update data object with only provided fields to prevent data loss
+    const updateData: any = {};
+    
+    // Always include required fields if provided
+    if (name !== undefined) updateData.name = name;
+    if (companyId !== undefined) updateData.companyId = companyId;
+    
+    // Optional fields - only update if provided (not undefined)
+    if (description !== undefined) updateData.description = description;
+    if (ga_id !== undefined) updateData.ga_id = ga_id;
+    if (blogEnabled !== undefined) updateData.blogEnabled = blogEnabled;
+    if (finalLogoUrl !== existingSubCompany.logo_img) updateData.logo_img = finalLogoUrl;
+    if (rawTheme !== undefined) updateData.theme = themeJson;
+    if (rawMenuItems !== undefined) updateData.menuItems = menuItemsJson;
+
     const subCompany = await prisma.subCompany.update({
       where: { id },
-      data: {
-        name,
-        companyId,
-        description,
-        ga_id,
-        blogEnabled,
-        logo_img: finalLogoUrl,
-        theme: themeJson,
-        menuItems: menuItemsJson
-      }
+      data: updateData
     });
     
     return NextResponse.json(subCompany);
