@@ -25,7 +25,6 @@ export default function DynamicPageRenderer() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Busca o MOLDE (Estrutura do Admin)
       const mouldRes = await fetch(`/api/pages/${pageId}`);
       if (!mouldRes.ok) throw new Error("Estrutura da página não encontrada.");
       const mouldData = await mouldRes.json();
@@ -36,28 +35,58 @@ export default function DynamicPageRenderer() {
       }
       setPageMould(mouldData);
 
-      // 2. Busca as RESPOSTAS (Dados do Usuário)
-      let userValuesData = {};
+      let userValuesData = null;
       const dataRes = await fetch(mouldData.endpoint);
       if (dataRes.ok) {
         const dataJson = await dataRes.json();
-        if (dataJson && Object.keys(dataJson).length > 0) userValuesData = dataJson;
+        const isArr = Array.isArray(dataJson);
+        if (dataJson && ((isArr && dataJson.length > 0) || (!isArr && Object.keys(dataJson).length > 0))) {
+          userValuesData = dataJson;
+        }
       }
 
-      // 3. Deep Merge: Adiciona campos novos do Admin sem apagar o texto do usuário
       const mergeData = (mould: any, user: any): any => {
-        if (!mould) return user || {};
-        if (!user) return mould;
-        const result = { ...mould };
-        
-        Object.keys(user).forEach(key => {
-          if (typeof user[key] === "object" && user[key] !== null && !Array.isArray(user[key])) {
-            result[key] = mergeData(mould[key] || {}, user[key]);
-          } else {
-            result[key] = user[key];
+        if (!mould) return user || (Array.isArray(mould) ? [] : {});
+        if (!user || (typeof user === 'object' && Object.keys(user).length === 0)) return mould;
+
+        const isMouldArray = Array.isArray(mould);
+        const isUserArray = Array.isArray(user);
+
+        if (isMouldArray && isUserArray) {
+          const maxLength = Math.max(mould.length, user.length);
+          const result = [];
+          for (let i = 0; i < maxLength; i++) {
+            const mouldItem = mould[i] !== undefined ? mould[i] : mould[0]; 
+            if (user[i] !== undefined) {
+              result.push(typeof user[i] === "object" && user[i] !== null ? mergeData(mouldItem, user[i]) : user[i]);
+            } else {
+              result.push(mouldItem);
+            }
           }
-        });
-        return result;
+          return result;
+        }
+
+        if (isMouldArray && !isUserArray && typeof user === 'object') {
+          return [ mergeData(mould[0] || {}, user) ];
+        }
+
+        if (!isMouldArray && isUserArray && typeof mould === 'object') {
+          return mergeData(mould, user[0] || {});
+        }
+
+        if (typeof mould === "object" && mould !== null) {
+          const result = { ...mould }; 
+          Object.keys(user).forEach(key => {
+            if (typeof user[key] === "object" && user[key] !== null && !Array.isArray(user[key])) {
+              result[key] = mergeData(mould[key] || {}, user[key]);
+            } else {
+              result[key] = user[key];
+            }
+          });
+          return result;
+        }
+
+        return user;
       };
 
       setUserValues(mergeData(mouldData.formData || {}, userValuesData));

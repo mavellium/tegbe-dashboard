@@ -20,9 +20,8 @@ export default function PagesCRUD() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // VOLTOU PARA {}: Inicializa como Objeto para não quebrar o Editor Visual
   const [formData, setFormData] = useState({
-    title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: "", formData: {} as any 
+    title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: "", formData: {} as any
   });
 
   const fetchData = async () => {
@@ -53,7 +52,6 @@ export default function PagesCRUD() {
       
       if (res.ok) {
         if (formData.endpoint) {
-          // Mantém a inteligência de saber se é Array ou Objeto na hora de salvar
           let finalPayload = payloadObj;
           const isArray = Array.isArray(payloadObj);
           
@@ -94,7 +92,6 @@ export default function PagesCRUD() {
   };
 
   const openNew = () => {
-    // VOLTOU PARA {}: Formulários novos começam como Objeto vazio para o construtor funcionar
     setFormData({ title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: subCompanies[0]?.id || "", formData: {} });
     setEditingId(null); setIsModalOpen(true);
   };
@@ -104,9 +101,9 @@ export default function PagesCRUD() {
     
     let parsedData = page.formData;
     if (typeof parsedData === "string") {
-      try { parsedData = JSON.parse(parsedData); } catch { parsedData = {}; } // Fallback para {}
+      try { parsedData = JSON.parse(parsedData); } catch { parsedData = {}; }
     }
-    if (!parsedData || parsedData === "null") parsedData = {}; // Fallback para {}
+    if (!parsedData || parsedData === "null") parsedData = {};
 
     let userValues = null;
     if (page.endpoint) {
@@ -124,30 +121,35 @@ export default function PagesCRUD() {
       }
     }
 
-    // Deep Merge Array-Aware: Trata listas e objetos de forma independente e segura
     const mergeData = (mould: any, user: any): any => {
       if (!mould) return user || (Array.isArray(mould) ? [] : {});
-      if (!user) return mould;
+      if (!user || (typeof user === 'object' && Object.keys(user).length === 0)) return mould;
 
-      // 1. Se o molde for uma Lista
-      if (Array.isArray(mould)) {
-        if (Array.isArray(user)) {
-          const maxLength = Math.max(mould.length, user.length);
-          const result = [];
-          for (let i = 0; i < maxLength; i++) {
-            const mouldItem = mould[i] !== undefined ? mould[i] : mould[0]; 
-            if (user[i] !== undefined) {
-               result.push(typeof user[i] === "object" ? mergeData(mouldItem, user[i]) : user[i]);
-            } else {
-               result.push(mouldItem);
-            }
+      const isMouldArray = Array.isArray(mould);
+      const isUserArray = Array.isArray(user);
+
+      if (isMouldArray && isUserArray) {
+        const maxLength = Math.max(mould.length, user.length);
+        const result = [];
+        for (let i = 0; i < maxLength; i++) {
+          const mouldItem = mould[i] !== undefined ? mould[i] : mould[0]; 
+          if (user[i] !== undefined) {
+            result.push(typeof user[i] === "object" && user[i] !== null ? mergeData(mouldItem, user[i]) : user[i]);
+          } else {
+            result.push(mouldItem);
           }
-          return result;
         }
-        return user; 
+        return result;
       }
 
-      // 2. Se o molde for um Objeto
+      if (isMouldArray && !isUserArray && typeof user === 'object') {
+        return [ mergeData(mould[0] || {}, user) ];
+      }
+
+      if (!isMouldArray && isUserArray && typeof mould === 'object') {
+        return mergeData(mould, user[0] || {});
+      }
+
       if (typeof mould === "object" && mould !== null) {
         const result = { ...mould };
         Object.keys(user).forEach(key => {

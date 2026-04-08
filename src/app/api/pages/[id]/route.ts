@@ -25,8 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const data = await req.json();
     
-    // Suporte explícito para Arrays ou Objetos
-    const safeFormData = data.formData ?? [];
+    const safeFormData = data.formData ?? {};
 
     const page = await prisma.page.update({
       where: { id },
