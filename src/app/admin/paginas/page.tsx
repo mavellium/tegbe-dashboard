@@ -44,7 +44,6 @@ export default function PagesCRUD() {
       
       const payloadObj = typeof formData.formData === 'string' ? JSON.parse(formData.formData) : formData.formData;
 
-      // 1. Salva a configuração da página na tabela principal do banco
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -52,11 +51,8 @@ export default function PagesCRUD() {
       });
       
       if (res.ok) {
-        
-        // 2. FORÇA A CRIAÇÃO/ATUALIZAÇÃO DO JSON NA API DINÂMICA
         if (formData.endpoint) {
           const finalPayload = Object.keys(payloadObj || {}).length > 0 ? payloadObj : { _init: true };
-          
           const apiFormData = new FormData();
           apiFormData.append("values", JSON.stringify(finalPayload));
 
@@ -94,23 +90,56 @@ export default function PagesCRUD() {
     setEditingId(null); setIsModalOpen(true);
   };
 
-  const openEdit = (page: any) => {
+  const openEdit = async (page: any) => {
+    setLoading(true); 
+    
     let parsedData = page.formData;
     if (typeof parsedData === "string") {
       try { parsedData = JSON.parse(parsedData); } catch { parsedData = {}; }
     }
     if (!parsedData || parsedData === "null") parsedData = {};
 
+    let userValues = {};
+    if (page.endpoint) {
+      try {
+        const res = await fetch(page.endpoint);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Object.keys(data).length > 0) userValues = data;
+        }
+      } catch (e) {
+        console.log("Ainda não existem dados de usuário para esta página.");
+      }
+    }
+
+    const mergeData = (mould: any, user: any): any => {
+      if (!mould) return user || {};
+      if (!user) return mould;
+      const result = { ...mould };
+      
+      Object.keys(user).forEach(key => {
+        if (typeof user[key] === "object" && user[key] !== null && !Array.isArray(user[key])) {
+          result[key] = mergeData(mould[key] || {}, user[key]);
+        } else {
+          result[key] = user[key];
+        }
+      });
+      return result;
+    };
+
+    const finalMergedData = mergeData(parsedData, userValues);
+
     setFormData({ 
       title: page.title || "", 
       subtitle: page.subtitle || "", 
       icon: page.icon || "lucide:file-text", 
       endpoint: page.endpoint || "", 
-      // Busca pelo subCompanyId na raiz ou por dentro da relation
       subCompanyId: page.subCompanyId || page.subCompany?.id || "", 
-      formData: parsedData 
+      formData: finalMergedData 
     });
+    
     setEditingId(page.id); 
+    setLoading(false);
     setIsModalOpen(true);
   };
 
@@ -206,7 +235,6 @@ export default function PagesCRUD() {
                   <h3 className="text-lg font-bold text-white">{editingId ? "Editar Página" : "Nova Página"}</h3>
                   <div className="flex items-center gap-3">
                      
-                     {/* BOTÃO DE VISUALIZAR - Agora aparece independentemente se o banco manda subCompanyId na raiz ou dentro do objeto */}
                      {editingId && (
                        <a 
                          href={`/dashboard/${formData.subCompanyId}/custom/${editingId}`} 

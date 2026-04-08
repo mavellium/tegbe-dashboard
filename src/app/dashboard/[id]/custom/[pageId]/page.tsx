@@ -25,28 +25,43 @@ export default function DynamicPageRenderer() {
     setLoading(true);
     setError(null);
     try {
-      // 1. Busca o MOLDE (A estrutura que o Admin criou)
+      // 1. Busca o MOLDE (Estrutura do Admin)
       const mouldRes = await fetch(`/api/pages/${pageId}`);
       if (!mouldRes.ok) throw new Error("Estrutura da página não encontrada.");
       const mouldData = await mouldRes.json();
       
-      // Parse de segurança no formData do molde
       if (typeof mouldData.formData === 'string') {
         try { mouldData.formData = JSON.parse(mouldData.formData); } 
         catch { mouldData.formData = {}; }
       }
       setPageMould(mouldData);
 
-      // 2. Busca as RESPOSTAS (O que o usuário já preencheu na API dinâmica)
+      // 2. Busca as RESPOSTAS (Dados do Usuário)
+      let userValuesData = {};
       const dataRes = await fetch(mouldData.endpoint);
       if (dataRes.ok) {
         const dataJson = await dataRes.json();
-        // Se a API retornar null ou os dados iniciais do Admin, usamos como base.
-        // Mescla a estrutura do admin com as respostas do usuário
-        setUserValues(dataJson && Object.keys(dataJson).length > 0 ? dataJson : mouldData.formData || {});
-      } else {
-        setUserValues(mouldData.formData || {});
+        if (dataJson && Object.keys(dataJson).length > 0) userValuesData = dataJson;
       }
+
+      // 3. Deep Merge: Adiciona campos novos do Admin sem apagar o texto do usuário
+      const mergeData = (mould: any, user: any): any => {
+        if (!mould) return user || {};
+        if (!user) return mould;
+        const result = { ...mould };
+        
+        Object.keys(user).forEach(key => {
+          if (typeof user[key] === "object" && user[key] !== null && !Array.isArray(user[key])) {
+            result[key] = mergeData(mould[key] || {}, user[key]);
+          } else {
+            result[key] = user[key];
+          }
+        });
+        return result;
+      };
+
+      setUserValues(mergeData(mouldData.formData || {}, userValuesData));
+
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -60,7 +75,6 @@ export default function DynamicPageRenderer() {
     setSaving(true);
     try {
       const form = new FormData();
-      // O backend [subtype]/json/[type] exige que os dados venham dentro de um field "values"
       form.append("values", JSON.stringify(userValues));
 
       const res = await fetch(pageMould.endpoint, {
@@ -82,10 +96,8 @@ export default function DynamicPageRenderer() {
     }
   };
 
-  // --- Função robusta para atualizar estados aninhados complexos ---
   const handleFieldChange = useCallback((path: string, val: any) => {
     setUserValues((prev: any) => {
-      // Cria um clone profundo para não quebrar a mutabilidade do React em Arrays e Objetos
       const newData = prev ? structuredClone(prev) : {}; 
       const keys = path.split('.');
       let current = newData;
@@ -93,7 +105,6 @@ export default function DynamicPageRenderer() {
       for (let i = 0; i < keys.length - 1; i++) {
         const key = keys[i];
         if (current[key] === undefined || current[key] === null) {
-          // Se o próximo caminho for um número, cria Array, senão Objeto
           current[key] = isNaN(Number(keys[i + 1])) ? {} : [];
         }
         current = current[key];
@@ -144,10 +155,6 @@ export default function DynamicPageRenderer() {
         </div>
 
         <Card className="bg-zinc-900 border-zinc-800 p-0 overflow-hidden shadow-2xl">
-           {/* - structure={pageMould.formData}: Define o esqueleto que não pode ser alterado.
-             - data={userValues}: Injeta o que o usuário já respondeu ou modificou.
-             - readOnlyStructure={true}: Esconde os botões de adicionar campo, organizar e dev mode.
-           */}
            <AdvancedJsonEditor 
              structure={pageMould?.formData} 
              data={userValues} 
