@@ -8,7 +8,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     
     const page = await prisma.page.findUnique({
       where: { id }
-      // Removido o include de formData pois agora formData é um campo JSON da própria tabela Page
     });
 
     if (!page) {
@@ -26,6 +25,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const { id } = await params;
     const data = await req.json();
     
+    // Suporte explícito para Arrays ou Objetos
+    const safeFormData = data.formData ?? [];
+
     const page = await prisma.page.update({
       where: { id },
       data: {
@@ -33,7 +35,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         subtitle: data.subtitle,
         icon: data.icon,
         endpoint: data.endpoint,
-        formData: data.formData,
+        formData: safeFormData,
         subCompanyId: data.subCompanyId
       }
     });

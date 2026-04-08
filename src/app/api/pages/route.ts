@@ -23,8 +23,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Título, Endpoint e Filial são obrigatórios." }, { status: 400 });
     }
 
+    // Garante que se for passado nulo, vira um array vazio por padrão caso seja a intenção
+    const safeFormData = formData ?? [];
+
     const page = await prisma.page.create({
-      data: { title, subtitle, icon, endpoint, formData, subCompanyId }
+      data: { title, subtitle, icon, endpoint, formData: safeFormData, subCompanyId }
     });
     return NextResponse.json(page, { status: 201 });
   } catch (error: any) {

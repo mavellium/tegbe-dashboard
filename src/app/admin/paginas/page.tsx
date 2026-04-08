@@ -20,8 +20,9 @@ export default function PagesCRUD() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // VOLTOU PARA {}: Inicializa como Objeto para não quebrar o Editor Visual
   const [formData, setFormData] = useState({
-    title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: "", formData: {} as any
+    title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: "", formData: {} as any 
   });
 
   const fetchData = async () => {
@@ -52,7 +53,14 @@ export default function PagesCRUD() {
       
       if (res.ok) {
         if (formData.endpoint) {
-          const finalPayload = Object.keys(payloadObj || {}).length > 0 ? payloadObj : { _init: true };
+          // Mantém a inteligência de saber se é Array ou Objeto na hora de salvar
+          let finalPayload = payloadObj;
+          const isArray = Array.isArray(payloadObj);
+          
+          if (!payloadObj || (isArray && payloadObj.length === 0) || (!isArray && Object.keys(payloadObj).length === 0)) {
+            finalPayload = isArray ? [] : { _init: true };
+          }
+
           const apiFormData = new FormData();
           apiFormData.append("values", JSON.stringify(finalPayload));
 
@@ -86,6 +94,7 @@ export default function PagesCRUD() {
   };
 
   const openNew = () => {
+    // VOLTOU PARA {}: Formulários novos começam como Objeto vazio para o construtor funcionar
     setFormData({ title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: subCompanies[0]?.id || "", formData: {} });
     setEditingId(null); setIsModalOpen(true);
   };
@@ -95,36 +104,63 @@ export default function PagesCRUD() {
     
     let parsedData = page.formData;
     if (typeof parsedData === "string") {
-      try { parsedData = JSON.parse(parsedData); } catch { parsedData = {}; }
+      try { parsedData = JSON.parse(parsedData); } catch { parsedData = {}; } // Fallback para {}
     }
-    if (!parsedData || parsedData === "null") parsedData = {};
+    if (!parsedData || parsedData === "null") parsedData = {}; // Fallback para {}
 
-    let userValues = {};
+    let userValues = null;
     if (page.endpoint) {
       try {
         const res = await fetch(page.endpoint);
         if (res.ok) {
           const data = await res.json();
-          if (data && Object.keys(data).length > 0) userValues = data;
+          const isArr = Array.isArray(data);
+          if (data && ((isArr && data.length > 0) || (!isArr && Object.keys(data).length > 0))) {
+             userValues = data;
+          }
         }
       } catch (e) {
         console.log("Ainda não existem dados de usuário para esta página.");
       }
     }
 
+    // Deep Merge Array-Aware: Trata listas e objetos de forma independente e segura
     const mergeData = (mould: any, user: any): any => {
-      if (!mould) return user || {};
+      if (!mould) return user || (Array.isArray(mould) ? [] : {});
       if (!user) return mould;
-      const result = { ...mould };
-      
-      Object.keys(user).forEach(key => {
-        if (typeof user[key] === "object" && user[key] !== null && !Array.isArray(user[key])) {
-          result[key] = mergeData(mould[key] || {}, user[key]);
-        } else {
-          result[key] = user[key];
+
+      // 1. Se o molde for uma Lista
+      if (Array.isArray(mould)) {
+        if (Array.isArray(user)) {
+          const maxLength = Math.max(mould.length, user.length);
+          const result = [];
+          for (let i = 0; i < maxLength; i++) {
+            const mouldItem = mould[i] !== undefined ? mould[i] : mould[0]; 
+            if (user[i] !== undefined) {
+               result.push(typeof user[i] === "object" ? mergeData(mouldItem, user[i]) : user[i]);
+            } else {
+               result.push(mouldItem);
+            }
+          }
+          return result;
         }
-      });
-      return result;
+        return user; 
+      }
+
+      // 2. Se o molde for um Objeto
+      if (typeof mould === "object" && mould !== null) {
+        const result = { ...mould };
+        Object.keys(user).forEach(key => {
+          if (typeof user[key] === "object" && user[key] !== null && !Array.isArray(user[key])) {
+            result[key] = mergeData(mould[key] || {}, user[key]);
+          } else {
+            result[key] = user[key];
+          }
+        });
+        return result;
+      }
+
+      return user;
     };
 
     const finalMergedData = mergeData(parsedData, userValues);
