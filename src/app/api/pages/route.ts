@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { createPageHistory } from "@/lib/page-history";
 
 export async function GET() {
   try {
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
     const page = await prisma.page.create({
       data: { title, subtitle, icon, endpoint, formData: safeFormData, subCompanyId }
     });
+    await createPageHistory(page, "CREATED");
     return NextResponse.json(page, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

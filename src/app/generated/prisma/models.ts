@@ -11,6 +11,7 @@
 export type * from './models/Company'
 export type * from './models/SubCompany'
 export type * from './models/Page'
+export type * from './models/PageHistory'
 export type * from './models/User'
 export type * from './models/BlogCategory'
 export type * from './models/BlogTag'

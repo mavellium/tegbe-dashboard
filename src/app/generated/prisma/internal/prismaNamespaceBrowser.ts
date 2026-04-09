@@ -54,6 +54,7 @@ export const ModelName = {
   Company: 'Company',
   SubCompany: 'SubCompany',
   Page: 'Page',
+  PageHistory: 'PageHistory',
   User: 'User',
   BlogCategory: 'BlogCategory',
   BlogTag: 'BlogTag',
@@ -120,6 +121,24 @@ export const PageScalarFieldEnum = {
 } as const
 
 export type PageScalarFieldEnum = (typeof PageScalarFieldEnum)[keyof typeof PageScalarFieldEnum]
+
+
+export const PageHistoryScalarFieldEnum = {
+  id: 'id',
+  pageId: 'pageId',
+  title: 'title',
+  subtitle: 'subtitle',
+  icon: 'icon',
+  endpoint: 'endpoint',
+  formData: 'formData',
+  subCompanyId: 'subCompanyId',
+  version: 'version',
+  action: 'action',
+  snapshot: 'snapshot',
+  createdAt: 'createdAt'
+} as const
+
+export type PageHistoryScalarFieldEnum = (typeof PageHistoryScalarFieldEnum)[keyof typeof PageHistoryScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {

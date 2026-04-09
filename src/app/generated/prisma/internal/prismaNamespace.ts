@@ -387,6 +387,7 @@ export const ModelName = {
   Company: 'Company',
   SubCompany: 'SubCompany',
   Page: 'Page',
+  PageHistory: 'PageHistory',
   User: 'User',
   BlogCategory: 'BlogCategory',
   BlogTag: 'BlogTag',
@@ -410,7 +411,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "company" | "subCompany" | "page" | "user" | "blogCategory" | "blogTag" | "blogPost" | "blogPostTag" | "formData" | "component" | "componentData"
+    modelProps: "company" | "subCompany" | "page" | "pageHistory" | "user" | "blogCategory" | "blogTag" | "blogPost" | "blogPostTag" | "formData" | "component" | "componentData"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -633,6 +634,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.PageCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.PageCountAggregateOutputType> | number
+        }
+      }
+    }
+    PageHistory: {
+      payload: Prisma.$PageHistoryPayload<ExtArgs>
+      fields: Prisma.PageHistoryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.PageHistoryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.PageHistoryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>
+        }
+        findFirst: {
+          args: Prisma.PageHistoryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.PageHistoryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>
+        }
+        findMany: {
+          args: Prisma.PageHistoryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>[]
+        }
+        create: {
+          args: Prisma.PageHistoryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>
+        }
+        createMany: {
+          args: Prisma.PageHistoryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.PageHistoryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>[]
+        }
+        delete: {
+          args: Prisma.PageHistoryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>
+        }
+        update: {
+          args: Prisma.PageHistoryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>
+        }
+        deleteMany: {
+          args: Prisma.PageHistoryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.PageHistoryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.PageHistoryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>[]
+        }
+        upsert: {
+          args: Prisma.PageHistoryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$PageHistoryPayload>
+        }
+        aggregate: {
+          args: Prisma.PageHistoryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregatePageHistory>
+        }
+        groupBy: {
+          args: Prisma.PageHistoryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PageHistoryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.PageHistoryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.PageHistoryCountAggregateOutputType> | number
         }
       }
     }
@@ -1309,6 +1384,24 @@ export const PageScalarFieldEnum = {
 export type PageScalarFieldEnum = (typeof PageScalarFieldEnum)[keyof typeof PageScalarFieldEnum]
 
 
+export const PageHistoryScalarFieldEnum = {
+  id: 'id',
+  pageId: 'pageId',
+  title: 'title',
+  subtitle: 'subtitle',
+  icon: 'icon',
+  endpoint: 'endpoint',
+  formData: 'formData',
+  subCompanyId: 'subCompanyId',
+  version: 'version',
+  action: 'action',
+  snapshot: 'snapshot',
+  createdAt: 'createdAt'
+} as const
+
+export type PageHistoryScalarFieldEnum = (typeof PageHistoryScalarFieldEnum)[keyof typeof PageHistoryScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -1532,6 +1625,34 @@ export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'Int'
+ */
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+    
+
+
+/**
+ * Reference to a field of type 'Int[]'
+ */
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'PageAction'
+ */
+export type EnumPageActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PageAction'>
+    
+
+
+/**
+ * Reference to a field of type 'PageAction[]'
+ */
+export type ListEnumPageActionFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PageAction[]'>
+    
+
+
+/**
  * Reference to a field of type 'Role'
  */
 export type EnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role'>
@@ -1556,20 +1677,6 @@ export type EnumBlogPostStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$P
  * Reference to a field of type 'BlogPostStatus[]'
  */
 export type ListEnumBlogPostStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BlogPostStatus[]'>
-    
-
-
-/**
- * Reference to a field of type 'Int'
- */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-/**
- * Reference to a field of type 'Int[]'
- */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -1668,6 +1775,7 @@ export type GlobalOmitConfig = {
   company?: Prisma.CompanyOmit
   subCompany?: Prisma.SubCompanyOmit
   page?: Prisma.PageOmit
+  pageHistory?: Prisma.PageHistoryOmit
   user?: Prisma.UserOmit
   blogCategory?: Prisma.BlogCategoryOmit
   blogTag?: Prisma.BlogTagOmit

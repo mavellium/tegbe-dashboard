@@ -211,6 +211,7 @@ export type PageWhereInput = {
   createdAt?: Prisma.DateTimeFilter<"Page"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Page"> | Date | string
   subCompany?: Prisma.XOR<Prisma.SubCompanyScalarRelationFilter, Prisma.SubCompanyWhereInput>
+  history?: Prisma.PageHistoryListRelationFilter
 }
 
 export type PageOrderByWithRelationInput = {
@@ -224,6 +225,7 @@ export type PageOrderByWithRelationInput = {
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
   subCompany?: Prisma.SubCompanyOrderByWithRelationInput
+  history?: Prisma.PageHistoryOrderByRelationAggregateInput
 }
 
 export type PageWhereUniqueInput = Prisma.AtLeast<{
@@ -240,6 +242,7 @@ export type PageWhereUniqueInput = Prisma.AtLeast<{
   createdAt?: Prisma.DateTimeFilter<"Page"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"Page"> | Date | string
   subCompany?: Prisma.XOR<Prisma.SubCompanyScalarRelationFilter, Prisma.SubCompanyWhereInput>
+  history?: Prisma.PageHistoryListRelationFilter
 }, "id">
 
 export type PageOrderByWithAggregationInput = {
@@ -282,6 +285,7 @@ export type PageCreateInput = {
   createdAt?: Date | string
   updatedAt?: Date | string
   subCompany: Prisma.SubCompanyCreateNestedOneWithoutPagesInput
+  history?: Prisma.PageHistoryCreateNestedManyWithoutPageInput
 }
 
 export type PageUncheckedCreateInput = {
@@ -294,6 +298,7 @@ export type PageUncheckedCreateInput = {
   subCompanyId: string
   createdAt?: Date | string
   updatedAt?: Date | string
+  history?: Prisma.PageHistoryUncheckedCreateNestedManyWithoutPageInput
 }
 
 export type PageUpdateInput = {
@@ -306,6 +311,7 @@ export type PageUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   subCompany?: Prisma.SubCompanyUpdateOneRequiredWithoutPagesNestedInput
+  history?: Prisma.PageHistoryUpdateManyWithoutPageNestedInput
 }
 
 export type PageUncheckedUpdateInput = {
@@ -318,6 +324,7 @@ export type PageUncheckedUpdateInput = {
   subCompanyId?: Prisma.StringFieldUpdateOperationsInput | string
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  history?: Prisma.PageHistoryUncheckedUpdateManyWithoutPageNestedInput
 }
 
 export type PageCreateManyInput = {
@@ -399,6 +406,11 @@ export type PageMinOrderByAggregateInput = {
   updatedAt?: Prisma.SortOrder
 }
 
+export type PageNullableScalarRelationFilter = {
+  is?: Prisma.PageWhereInput | null
+  isNot?: Prisma.PageWhereInput | null
+}
+
 export type PageCreateNestedManyWithoutSubCompanyInput = {
   create?: Prisma.XOR<Prisma.PageCreateWithoutSubCompanyInput, Prisma.PageUncheckedCreateWithoutSubCompanyInput> | Prisma.PageCreateWithoutSubCompanyInput[] | Prisma.PageUncheckedCreateWithoutSubCompanyInput[]
   connectOrCreate?: Prisma.PageCreateOrConnectWithoutSubCompanyInput | Prisma.PageCreateOrConnectWithoutSubCompanyInput[]
@@ -441,6 +453,22 @@ export type PageUncheckedUpdateManyWithoutSubCompanyNestedInput = {
   deleteMany?: Prisma.PageScalarWhereInput | Prisma.PageScalarWhereInput[]
 }
 
+export type PageCreateNestedOneWithoutHistoryInput = {
+  create?: Prisma.XOR<Prisma.PageCreateWithoutHistoryInput, Prisma.PageUncheckedCreateWithoutHistoryInput>
+  connectOrCreate?: Prisma.PageCreateOrConnectWithoutHistoryInput
+  connect?: Prisma.PageWhereUniqueInput
+}
+
+export type PageUpdateOneWithoutHistoryNestedInput = {
+  create?: Prisma.XOR<Prisma.PageCreateWithoutHistoryInput, Prisma.PageUncheckedCreateWithoutHistoryInput>
+  connectOrCreate?: Prisma.PageCreateOrConnectWithoutHistoryInput
+  upsert?: Prisma.PageUpsertWithoutHistoryInput
+  disconnect?: Prisma.PageWhereInput | boolean
+  delete?: Prisma.PageWhereInput | boolean
+  connect?: Prisma.PageWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.PageUpdateToOneWithWhereWithoutHistoryInput, Prisma.PageUpdateWithoutHistoryInput>, Prisma.PageUncheckedUpdateWithoutHistoryInput>
+}
+
 export type PageCreateWithoutSubCompanyInput = {
   id?: string
   title: string
@@ -450,6 +478,7 @@ export type PageCreateWithoutSubCompanyInput = {
   formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
+  history?: Prisma.PageHistoryCreateNestedManyWithoutPageInput
 }
 
 export type PageUncheckedCreateWithoutSubCompanyInput = {
@@ -461,6 +490,7 @@ export type PageUncheckedCreateWithoutSubCompanyInput = {
   formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Date | string
   updatedAt?: Date | string
+  history?: Prisma.PageHistoryUncheckedCreateNestedManyWithoutPageInput
 }
 
 export type PageCreateOrConnectWithoutSubCompanyInput = {
@@ -504,6 +534,70 @@ export type PageScalarWhereInput = {
   updatedAt?: Prisma.DateTimeFilter<"Page"> | Date | string
 }
 
+export type PageCreateWithoutHistoryInput = {
+  id?: string
+  title: string
+  subtitle?: string | null
+  icon?: string
+  endpoint: string
+  formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  subCompany: Prisma.SubCompanyCreateNestedOneWithoutPagesInput
+}
+
+export type PageUncheckedCreateWithoutHistoryInput = {
+  id?: string
+  title: string
+  subtitle?: string | null
+  icon?: string
+  endpoint: string
+  formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  subCompanyId: string
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type PageCreateOrConnectWithoutHistoryInput = {
+  where: Prisma.PageWhereUniqueInput
+  create: Prisma.XOR<Prisma.PageCreateWithoutHistoryInput, Prisma.PageUncheckedCreateWithoutHistoryInput>
+}
+
+export type PageUpsertWithoutHistoryInput = {
+  update: Prisma.XOR<Prisma.PageUpdateWithoutHistoryInput, Prisma.PageUncheckedUpdateWithoutHistoryInput>
+  create: Prisma.XOR<Prisma.PageCreateWithoutHistoryInput, Prisma.PageUncheckedCreateWithoutHistoryInput>
+  where?: Prisma.PageWhereInput
+}
+
+export type PageUpdateToOneWithWhereWithoutHistoryInput = {
+  where?: Prisma.PageWhereInput
+  data: Prisma.XOR<Prisma.PageUpdateWithoutHistoryInput, Prisma.PageUncheckedUpdateWithoutHistoryInput>
+}
+
+export type PageUpdateWithoutHistoryInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  subtitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.StringFieldUpdateOperationsInput | string
+  endpoint?: Prisma.StringFieldUpdateOperationsInput | string
+  formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  subCompany?: Prisma.SubCompanyUpdateOneRequiredWithoutPagesNestedInput
+}
+
+export type PageUncheckedUpdateWithoutHistoryInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  title?: Prisma.StringFieldUpdateOperationsInput | string
+  subtitle?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  icon?: Prisma.StringFieldUpdateOperationsInput | string
+  endpoint?: Prisma.StringFieldUpdateOperationsInput | string
+  formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
+  subCompanyId?: Prisma.StringFieldUpdateOperationsInput | string
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 export type PageCreateManySubCompanyInput = {
   id?: string
   title: string
@@ -524,6 +618,7 @@ export type PageUpdateWithoutSubCompanyInput = {
   formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  history?: Prisma.PageHistoryUpdateManyWithoutPageNestedInput
 }
 
 export type PageUncheckedUpdateWithoutSubCompanyInput = {
@@ -535,6 +630,7 @@ export type PageUncheckedUpdateWithoutSubCompanyInput = {
   formData?: Prisma.NullableJsonNullValueInput | runtime.InputJsonValue
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  history?: Prisma.PageHistoryUncheckedUpdateManyWithoutPageNestedInput
 }
 
 export type PageUncheckedUpdateManyWithoutSubCompanyInput = {
@@ -549,6 +645,35 @@ export type PageUncheckedUpdateManyWithoutSubCompanyInput = {
 }
 
 
+/**
+ * Count Type PageCountOutputType
+ */
+
+export type PageCountOutputType = {
+  history: number
+}
+
+export type PageCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  history?: boolean | PageCountOutputTypeCountHistoryArgs
+}
+
+/**
+ * PageCountOutputType without action
+ */
+export type PageCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PageCountOutputType
+   */
+  select?: Prisma.PageCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * PageCountOutputType without action
+ */
+export type PageCountOutputTypeCountHistoryArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.PageHistoryWhereInput
+}
+
 
 export type PageSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -561,6 +686,8 @@ export type PageSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   createdAt?: boolean
   updatedAt?: boolean
   subCompany?: boolean | Prisma.SubCompanyDefaultArgs<ExtArgs>
+  history?: boolean | Prisma.Page$historyArgs<ExtArgs>
+  _count?: boolean | Prisma.PageCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["page"]>
 
 export type PageSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -604,6 +731,8 @@ export type PageSelectScalar = {
 export type PageOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "subtitle" | "icon" | "endpoint" | "formData" | "subCompanyId" | "createdAt" | "updatedAt", ExtArgs["result"]["page"]>
 export type PageInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   subCompany?: boolean | Prisma.SubCompanyDefaultArgs<ExtArgs>
+  history?: boolean | Prisma.Page$historyArgs<ExtArgs>
+  _count?: boolean | Prisma.PageCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type PageIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   subCompany?: boolean | Prisma.SubCompanyDefaultArgs<ExtArgs>
@@ -616,6 +745,7 @@ export type $PagePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   name: "Page"
   objects: {
     subCompany: Prisma.$SubCompanyPayload<ExtArgs>
+    history: Prisma.$PageHistoryPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1022,6 +1152,7 @@ readonly fields: PageFieldRefs;
 export interface Prisma__PageClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   subCompany<T extends Prisma.SubCompanyDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.SubCompanyDefaultArgs<ExtArgs>>): Prisma.Prisma__SubCompanyClient<runtime.Types.Result.GetResult<Prisma.$SubCompanyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  history<T extends Prisma.Page$historyArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Page$historyArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$PageHistoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1453,6 +1584,30 @@ export type PageDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Limit how many Pages to delete.
    */
   limit?: number
+}
+
+/**
+ * Page.history
+ */
+export type Page$historyArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the PageHistory
+   */
+  select?: Prisma.PageHistorySelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the PageHistory
+   */
+  omit?: Prisma.PageHistoryOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.PageHistoryInclude<ExtArgs> | null
+  where?: Prisma.PageHistoryWhereInput
+  orderBy?: Prisma.PageHistoryOrderByWithRelationInput | Prisma.PageHistoryOrderByWithRelationInput[]
+  cursor?: Prisma.PageHistoryWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.PageHistoryScalarFieldEnum | Prisma.PageHistoryScalarFieldEnum[]
 }
 
 /**

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Menu, X, HelpCircle, FileText, Newspaper, Building, PlayCircle,
-  LayoutDashboard, ChevronDown, LogOutIcon, Users, Settings, Network, Loader2, Globe, LayoutTemplate
+  LayoutDashboard, ChevronDown, LogOutIcon, Users, Settings, Network, Loader2, Globe, LayoutTemplate, History
 } from "lucide-react";
 import { Icon } from '@iconify/react'; 
 import Link from "next/link";
@@ -17,7 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import React from "react";
 
 const iconMap: { [key: string]: React.ComponentType<any> } = {
-  LayoutDashboard, HelpCircle, FileText, Newspaper, Building, PlayCircle, Users, Settings, Network, Globe, LayoutTemplate
+  LayoutDashboard, HelpCircle, FileText, Newspaper, Building, PlayCircle, Users, Settings, Network, Globe, LayoutTemplate, History
 };
 
 export default function Sidebar() {
@@ -54,7 +54,8 @@ export default function Sidebar() {
             { name: "Usuários", href: "/admin/usuarios", icon: "Users", isActive: true },
             { name: "Empresas", href: "/admin/empresas", icon: "Building", isActive: true },
             { name: "Filiais", href: "/admin/subempresas", icon: "Network", isActive: true },
-            { name: "Páginas", href: "/admin/paginas", icon: "LayoutTemplate", isActive: true }
+            { name: "Páginas", href: "/admin/paginas", icon: "LayoutTemplate", isActive: true },
+            { name: "Histórico", href: "/admin/historico", icon: "History", isActive: true }
           ] 
         }
       ];

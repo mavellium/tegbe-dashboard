@@ -17,6 +17,15 @@ export const Role = {
 export type Role = (typeof Role)[keyof typeof Role]
 
 
+export const PageAction = {
+  CREATED: 'CREATED',
+  UPDATED: 'UPDATED',
+  DELETED: 'DELETED'
+} as const
+
+export type PageAction = (typeof PageAction)[keyof typeof PageAction]
+
+
 export const BlogPostStatus = {
   DRAFT: 'DRAFT',
   PUBLISHED: 'PUBLISHED',

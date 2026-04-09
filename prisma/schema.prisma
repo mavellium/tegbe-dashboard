@@ -56,17 +56,49 @@ model Page {
   id           String     @id @default(cuid())
   title        String
   subtitle     String?
-  icon         String     @default("FileText") 
-  endpoint     String     
-  formData     Json?    
-  
+  icon         String     @default("FileText")
+  endpoint     String
+  formData     Json?
+
   subCompanyId String
   subCompany   SubCompany @relation(fields: [subCompanyId], references: [id], onDelete: Cascade)
-  
+
+  history      PageHistory[]
+
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   @@map("pages")
+}
+
+enum PageAction {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+model PageHistory {
+  id           String     @id @default(cuid())
+
+  pageId       String?
+  page         Page?      @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  title        String
+  subtitle     String?
+  icon         String
+  endpoint     String
+  formData     Json?
+  subCompanyId String
+
+  version      Int
+  action       PageAction
+  snapshot     Json
+
+  createdAt    DateTime   @default(now())
+
+  @@index([pageId])
+  @@index([createdAt])
+  @@map("page_history")
 }
 
 model User {

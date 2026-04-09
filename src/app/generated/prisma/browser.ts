@@ -33,6 +33,11 @@ export type SubCompany = Prisma.SubCompanyModel
  */
 export type Page = Prisma.PageModel
 /**
+ * Model PageHistory
+ * 
+ */
+export type PageHistory = Prisma.PageHistoryModel
+/**
  * Model User
  * 
  */
