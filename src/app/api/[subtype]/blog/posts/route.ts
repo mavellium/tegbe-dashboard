@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import sharp from "sharp";
+import { triggerRevalidateAsync } from "@/lib/revalidate";
 
 const AVIF_CONFIG = { quality: 80, effort: 5, chromaSubsampling: "4:4:4" as const };
 
@@ -181,6 +182,7 @@ export async function POST(req: NextRequest) {
         include: { category: true, tags: { include: { tag: true } }, subCompany: { select: { id: true, name: true } } }
       });
 
+      triggerRevalidateAsync({ slugs: [slug, "blog"] });
       return NextResponse.json(fullPost, { status: 201 });
     } catch (e: any) {
       if (e.code === "P2002") {
@@ -200,6 +202,7 @@ export async function POST(req: NextRequest) {
           });
         }
 
+        triggerRevalidateAsync({ slugs: [slug, "blog"] });
         return NextResponse.json(post, { status: 201 });
       }
       throw e;

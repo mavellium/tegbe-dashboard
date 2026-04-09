@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createPageHistory } from "@/lib/page-history";
+import { extractSlugFromPath, triggerRevalidateAsync } from "@/lib/revalidate";
 
 export async function GET() {
   try {
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
       data: { title, subtitle, icon, endpoint, formData: safeFormData, subCompanyId }
     });
     await createPageHistory(page, "CREATED");
+    triggerRevalidateAsync({ slug: extractSlugFromPath(page.endpoint) });
     return NextResponse.json(page, { status: 201 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

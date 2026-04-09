@@ -1,6 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { triggerRevalidateAsync } from "@/lib/revalidate";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0",
+};
 
 /* =========================================================
    Função para extrair sugestões de todos os logos
@@ -114,6 +124,7 @@ async function handleUpsert(req: NextRequest, context: { params: Promise<{ type:
     });
   }
 
+  triggerRevalidateAsync({ slug: type });
   return NextResponse.json(record);
 }
 
@@ -135,7 +146,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ type: s
     suggestions = await getSuggestionsFromAllLogos();
   }
 
-  return NextResponse.json({ ...record, suggestions });
+  return NextResponse.json({ ...record, suggestions }, { headers: NO_STORE_HEADERS });
 }
 
 export async function DELETE(_req: NextRequest, context: { params: Promise<{ type: string; subtype: string }> }) {
@@ -157,6 +168,7 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ typ
       await prisma.formData.delete({ where: { id: existingData.id } });
     }
 
+    triggerRevalidateAsync({ slug: type });
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: "Erro ao deletar" }, { status: 500 });

@@ -2,6 +2,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import sharp from "sharp";
+import { triggerRevalidateAsync } from "@/lib/revalidate";
+
+// Garante que o GET sempre leia do banco (sem cache do Next nem do navegador)
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+const NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+  Pragma: "no-cache",
+  Expires: "0",
+};
 
 type JsonValue = Record<string, any>;
 const AVIF_CONFIG = { quality: 80, effort: 5, chromaSubsampling: "4:4:4" as const };
@@ -138,6 +149,9 @@ async function handleUpsert(req: NextRequest, params: { type: string; subtype: s
     });
   }
 
+  // Dispara webhook de revalidação sem bloquear a resposta do CMS
+  triggerRevalidateAsync({ slug: type });
+
   return NextResponse.json(record.values);
 }
 
@@ -153,7 +167,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ sub
     const { subtype, type } = await params;
     // CORREÇÃO: findFirst
     const record = await prisma.formData.findFirst({ where: { type, subtype } });
-    return NextResponse.json(record?.values ?? null);
+    return NextResponse.json(record?.values ?? null, { headers: NO_STORE_HEADERS });
   } catch (err) { return NextResponse.json({ error: "Erro" }, { status: 500 }); }
 }
 
@@ -174,6 +188,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       await findAndDeleteUrls(values);
       await prisma.formData.delete({ where: { id: existingData.id } });
     }
+    triggerRevalidateAsync({ slug: type });
     return NextResponse.json({ success: true });
   } catch (err) { return NextResponse.json({ error: "Erro" }, { status: 500 }); }
 }

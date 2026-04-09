@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { triggerRevalidateAsync } from "@/lib/revalidate";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function POST(
   req: NextRequest,
@@ -41,6 +45,7 @@ export async function POST(
       });
     }
 
+    triggerRevalidateAsync({ slug: type });
     return NextResponse.json({ success: true, values: record.values });
   } catch (err: any) {
     console.error("RAW JSON API ERROR:", err);

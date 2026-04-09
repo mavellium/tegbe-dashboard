@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import sharp from "sharp";
+import { triggerRevalidateAsync } from "@/lib/revalidate";
 
 const AVIF_CONFIG = { quality: 80, effort: 5, chromaSubsampling: "4:4:4" as const };
 
@@ -192,6 +193,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           subCompany: { select: { id: true, name: true } }
         }
       });
+      // Revalida slug novo e antigo (caso o título tenha mudado) + índice do blog
+      triggerRevalidateAsync({ slugs: [slug, existing.slug, "blog"] });
       return NextResponse.json(post);
     } catch (e: any) {
       if (e.code === "P2002") {
@@ -205,6 +208,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             seoTitle, seoDescription, seoKeywords
           }
         });
+        triggerRevalidateAsync({ slugs: [slug, existing.slug, "blog"] });
         return NextResponse.json(post);
       }
       throw e;
@@ -225,6 +229,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     }
 
     await prisma.blogPost.delete({ where: { id } });
+    if (existing?.slug) {
+      triggerRevalidateAsync({ slugs: [existing.slug, "blog"] });
+    } else {
+      triggerRevalidateAsync({ slug: "blog" });
+    }
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

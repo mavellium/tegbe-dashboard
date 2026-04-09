@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createPageHistory } from "@/lib/page-history";
+import { extractSlugFromPath, triggerRevalidateAsync } from "@/lib/revalidate";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -25,8 +26,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const data = await req.json();
-    
+
     const safeFormData = data.formData ?? {};
+
+    // Guardamos o endpoint antigo para revalidar caso ele tenha mudado
+    const previous = await prisma.page.findUnique({
+      where: { id },
+      select: { endpoint: true },
+    });
 
     const page = await prisma.page.update({
       where: { id },
@@ -40,6 +47,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     });
     await createPageHistory(page, "UPDATED");
+
+    triggerRevalidateAsync({
+      slugs: [
+        extractSlugFromPath(page.endpoint),
+        previous?.endpoint ? extractSlugFromPath(previous.endpoint) : null,
+      ],
+    });
+
     return NextResponse.json(page);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -89,6 +104,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
       },
     });
 
+    triggerRevalidateAsync({ slug: extractSlugFromPath(page.endpoint) });
     return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
