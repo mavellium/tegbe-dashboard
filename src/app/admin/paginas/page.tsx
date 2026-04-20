@@ -37,7 +37,6 @@ export default function PagesCRUD() {
     title: "", subtitle: "", icon: "lucide:file-text", endpoint: "", subCompanyId: "", formData: {} as any
   });
 
-  // === Estado do painel de histórico ===
   const [showHistory, setShowHistory] = useState(false);
   const [versions, setVersions] = useState<any[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
@@ -51,7 +50,11 @@ export default function PagesCRUD() {
       const [pagesRes, subRes] = await Promise.all([fetch("/api/pages"), fetch("/api/sub-companies")]);
       setPages(await pagesRes.json());
       setSubCompanies(await subRes.json());
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -103,7 +106,25 @@ export default function PagesCRUD() {
           });
 
           if (!endpointRes.ok) {
-            console.error("Erro ao injetar dados no endpoint dinâmico:", await endpointRes.text());
+            console.error(await endpointRes.text());
+          }
+
+          try {
+            const pageSlug = formData.endpoint.split('/').pop() || "hero-carrossel-home";
+            
+            const webhookRes = await fetch("/api/webhook", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ slug: pageSlug })
+            });
+
+            if (!webhookRes.ok) {
+              console.error(webhookRes.status);
+            }
+          } catch (webhookError) {
+            console.error(webhookError);
           }
         }
 
@@ -125,7 +146,12 @@ export default function PagesCRUD() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir esta página definitivamente?")) return;
-    try { await fetch(`/api/pages/${id}`, { method: "DELETE" }); fetchData(); } catch (e) { console.error(e); }
+    try { 
+      await fetch(`/api/pages/${id}`, { method: "DELETE" }); 
+      fetchData(); 
+    } catch (e) { 
+      console.error(e); 
+    }
   };
 
   const openNew = () => {
@@ -158,7 +184,7 @@ export default function PagesCRUD() {
           }
         }
       } catch (e) {
-        console.log("Ainda não existem dados de usuário para esta página.");
+        console.error(e);
       }
     }
 
@@ -248,7 +274,6 @@ export default function PagesCRUD() {
     });
   };
 
-  // === Funções do Histórico ===
   const openHistoryPanel = () => {
     if (!editingId) return;
     setShowHistory(true);
@@ -264,7 +289,6 @@ export default function PagesCRUD() {
       if (res.ok) {
         const restoredPage = await res.json();
 
-        // Atualizar o estado do editor imediatamente com os dados restaurados
         setFormData(prev => ({
           ...prev,
           title: restoredPage.title || prev.title,
@@ -274,7 +298,6 @@ export default function PagesCRUD() {
           formData: restoredPage.formData ?? {},
         }));
 
-        // Atualizar a lista de versões
         if (editingId) {
           fetchVersions(editingId);
         }
@@ -382,13 +405,11 @@ export default function PagesCRUD() {
           )}
         </Card>
 
-        {/* ========= MODAL DO EDITOR ========= */}
         <AnimatePresence>
           {isModalOpen && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="w-full max-w-6xl bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col h-[95vh] overflow-hidden">
 
-                {/* Header do modal */}
                 <div className="p-4 border-b border-zinc-800 bg-zinc-950 shrink-0 flex items-center justify-between gap-4">
                   <h3 className="text-lg font-bold text-white">{editingId ? "Editar Página" : "Nova Página"}</h3>
                   <div className="flex items-center gap-3">
@@ -416,7 +437,6 @@ export default function PagesCRUD() {
                 </div>
 
                 <div className="flex-1 overflow-hidden flex">
-                  {/* ===== Área principal do editor ===== */}
                   <div className={`flex-1 overflow-y-auto custom-scrollbar flex flex-col p-6 space-y-6 transition-all ${showHistory ? "w-[60%]" : "w-full"}`}>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 shrink-0 bg-black/20 p-4 rounded-xl border border-zinc-800/50">
@@ -464,7 +484,6 @@ export default function PagesCRUD() {
                     </div>
                   </div>
 
-                  {/* ===== Painel lateral de Histórico ===== */}
                   <AnimatePresence>
                     {showHistory && (
                       <motion.div
@@ -474,7 +493,6 @@ export default function PagesCRUD() {
                         transition={{ duration: 0.2 }}
                         className="border-l border-zinc-800 bg-zinc-950/80 flex flex-col overflow-hidden"
                       >
-                        {/* Header do painel */}
                         <div className="p-4 border-b border-zinc-800 shrink-0 flex items-center justify-between">
                           {snapshotView ? (
                             <button onClick={() => setSnapshotView(null)} className="flex items-center gap-2 text-sm font-bold text-zinc-300 hover:text-white transition-colors">
@@ -490,10 +508,8 @@ export default function PagesCRUD() {
                           </button>
                         </div>
 
-                        {/* Conteúdo do painel */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
                           {snapshotView ? (
-                            /* === Visualização do Snapshot === */
                             <div className="p-4 space-y-4">
                               <div className="flex items-center justify-between">
                                 <div>
@@ -545,7 +561,6 @@ export default function PagesCRUD() {
                               Nenhum histórico registrado para esta página.
                             </div>
                           ) : (
-                            /* === Lista de Versões === */
                             <div className="divide-y divide-zinc-800/50">
                               {versions.map((v: any) => {
                                 const action = actionLabels[v.action] || actionLabels.UPDATED;

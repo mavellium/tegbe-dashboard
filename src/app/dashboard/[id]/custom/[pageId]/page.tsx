@@ -133,6 +133,23 @@ export default function DynamicPageRenderer() {
       });
 
       if (res.ok) {
+        try {
+          const pageSlug = pageMould.endpoint.split('/').pop() || "hero-carrossel-home";
+          const webhookRes = await fetch("/api/webhook", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ slug: pageSlug })
+          });
+
+          if (!webhookRes.ok) {
+            console.error(webhookRes.status);
+          }
+        } catch (webhookError) {
+          console.error(webhookError);
+        }
+
         setSuccessMsg(true);
         setTimeout(() => setSuccessMsg(false), 3000);
       } else {
