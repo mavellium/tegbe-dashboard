@@ -35,6 +35,18 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
     title: "", subtitle: "", body: "", excerpt: "", image: "", status: "DRAFT", featured: false, categoryId: "", seoTitle: "", seoDescription: "", seoKeywords: "", authorId: "", authorName: ""
   });
   const [selectedTags, setSelectedTags] = useState<string[]>(initialTagIds);
+  
+  // Estados para gerenciar criação de categoria
+  const [localCategories, setLocalCategories] = useState<Category[]>(categories);
+  const [isCreatingCategory, setIsCreatingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  
+  // Estados para gerenciar criação de tags
+  const [localTags, setLocalTags] = useState<Tag[]>(tags);
+  const [newTagName, setNewTagName] = useState('');
+  const [isSavingTag, setIsSavingTag] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState({ show: false, success: false, msg: "", id: 0 });
   const isSavingRef = useRef(false);
@@ -81,6 +93,76 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
       }
     };
   }, []);
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim() || isSavingCategory) return;
+    setIsSavingCategory(true);
+    try {
+      const data = new FormData();
+      data.append('name', newCategoryName.trim());
+      
+      const res = await fetch(`/api/${subCompanyId}/blog/categories`, { method: "POST", body: data });
+      if (res.ok) {
+        const newCat = await res.json();
+        setLocalCategories(prev => {
+          if (prev.find(c => c.id === newCat.id)) return prev;
+          return [...prev, newCat];
+        });
+        setFormData(prev => ({ ...prev, categoryId: newCat.id }));
+        setNewCategoryName('');
+        setIsCreatingCategory(false);
+        showFeedback(true, "Categoria adicionada!");
+      } else {
+        const err = await res.json();
+        showFeedback(false, err.error || "Erro ao criar categoria.");
+      }
+    } catch {
+      showFeedback(false, "Erro de conexão.");
+    } finally {
+      setIsSavingCategory(false);
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim() || isSavingTag) return;
+    
+    const trimmedName = newTagName.trim();
+    // Verifica se já existe na lista (ignora maiúsculas e espaços)
+    const existingTag = localTags.find(t => t.name.toLowerCase() === trimmedName.toLowerCase());
+    
+    if (existingTag) {
+      if (!selectedTags.includes(existingTag.id)) {
+        setSelectedTags(prev => [...prev, existingTag.id]);
+      }
+      setNewTagName('');
+      return;
+    }
+
+    setIsSavingTag(true);
+    try {
+      const data = new FormData();
+      data.append('name', trimmedName);
+      
+      const res = await fetch(`/api/${subCompanyId}/blog/tags`, { method: "POST", body: data });
+      if (res.ok) {
+        const newT = await res.json();
+        setLocalTags(prev => {
+          if (prev.find(t => t.id === newT.id)) return prev;
+          return [...prev, newT];
+        });
+        setSelectedTags(prev => [...prev, newT.id]);
+        setNewTagName('');
+        showFeedback(true, "Tag adicionada!");
+      } else {
+        const err = await res.json();
+        showFeedback(false, err.error || "Erro ao criar tag.");
+      }
+    } catch {
+      showFeedback(false, "Erro de conexão.");
+    } finally {
+      setIsSavingTag(false);
+    }
+  };
 
   const handleSave = async () => {
     const now = Date.now();
@@ -261,11 +343,43 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
             </h3>
             
             <div className="space-y-2">
-              <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Categoria <span className="text-rose-500">*</span></label>
-              <select value={formData.categoryId} onChange={e => setFormData({...formData, categoryId: e.target.value})} className="w-full px-4 py-3 bg-zinc-950 border border-white/10 rounded-xl text-sm font-medium text-zinc-100 outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all cursor-pointer shadow-inner">
-                <option value="" disabled>Selecione uma categoria...</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Categoria <span className="text-rose-500">*</span></label>
+                {!isCreatingCategory && (
+                  <button type="button" onClick={() => setIsCreatingCategory(true)} className="text-xs font-semibold text-[var(--color-primary)] hover:underline hover:text-white transition-all">
+                    + Nova Categoria
+                  </button>
+                )}
+              </div>
+              
+              {isCreatingCategory ? (
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={newCategoryName} 
+                    onChange={e => setNewCategoryName(e.target.value)} 
+                    placeholder="Nome da categoria..." 
+                    className="flex-1 w-full px-4 py-3 bg-zinc-950 border border-white/10 rounded-xl text-sm font-medium text-zinc-100 placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all shadow-inner" 
+                    onKeyDown={(e) => { 
+                      if (e.key === 'Enter') { 
+                        e.preventDefault(); 
+                        handleCreateCategory(); 
+                      } 
+                    }}
+                  />
+                  <Button variant="primary" onClick={handleCreateCategory} disabled={isSavingCategory} className="px-4 py-3 rounded-xl font-bold shadow-lg shadow-[var(--color-primary)]/20">
+                    {isSavingCategory ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
+                  </Button>
+                  <button type="button" onClick={() => setIsCreatingCategory(false)} className="px-4 py-3 bg-zinc-800 hover:bg-zinc-700 rounded-xl text-sm font-bold text-white transition-all border border-white/10 shadow-inner">
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <select value={formData.categoryId} onChange={e => setFormData({...formData, categoryId: e.target.value})} className="w-full px-4 py-3 bg-zinc-950 border border-white/10 rounded-xl text-sm font-medium text-zinc-100 outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all cursor-pointer shadow-inner">
+                  <option value="" disabled>Selecione uma categoria...</option>
+                  {localCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -281,11 +395,34 @@ export default function PostEditor({ subCompanyId, initialData, categories = [],
 
             <div className="space-y-3">
               <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">Tags de Marcação</label>
+              
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={newTagName} 
+                  onChange={e => setNewTagName(e.target.value)} 
+                  placeholder="Criar nova tag (Enter ou Vírgula)..." 
+                  className="flex-1 w-full px-4 py-2.5 bg-zinc-950 border border-white/10 rounded-xl text-sm font-medium text-zinc-100 placeholder:text-zinc-600 outline-none focus:ring-2 focus:ring-[var(--color-primary)]/50 focus:border-[var(--color-primary)] transition-all shadow-inner" 
+                  onKeyDown={(e) => { 
+                    if (e.key === 'Enter') { 
+                      e.preventDefault(); 
+                      handleCreateTag(); 
+                    } else if (e.key === ',') {
+                      e.preventDefault();
+                      handleCreateTag();
+                    }
+                  }}
+                />
+                <Button variant="primary" onClick={handleCreateTag} disabled={isSavingTag} className="px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-[var(--color-primary)]/20">
+                  {isSavingTag ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
+                </Button>
+              </div>
+
               <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-3 border border-white/10 bg-zinc-950 rounded-xl custom-scrollbar shadow-inner">
-                {tags.length === 0 ? (
-                  <p className="text-xs text-zinc-500 w-full text-center py-2 font-medium">Nenhuma tag criada.</p>
+                {localTags.length === 0 ? (
+                  <p className="text-xs text-zinc-500 w-full text-center py-2 font-medium">Nenhuma tag existente.</p>
                 ) : (
-                  tags.map(t => (
+                  localTags.map(t => (
                     <button 
                       key={t.id} 
                       type="button"

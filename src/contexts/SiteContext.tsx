@@ -61,6 +61,8 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   }, [user, authLoading]);
 
   useEffect(() => {
+    if (loadingSites) return; // Retém o contexto se ainda estiver batendo na API
+
     if (sites.length > 0) {
       const match = pathname?.match(/^\/dashboard\/([^/]+)/);
       if (match) {
@@ -76,9 +78,10 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
       const foundSaved = savedId ? sites.find(s => s.id === savedId) : null;
       setCurrentSiteState(foundSaved || sites[0]);
     } else {
+      if (user?.role === 'ADMIN') return; // Admin não precisa resetar
       setCurrentSiteState(null);
     }
-  }, [pathname, sites]);
+  }, [pathname, sites, loadingSites, user]);
 
   const setCurrentSite = (site: any) => {
     setCurrentSiteState(site);

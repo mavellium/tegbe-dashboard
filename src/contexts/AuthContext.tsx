@@ -58,8 +58,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = (userData: User) => {
     setUser(userData);
     
-    router.push("/");
-    router.refresh(); 
+    // Usar transition ou delay para evitar race condition no Next App Router
+    setTimeout(() => {
+      router.push("/");
+      setTimeout(() => router.refresh(), 100);
+    }, 0);
   };
 
   const logout = async () => {
